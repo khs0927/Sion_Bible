@@ -27,6 +27,7 @@ interface BibleVersePickerProps {
   readingRange?: import('../../types/bible').BibleReadRange | null;
   onExitRange?: () => void;
   onNavigate?: (book: BibleBook, chapter: number) => void;
+  onOpenSelector?: () => void;
 }
 
 export function BibleVersePicker({
@@ -42,6 +43,7 @@ export function BibleVersePicker({
   readingRange,
   onExitRange,
   onNavigate,
+  onOpenSelector,
 }: BibleVersePickerProps) {
   const [selBook, setSelBook] = useState(initialBook);
   const [selChap, setSelChap] = useState(initialChapter);
@@ -171,18 +173,25 @@ export function BibleVersePicker({
           </button>
         </div>
       ) : (
-        <BibleBookChapterSelector
-          selectedBook={selBook}
-          selectedChapter={selChap}
-          onSelectBook={(book) => {
-            setSelBook(book);
-            onNavigate?.(book, 1);
-          }}
-          onSelectChapter={(chap) => {
-            setSelChap(chap);
-            onNavigate?.(selBook, chap);
-          }}
-        />
+        <button
+          onClick={onOpenSelector}
+          className="flex items-center justify-between p-5 rounded-[22px] bg-white border border-[#E8D8C8] shadow-sm hover:bg-[#FDF2E7] transition-all active:scale-[0.98] group"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-[#FDF6F0] flex items-center justify-center text-[#A17C5B] group-hover:scale-110 transition-transform">
+              <KawaiiBibleIcon size={24} />
+            </div>
+            <div className="flex flex-col items-start">
+              <span className="text-[10px] font-black text-[#A17C5B] uppercase tracking-widest opacity-70">현재 위치</span>
+              <h3 className="title-font text-lg font-black text-[#3D3129]">
+                {selBook.name} {selChap}장
+              </h3>
+            </div>
+          </div>
+          <div className="px-3 py-1.5 rounded-full bg-[#FDF6F0] border border-[#E8D8C8] text-[10px] font-black text-[#A17C5B]">
+            변경하기
+          </div>
+        </button>
       )}
 
       <div className="flex-1 min-h-[200px] space-y-8">
