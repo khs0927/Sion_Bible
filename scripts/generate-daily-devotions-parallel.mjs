@@ -2,8 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  DEFAULT_FAST_MODEL_1,
-  DEFAULT_FAST_MODEL_2,
+  DEFAULT_QUALITY_MODEL,
 } from '../api/_lib/nvidia.js';
 import { raceNvidiaModels } from '../api/_lib/raceNvidiaModels.js';
 
@@ -21,8 +20,7 @@ if (!apiKey) {
 }
 
 const models = [
-  process.env.NVIDIA_FAST_MODEL_1 || DEFAULT_FAST_MODEL_1,
-  process.env.NVIDIA_FAST_MODEL_2 || DEFAULT_FAST_MODEL_2,
+  process.env.NVIDIA_QUALITY_MODEL || DEFAULT_QUALITY_MODEL,
 ];
 
 const source = await fs.readFile(versesPath, 'utf8');
@@ -37,8 +35,8 @@ await runWithConcurrency(verses, concurrency, async (verse) => {
     models,
     messages: buildMessages(ref, verse.content),
     validate: validateDevotion,
-    maxTokens: 650,
-    temperature: 0.35,
+    maxTokens: 1200,
+    temperature: 0.28,
   });
   results[ref] = winner.result;
 });
@@ -66,14 +64,15 @@ function buildMessages(ref, verseText) {
   return [
     {
       role: 'system',
-      content: '너는 한국어 성경 묵상과 기도문을 돕는 목회적 글쓰기 도우미다. JSON만 반환하고 본문에 없는 내용을 억지로 만들지 않는다.',
+      content: '너는 한국어 성경 묵상과 기도문을 돕는 신중하고 경건한 도우미다. 본문 중심, 하나님 중심, 그리스도 중심, 성령의 도우심, 회개와 믿음과 순종을 균형 있게 반영한다. JSON만 반환하고 본문에 없는 내용을 억지로 만들지 않는다.',
     },
     {
       role: 'user',
       content: [
-        '홈 화면에서 즉시 보여줄 짧은 devotional JSON을 작성해줘.',
+        '홈 화면에서 즉시 보여줄 devotional JSON을 작성해줘.',
+        '본문의 핵심 표현, 하나님의 성품, 예수 그리스도를 의지하는 믿음, 성령의 도우심, 오늘의 순종이 자연스럽게 드러나야 한다.',
         '따뜻하고 경건한 한국어로 쓰고, 본문 범위를 벗어나지 마.',
-        'JSON 형식: {"title":"묵상 제목","meditation":"묵상 내용","prayer":"기도문","application":"오늘 적용 한 가지"}',
+        'JSON 형식: {"title":"묵상 제목","keyPhrase":"핵심 표현","meditation":"묵상 내용","prayer":"기도문","application":"오늘 적용 한 가지","reflectionQuestion":"묵상 질문"}',
         `구절: ${ref}`,
         `본문: ${verseText}`,
       ].join('\n\n'),
@@ -88,9 +87,11 @@ function validateDevotion(parsed, model) {
   if (!title || !meditation || !prayer) return null;
   return {
     title,
+    keyPhrase: String(parsed?.keyPhrase ?? '').trim(),
     meditation,
     prayer,
     application: String(parsed?.application ?? '').trim(),
+    reflectionQuestion: String(parsed?.reflectionQuestion ?? '').trim(),
     model,
   };
 }

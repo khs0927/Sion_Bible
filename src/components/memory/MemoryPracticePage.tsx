@@ -1,12 +1,25 @@
 import { useState } from 'react';
-import { ArrowLeft, CheckCircle2, ChevronRight, Check, Bell, Info } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ChevronRight, Check, Bell, Info, BookOpen, EyeOff, Shuffle, Lightbulb, Grid } from 'lucide-react';
 import type { MemoryVerse } from '../../types/memory';
 import { MemoryClozePractice } from './MemoryClozePractice';
-import { MemoryFullBlankPractice } from './MemoryFullBlankPractice';
 import { MemoryArrangePractice } from './MemoryArrangePractice';
 import { MemoryInitialHintPractice } from './MemoryInitialHintPractice';
+import { MemoryFullBlankPractice } from './MemoryFullBlankPractice';
 
 type ThemeTokens = Record<string, string>;
+type StageMeta = {
+  level: number;
+  label: string;
+  Icon: typeof BookOpen;
+};
+
+const STAGES: StageMeta[] = [
+  { level: 1, label: '전체 읽기', Icon: BookOpen },
+  { level: 2, label: '부분 빈칸', Icon: EyeOff },
+  { level: 3, label: '전체 빈칸', Icon: Grid },
+  { level: 4, label: '순서 맞추기', Icon: Shuffle },
+  { level: 5, label: '첫 글자 힌트', Icon: Lightbulb },
+];
 
 export function MemoryPracticePage({ 
   verse, 
@@ -106,6 +119,41 @@ export function MemoryPracticePage({
             )}
           </div>
         </div>
+
+        <div className="grid grid-cols-5 gap-1.5">
+          {STAGES.map(({ level, label, Icon }) => {
+            const active = verse.level === level;
+            const done = verse.level > level;
+            return (
+              <button
+                key={level}
+                type="button"
+                onClick={() => onMoveStage(level - verse.level)}
+                disabled={active}
+                className="min-w-0 rounded-[18px] border p-2 transition-all active:scale-[0.98] disabled:cursor-default"
+                style={{
+                  background: active ? `linear-gradient(145deg, ${T.peach}, ${T.butter})` : done ? T.solid : 'white',
+                  borderColor: active || done ? T.accent : T.line,
+                  color: active || done ? T.text : T.sub,
+                  boxShadow: active ? T.soft : 'none',
+                }}
+              >
+                <span
+                  className="mx-auto mb-1 flex h-7 w-7 items-center justify-center rounded-full border"
+                  style={{
+                    background: active ? 'rgba(255,255,255,0.6)' : T.solid,
+                    borderColor: active ? 'rgba(255,255,255,0.7)' : T.line,
+                    color: active || done ? T.accent : T.sub,
+                  }}
+                >
+                  <Icon size={14} strokeWidth={done ? 3 : 2.3} />
+                </span>
+                <span className="block truncate text-[10px] font-black">{level}단계</span>
+                <span className="block truncate text-[8px] font-bold opacity-70">{label}</span>
+              </button>
+            );
+          })}
+        </div>
       </section>
 
       <div className="min-h-[300px]">
@@ -124,8 +172,8 @@ export function MemoryPracticePage({
         )}
         
         {verse.level === 2 && <MemoryClozePractice text={verse.text} T={T} />}
-        {verse.level === 3 && <MemoryArrangePractice text={verse.text} T={T} />}
-        {verse.level === 4 && <MemoryFullBlankPractice text={verse.text} T={T} />}
+        {verse.level === 3 && <MemoryFullBlankPractice text={verse.text} T={T} />}
+        {verse.level === 4 && <MemoryArrangePractice text={verse.text} T={T} />}
         {verse.level === 5 && <MemoryInitialHintPractice text={verse.text} T={T} />}
       </div>
 

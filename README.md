@@ -104,10 +104,14 @@ Vercel 대시보드에서 프로젝트를 연결할 때 아래 설정을 확인�
 1.  **Cache First (캐시 우선)**: 로컬 스토리지에 저장된 결과가 있으면 AI 호출 없이 즉시 표시합니다.
 2.  **Hedged Request (지연 병렬 호출)**:
     *   첫 번째 빠른 모델(`NVIDIA_FAST_MODEL_1`)을 즉시 호출합니다.
-    *   1.8초 내에 응답이 없으면 두 번째 모델(`NVIDIA_FAST_MODEL_2`)을 추가로 호출하여 경합(Race)시킵니다.
+    *   1.2초 내에 응답이 없으면 두 번째 모델(`NVIDIA_FAST_MODEL_2`)을 추가로 호출하여 경합(Race)시킵니다.
     *   가장 먼저 유효한 JSON을 반환한 결과를 사용하고 나머지는 중단(Abort)합니다.
-3.  **Timeout & Fallback (타임아웃 및 폴백)**:
-    *   전체 과정이 약 5.2초를 넘거나 모든 모델이 실패하면 **Gemini API**를 통해 2차 시도를 수행합니다.
+3.  **Quality Model (깊은 묵상/질문)**:
+    *   `mode: "deep"` 묵상 요청과 구절 질문 답변은 `NVIDIA_QUALITY_MODEL`을 우선 사용합니다.
+    *   품질 모델이 지연되거나 실패하면 빠른 모델로 fallback합니다.
+4.  **Timeout & Fallback (타임아웃 및 폴백)**:
+    *   일반 구절 묵상은 빠른 모델 경합을 우선하며, 깊은 묵상/질문은 품질 모델에 최대 15초를 허용합니다.
+    *   모든 모델이 실패하면 **Gemini API**를 통해 2차 시도를 수행합니다.
     *   모든 AI 서비스가 불가한 경우, 정중한 안내가 담긴 **기본 묵상 템플릿**을 즉시 제공하여 끊김 없는 경험을 보장합니다.
 
 ## 🔑 환경변수 (Vercel Environment Variables)
@@ -115,15 +119,15 @@ Vercel 대시보드에서 프로젝트를 연결할 때 아래 설정을 확인�
 | 변수명 | 설명 | 비고 |
 | :--- | :--- | :--- |
 | `NVIDIA_API_KEY` | NVIDIA AI API 키 | Sensitive (Secret) |
-| `NVIDIA_FAST_MODEL_1` | 1순위 빠른 모델 | `nvidia/nemotron-mini-4b-instruct` |
-| `NVIDIA_FAST_MODEL_2` | 2순위 빠른 모델 | `nvidia/nemotron-mini-4b-instruct` |
+| `NVIDIA_FAST_MODEL_1` | 1순위 빠른 모델 | `meta/llama-3.1-8b-instruct` |
+| `NVIDIA_FAST_MODEL_2` | 2순위 빠른 모델 | `openai/gpt-oss-20b` |
 | `NVIDIA_QUALITY_MODEL`| 고품질 모델 (통독용) | `nvidia/llama-3.3-nemotron-super-49b-v1` |
 | `GEMINI_API_KEY` | Gemini API 키 | Optional (Fallback 용) |
 | `VITE_APP_NAME` | 앱 이름 | `SION BIBLE` |
 
 ## 🛡 무료 한도 보호 및 정책
 - **캐시 활용**: 동일 구절에 대한 중복 AI 호출을 원천 차단합니다.
-- **지연 병렬**: 무조건적인 병렬 호출이 아닌, 지연 시간(1.8s)을 둔 선별적 호출로 API 할당량을 보호합니다.
+- **지연 병렬**: 무조건적인 병렬 호출이 아닌, 지연 시간(1.2s)을 둔 선별적 호출로 API 할당량을 보호합니다.
 - **데이터 제한**: 본문 길이를 제한하고 `max_tokens`를 최적화하여 비용과 속도를 동시에 잡았습니다.
 - **정적 데이터**: 홈탭의 '오늘의 말씀'은 실시간 AI 호출 없이 사전 생성된 데이터를 사용하여 안정성을 확보합니다.
 

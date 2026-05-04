@@ -45,7 +45,7 @@ export function MemoryArrangePractice({ text }: { text: string; T: ThemeTokens }
     <section className="space-y-6 p-5 rounded-[28px] bg-white border border-[#e8d8ce] shadow-sm">
       <header className="flex items-center justify-between">
         <div className="text-[10px] font-black text-[#8d95d8] uppercase tracking-widest">
-          Level 3 · 순서 맞추기
+          4단계 · 순서 맞추기
         </div>
         <div className="flex gap-2">
           <button 

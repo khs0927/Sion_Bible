@@ -26,6 +26,7 @@ interface BibleVersePickerProps {
   onCopy?: (text: string) => void;
   readingRange?: import('../../types/bible').BibleReadRange | null;
   onExitRange?: () => void;
+  onNavigate?: (book: BibleBook, chapter: number) => void;
 }
 
 export function BibleVersePicker({
@@ -40,6 +41,7 @@ export function BibleVersePicker({
   onCopy,
   readingRange,
   onExitRange,
+  onNavigate,
 }: BibleVersePickerProps) {
   const [selBook, setSelBook] = useState(initialBook);
   const [selChap, setSelChap] = useState(initialChapter);
@@ -48,6 +50,17 @@ export function BibleVersePicker({
   const [err, setErr] = useState('');
   const [selectedVerseNumbers, setSelectedVerseNumbers] = useState<number[]>([]);
   const [rangeChapters, setRangeChapters] = useState<{ bookName: string; chapter: number; verses: Verse[] }[]>([]);
+
+  // Sync internal state ONLY when initial props change from outside (to avoid loop)
+  useEffect(() => {
+    if (initialBook.id !== selBook.id || initialChapter !== selChap) {
+      setSelBook(initialBook);
+      setSelChap(initialChapter);
+    }
+  }, [initialBook, initialChapter]);
+
+  // Remove the automatic onNavigate sync that causes loops.
+  // Instead, onNavigate will be called by explicit user actions if needed.
 
   const loadChapter = useCallback(async (bookNumber: string | number, chap: number) => {
     const res = await fetch(`https://api.getbible.net/v2/korean/${bookNumber}/${chap}.json`, { mode: 'cors' });
@@ -161,8 +174,14 @@ export function BibleVersePicker({
         <BibleBookChapterSelector
           selectedBook={selBook}
           selectedChapter={selChap}
-          onSelectBook={setSelBook}
-          onSelectChapter={setSelChap}
+          onSelectBook={(book) => {
+            setSelBook(book);
+            onNavigate?.(book, 1);
+          }}
+          onSelectChapter={(chap) => {
+            setSelChap(chap);
+            onNavigate?.(selBook, chap);
+          }}
         />
       )}
 

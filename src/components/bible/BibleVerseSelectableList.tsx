@@ -1,4 +1,5 @@
 import { Check, Bookmark, BookmarkCheck, Copy } from 'lucide-react';
+import { decodeHtml } from '../../utils/textUtils';
 
 interface Verse {
   verse: number;
@@ -38,6 +39,7 @@ export function BibleVerseSelectableList({
         return (
           <button
             key={v.verse}
+            id={`verse-${v.verse}`}
             onClick={() => {
               if (mode === 'select') {
                 onToggleVerse(v.verse);
@@ -89,7 +91,7 @@ export function BibleVerseSelectableList({
                 className="leading-relaxed text-[#3D3129] serif-verse"
                 style={{ fontSize }}
               >
-                {v.text}
+                {decodeHtml(v.text)}
               </p>
             </div>
           </button>

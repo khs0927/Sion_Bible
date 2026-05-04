@@ -1,7 +1,7 @@
-
-import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
-import { Bookmark, BookmarkCheck, Copy, Download, GripVertical, Loader2, X } from 'lucide-react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { Bookmark, BookmarkCheck, ChevronLeft, ChevronRight, Copy, Download, GripVertical, Loader2, X, Search } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { decodeHtml } from './utils/textUtils';
 import { BIBLE_BOOKS } from './data/bibleBooks';
 import { BIBLE_VERSES, type BibleVerse } from './data/verses';
 import { KawaiiApplicationIcon, KawaiiAudioIcon, KawaiiBibleIcon, KawaiiCalendarIcon, KawaiiComfortIcon, KawaiiHomeIcon, KawaiiJournalIcon, KawaiiMeditationIcon, KawaiiPrayerIcon, KawaiiRandomIcon, KawaiiSavedIcon, KawaiiSettingsIcon, KawaiiShareIcon, KawaiiVerseIcon, KawaiiWisdomIcon } from './components/icons';
@@ -15,16 +15,16 @@ import { BibleVersePicker } from './components/bible/BibleVersePicker';
 import { convertTaskToBibleRange } from './services/readingPlanToBibleRange';
 import type { ReadingDayTask } from './types/readingPlan';
 import type { BibleReadRange } from './types/bible';
-import { Search } from 'lucide-react';
+
 import { getActiveReadingPlan, toggleReadingDay, completeReadingDay, startReadingPlan } from './services/readingPlanStorage';
 import { READING_PLAN_TEMPLATES } from './data/readingPlans';
 import { BibleSearchSheet } from './components/bible/BibleSearchSheet';
 
-interface JournalEntry { id: string; ref: string; date: string; note: string; }
 interface SavedVerse { ref: string; text: string; date?: string; meditation?: string; prayer?: string; }
 interface VerseDetail { ref: string; text: string; title?: string; meditation?: string; prayer?: string; application?: string; model?: string; fromCache?: boolean; }
+interface JournalEntry { id: string; ref: string; date: string; [key: string]: unknown; }
 
-type Tab = 'home' | 'random' | 'read' | 'plan' | 'memory' | 'journal' | 'saved' | 'settings';
+type Tab = 'home' | 'random' | 'read' | 'plan' | 'memory' | 'saved' | 'settings';
 type FontSize = 'sm' | 'base' | 'lg' | 'xl';
 type Theme = 'a-soft' | 'a-dark';
 type SavedGroupMode = 'date' | 'week' | 'month' | 'topic' | 'book';
@@ -56,6 +56,20 @@ const MOODS: Array<{ label: Mood; category: BibleVerse['category'] }> = [
   { label: '능력', category: '능력' },
   { label: '축복', category: '축복' },
 ];
+const MOOD_KEYWORDS: Record<Mood, string[]> = {
+  '평안': ['평안', '평강', '안식', '평화', '안위', '쉬게'],
+  '감사': ['감사', '찬양', '송축', '기뻐', '즐거워', '은혜'],
+  '불안': ['평안', '두려워', '함께', '염려', '근심', '강하고'],
+  '소망': ['소망', '약속', '기다', '새 일', '영원', '미래'],
+  '회개': ['회개', '용서', '깨끗', '자백', '돌이', '자비'],
+  '위로': ['위로', '눈물', '고난', '힘', '함께', '상한'],
+  '사랑': ['사랑', '자비', '긍휼', '은혜', '오래', '친절'],
+  '용서': ['용서', '긍휼', '사랑', '자비', '일흔', '화목'],
+  '두려움': ['두려워', '함께', '놀라지', '능력', '강하고', '담대'],
+  '지혜': ['지혜', '명철', '길', '깨달', '훈계', '정직'],
+  '능력': ['능력', '권능', '힘', '능치', '강한', '역사'],
+  '축복': ['복', '축복', '형통', '은택', '넘치', '복이'],
+};
 const FS: Record<FontSize, string> = { sm: '0.9rem', base: '1rem', lg: '1.13rem', xl: '1.25rem' };
 const LS = { SAVED: 'gb_saved', JOURNAL: 'gb_journal', THEME: 'gb_theme', SIZE: 'gb_size', LAST_BOOK: 'gb_last_book', LAST_CHAP: 'gb_last_chap', DAILY_DATE: 'gb_daily_date', DAILY_IDX: 'gb_daily_idx' };
 
@@ -132,14 +146,11 @@ export default function App() {
   const [selBook, setSelBook] = useState(BIBLE_BOOKS[42]);
   const [selChap, setSelChap] = useState(3);
   const [saved, setSaved] = useState<SavedVerse[]>([]);
+  const [journals, setJournals] = useState<JournalEntry[]>([]);
   const [savedMode, setSavedMode] = useState<SavedGroupMode>('date');
   const [isReorderingSaved, setIsReorderingSaved] = useState(false);
   const [draggedSavedRef, setDraggedSavedRef] = useState<string | null>(null);
   const [detail, setDetail] = useState<VerseDetail | null>(null);
-  const [journals, setJournals] = useState<JournalEntry[]>([]);
-  const [journalNote, setJournalNote] = useState('');
-  const [journalRef, setJournalRef] = useState('');
-  const [showJournalForm, setShowJournalForm] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [selectedMood, setSelectedMood] = useState<Mood | null>(null);
@@ -147,6 +158,8 @@ export default function App() {
   const [activeReadingRange, setActiveReadingRange] = useState<BibleReadRange | null>(null);
   const [readingProgress, setReadingProgress] = useState<import('./types/readingPlan').ReadingPlanProgress | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [homeDevotion, setHomeDevotion] = useState<import('./services/verseDevotionApi').VerseDevotionResult | null>(null);
+  const [homeDevotionLoading, setHomeDevotionLoading] = useState(false);
 
   useEffect(() => {
     setReadingProgress(getActiveReadingPlan());
@@ -180,8 +193,37 @@ export default function App() {
   const th = TH(theme);
   const fsize = FS[fontSize];
   const currentHomeVerse = homeHistory[homeIndex] ?? BIBLE_VERSES[getDailyIdx()];
-  const currentHomeDevotion = getDailyDevotion(currentHomeVerse);
+  const currentHomeDevotion = homeDevotion ?? getDailyDevotion(currentHomeVerse);
   const recentJournals = journals.slice(0, 2);
+
+  // Sync AI devotion for currentHomeVerse
+  useEffect(() => {
+    let active = true;
+    const fetchDevotion = async () => {
+      const ref = `${currentHomeVerse.book} ${currentHomeVerse.chapter}:${currentHomeVerse.verse}`;
+      const text = currentHomeVerse.content;
+      
+      // First check curated/cache
+      const cached = readCachedVerseDevotion(ref, text);
+      if (cached) {
+        setHomeDevotion(cached);
+        setHomeDevotionLoading(false);
+        return;
+      }
+
+      setHomeDevotionLoading(true);
+      const { getOrGenerateVerseDevotion } = await import('./services/verseDevotionApi');
+      const { result } = await getOrGenerateVerseDevotion({ ref, verseText: text });
+      
+      if (active) {
+        setHomeDevotion(result);
+        setHomeDevotionLoading(false);
+      }
+    };
+
+    fetchDevotion();
+    return () => { active = false; };
+  }, [currentHomeVerse]);
 
   useEffect(() => {
     try { const s = localStorage.getItem(LS.SAVED); if (s) setSaved(JSON.parse(s)); } catch {}
@@ -222,16 +264,64 @@ export default function App() {
     { id: 'plan', label: '통독', icon: <KawaiiApplicationIcon size={24} /> },
     { id: 'memory', label: '암송', icon: <KawaiiWisdomIcon size={24} /> },
     { id: 'saved', label: '저장', icon: <KawaiiSavedIcon size={24} /> },
-    { id: 'journal', label: '일기', icon: <KawaiiJournalIcon size={24} /> },
   ] as const;
 
-  const pageTitle = { home: '은혜의 말씀', random: '오늘의 말씀', read: `${selBook.name} ${selChap}장`, plan: '통독', memory: '암송', journal: '묵상 일기', saved: '저장한 말씀', settings: '설정' }[tab];
+  const pageTitle = { home: '은혜의 말씀', random: '오늘의 말씀', read: `${selBook.name} ${selChap}장`, plan: '통독', memory: '암송', saved: '저장한 말씀', settings: '설정' }[tab];
+
+  const pageIcon = tab === 'read'
+    ? <KawaiiBibleIcon size={25} />
+    : tab === 'plan'
+      ? <KawaiiApplicationIcon size={25} />
+      : tab === 'memory'
+        ? <KawaiiWisdomIcon size={25} />
+        : tab === 'saved'
+          ? <KawaiiSavedIcon size={25} />
+          : tab === 'settings'
+            ? <KawaiiSettingsIcon size={25} />
+            : <KawaiiHomeIcon size={25} />;
+  const currentBookIndex = BIBLE_BOOKS.findIndex(book => book.id === selBook.id);
+  const canGoPreviousChapter = currentBookIndex > 0 || selChap > 1;
+  const canGoNextChapter = currentBookIndex < BIBLE_BOOKS.length - 1 || selChap < selBook.chapters;
+  const navigateChapterBy = (delta: -1 | 1) => {
+    let nextBook = selBook;
+    let nextChapter = selChap + delta;
+
+    if (nextChapter < 1) {
+      if (currentBookIndex <= 0) return;
+      nextBook = BIBLE_BOOKS[currentBookIndex - 1];
+      nextChapter = nextBook.chapters;
+    } else if (nextChapter > selBook.chapters) {
+      if (currentBookIndex >= BIBLE_BOOKS.length - 1) return;
+      nextBook = BIBLE_BOOKS[currentBookIndex + 1];
+      nextChapter = 1;
+    }
+
+    handleBibleNavigate(nextBook, nextChapter);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const btn = (active: boolean): CSSProperties => ({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, minWidth: 0, padding: '9px 12px', borderRadius: 16, border: `1px solid ${active ? 'rgba(255,255,255,0.72)' : th.line}`, background: active ? `linear-gradient(145deg, ${th.butter}, ${th.peach})` : th.solid, color: th.text, cursor: 'pointer', fontWeight: 800, fontSize: 12, fontFamily: 'inherit', boxShadow: th.soft });
-  const circle = (active: boolean): CSSProperties => ({ width: 38, height: 38, borderRadius: 16, border: `1px solid ${active ? 'rgba(255,255,255,0.72)' : th.line}`, background: active ? `linear-gradient(145deg, ${th.lavender}, ${th.mint})` : th.solid, color: active ? '#fff' : th.text, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: th.soft, flex: '0 0 auto' });
+  const circle = (active: boolean): CSSProperties => ({ width: 38, height: 38, borderRadius: 16, border: `1px solid ${active ? '#e8c8a8' : th.line}`, background: active ? 'linear-gradient(145deg, #fff7ed, #ffe9d3)' : th.solid, color: th.text, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: th.soft, flex: '0 0 auto' });
   const installBtn = (active: boolean): CSSProperties => ({ minWidth: 78, height: 38, borderRadius: 16, border: `1px solid ${active ? 'rgba(255,255,255,0.72)' : th.line}`, background: active ? `linear-gradient(145deg, ${th.lavender}, ${th.mint})` : th.solid, color: active ? '#fff' : th.text, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, boxShadow: th.soft, flex: '0 0 auto', fontFamily: 'inherit', fontWeight: 900, fontSize: 11 });
   const chip = (active: boolean): CSSProperties => ({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '7px 10px', minHeight: 32, borderRadius: 999, border: `1px solid ${active ? 'rgba(255,255,255,0.72)' : th.line}`, background: active ? `linear-gradient(145deg, ${th.mint}, ${th.lavender})` : th.solid, color: active ? '#fff' : th.sub, cursor: 'pointer', fontWeight: active ? 900 : 700, fontSize: 11, fontFamily: 'inherit' });
-  const iconTile = (tone: string): CSSProperties => ({ width: 42, height: 42, borderRadius: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: tone, border: '1px solid rgba(255,255,255,0.62)', color: '#fff', boxShadow: th.soft });
+  const iconTile = (_tone: string): CSSProperties => ({ width: 42, height: 42, borderRadius: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: '0', color: '#fff', boxShadow: 'none' });
+  const chapterSideButton = (side: 'left' | 'right', enabled: boolean): CSSProperties => ({
+    position: 'fixed',
+    top: '50%',
+    [side]: 4,
+    transform: 'translateY(-50%)',
+    width: 42,
+    height: '40vh',
+    border: 'none',
+    background: 'transparent',
+    color: enabled ? th.accent : 'transparent',
+    display: enabled ? 'inline-flex' : 'none',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    zIndex: 84,
+    WebkitTapHighlightColor: 'transparent',
+  });
 
   const saveSaved = (next: SavedVerse[]) => { setSaved(next); localStorage.setItem(LS.SAVED, JSON.stringify(next)); };
   const isSaved = (ref: string) => saved.some(s => s.ref === ref);
@@ -263,7 +353,34 @@ export default function App() {
     if (navigator.share) { try { await navigator.share({ title: ref, text: msg }); return; } catch {} }
     await navigator.clipboard.writeText(msg); alert('복사되었습니다!');
   };
-  const pickHomeVerse = (mood = selectedMood) => {
+  const pickHomeVerse = async (mood = selectedMood): Promise<BibleVerse> => {
+    const keywords = mood ? MOOD_KEYWORDS[mood] : CATEGORIES.filter(c => c !== '전체').flatMap(c => MOOD_KEYWORDS[c as Mood] || []);
+    const randomKeyword = keywords[Math.floor(Math.random() * keywords.length)];
+    
+    try {
+      const { searchBibleVerses } = await import('./services/bibleSearch');
+      const { items } = await searchBibleVerses(randomKeyword, { limit: 50 });
+      
+      if (items.length > 0) {
+        const item = items[Math.floor(Math.random() * items.length)];
+        const category = (mood && MOODS.find(m => m.label === mood)?.category) || '평안';
+        return {
+          id: Date.now(),
+          book: item.bookName,
+          chapter: String(item.chapter),
+          verse: String(item.verse),
+          content: item.text,
+          contentEn: '',
+          category: category as BibleVerse['category'],
+          meditation: '',
+          prayer: ''
+        };
+      }
+    } catch (e) {
+      console.error('Failed to pick home verse from full index', e);
+    }
+    
+    // Fallback to curated verses
     const category = mood ? MOODS.find(item => item.label === mood)?.category : null;
     const pool = category ? BIBLE_VERSES.filter(v => v.category === category) : BIBLE_VERSES;
     return pool[Math.floor(Math.random() * pool.length)];
@@ -273,25 +390,19 @@ export default function App() {
     const pool = category === '전체' ? BIBLE_VERSES : BIBLE_VERSES.filter(v => v.category === category);
     window.setTimeout(() => { setRndVerse(pool[Math.floor(Math.random() * pool.length)]); setRndLoading(false); confetti({ particleCount: 32, spread: 38, origin: { y: 0.55 } }); }, 220);
   }
-  const chooseMood = (mood: Mood) => {
+  const chooseMood = async (mood: Mood) => {
     const nextMood = selectedMood === mood ? null : mood;
     setSelectedMood(nextMood);
-    const pick = pickHomeVerse(nextMood);
+    const pick = await pickHomeVerse(nextMood);
     setHomeHistory(prev => [...prev.slice(0, homeIndex + 1), pick]);
     setHomeIndex(homeIndex + 1);
   };
-  const nextHomeVerse = () => {
+  const nextHomeVerse = async () => {
     if (homeIndex < homeHistory.length - 1) { setHomeIndex(homeIndex + 1); return; }
-    const pick = pickHomeVerse();
+    const pick = await pickHomeVerse();
     setHomeHistory(prev => [...prev, pick]); setHomeIndex(homeIndex + 1);
   };
-  const saveJournal = (e: FormEvent) => {
-    e.preventDefault(); if (!journalNote.trim()) return;
-    const entry = { id: String(Date.now()), ref: journalRef || '자유 묵상', date: todayText(), note: journalNote.trim() };
-    const next = [entry, ...journals]; setJournals(next); localStorage.setItem(LS.JOURNAL, JSON.stringify(next));
-    setJournalNote(''); setJournalRef(''); setShowJournalForm(false); confetti({ particleCount: 32, spread: 30 });
-  };
-  const deleteJournal = (id: string) => { const next = journals.filter(j => j.id !== id); setJournals(next); localStorage.setItem(LS.JOURNAL, JSON.stringify(next)); };
+
   const openCuratedDetail = (v: BibleVerse) => {
     const devotion = getDailyDevotion(v);
     setDetail({ ref: `${v.book} ${v.chapter}:${v.verse}`, text: v.content, ...devotion });
@@ -321,12 +432,6 @@ export default function App() {
     } else {
       alert('브라우저 메뉴(우측 상단 또는 하단 점 세개)에서 "앱 설치" 또는 "홈 화면에 추가"를 선택하시면 바탕화면에 아이콘이 생성됩니다.');
     }
-  };
-  const startJournalFromReading = (reference: string, note = '') => {
-    setJournalRef(reference);
-    setJournalNote(note);
-    setShowJournalForm(true);
-    setTab('journal');
   };
 
   const handleGoToMemory = (verse: { ref: string; text: string }) => {
@@ -379,8 +484,7 @@ export default function App() {
   const navigateToBible = (bookId: string, chapter: number) => {
     const book = BIBLE_BOOKS.find(b => b.id === bookId);
     if (book) {
-      setSelBook(book);
-      setSelChap(chapter);
+      handleBibleNavigate(book, chapter);
       setTab('read');
       setDetail(null);
       window.scrollTo(0, 0);
@@ -395,6 +499,13 @@ export default function App() {
     window.scrollTo(0, 0);
   };
 
+  const handleBibleNavigate = (book: import('./data/bibleBooks').BibleBook, chapter: number) => {
+    setSelBook(book);
+    setSelChap(chapter);
+    localStorage.setItem(LS.LAST_BOOK, book.id);
+    localStorage.setItem(LS.LAST_CHAP, chapter.toString());
+  };
+
   const handleStartPlan = (templateId: string) => {
     const template = READING_PLAN_TEMPLATES.find((t: any) => t.id === templateId);
     if (template) {
@@ -405,22 +516,33 @@ export default function App() {
   const handleSearchNavigate = (verse: import('./types/bible').BibleVerseRecord) => {
     const book = BIBLE_BOOKS.find(b => b.id === verse.bookId);
     if (book) {
-      setSelBook(book);
-      setSelChap(verse.chapter);
+      handleBibleNavigate(book, verse.chapter);
       setTab('read');
       setActiveReadingRange(null);
       setIsSearchOpen(false);
-      // We can also set a highlighted verse state if we want
-      window.scrollTo(0, 0);
+      
+      // Wait for the verses to load and render, then scroll to the specific verse
+      setTimeout(() => {
+        const el = document.getElementById(`verse-${verse.verse}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Highlight effect
+          el.style.transition = 'background-color 1s ease';
+          el.style.backgroundColor = 'rgba(245, 194, 146, 0.3)'; // Peach color
+          setTimeout(() => {
+            el.style.backgroundColor = 'white';
+          }, 2000);
+        }
+      }, 800); // 800ms to allow fetch and render
     }
   };
 
   return <div style={{ minHeight: '100vh', background: th.bg, color: th.text, fontFamily: "'S-Core Dream', sans-serif" }}>
-    {isSearchOpen && <BibleSearchSheet onClose={() => setIsSearchOpen(false)} onNavigate={handleSearchNavigate} T={th} />}
+    {isSearchOpen && <BibleSearchSheet onClose={() => setIsSearchOpen(false)} onNavigate={handleSearchNavigate} T={th} fontSize={fsize} />}
     
-    <main style={{ position: 'relative', zIndex: 2, maxWidth: 1220, margin: '0 auto', padding: '14px 16px 112px', minHeight: '100vh' }}>
+    <main style={{ position: 'relative', maxWidth: 1220, margin: '0 auto', padding: '14px 16px 112px', minHeight: '100vh' }}>
       <header style={{ position: 'sticky', top: 0, zIndex: 20, display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0 12px', background: `linear-gradient(180deg, ${th.bg} 74%, transparent)` }}>
-        <button aria-label="홈으로 이동" onClick={() => { setDetail(null); setTab('home'); setActiveReadingRange(null); }} style={{ ...circle(tab === 'home'), width: 46, height: 46, borderRadius: 18 }}><KawaiiHomeIcon size={25} /></button>
+        <button aria-label="홈으로 이동" onClick={() => { setDetail(null); setTab('home'); setActiveReadingRange(null); }} style={{ ...circle(tab === 'home'), width: 46, height: 46, borderRadius: 18 }}>{pageIcon}</button>
         <div style={{ minWidth: 0, flex: 1 }}><div className="title-font" style={{ fontSize: 11, color: th.sub, fontWeight: 800 }}>SION BIBLE</div><div className="title-font" style={{ fontWeight: 800, fontSize: '1.15rem', lineHeight: 1.22, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pageTitle}</div></div>
         
         {tab === 'home' ? (
@@ -429,7 +551,10 @@ export default function App() {
             <button aria-label="설정" onClick={() => setTab('settings')} style={circle(false)}><KawaiiSettingsIcon size={23} /></button>
           </>
         ) : tab === 'read' ? (
-          <button aria-label="성경 검색" onClick={() => setIsSearchOpen(true)} style={circle(false)}><Search size={22} /></button>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, flex: '0 0 auto' }}>
+            <span style={{ height: 38, display: 'inline-flex', alignItems: 'center', padding: '0 12px', borderRadius: 15, border: `1px solid ${th.line}`, background: th.solid, color: th.accent, boxShadow: th.soft, fontWeight: 900, fontSize: 12, whiteSpace: 'nowrap' }}>{selChap}/{selBook.chapters}장</span>
+            <button aria-label="성경 검색" onClick={() => setIsSearchOpen(true)} style={circle(false)}><Search size={22} /></button>
+          </div>
         ) : (
           <button aria-label="설정" onClick={() => setTab('settings')} style={circle(tab === 'settings')}><KawaiiSettingsIcon size={23} /></button>
         )}
@@ -450,10 +575,33 @@ export default function App() {
                 <div style={{ display: 'flex', gap: 6, flex: '0 0 auto' }}><button onClick={nextHomeVerse} style={{ ...btn(false), padding: '7px 10px', whiteSpace: 'nowrap' }}>말씀 더보기</button><button onClick={() => toggleSave(`${currentHomeVerse.book} ${currentHomeVerse.chapter}:${currentHomeVerse.verse}`, currentHomeVerse.content, currentHomeVerse.meditation, currentHomeVerse.prayer)} style={{ ...btn(isSaved(`${currentHomeVerse.book} ${currentHomeVerse.chapter}:${currentHomeVerse.verse}`)), padding: '7px 10px', whiteSpace: 'nowrap' }}><KawaiiSavedIcon size={17} /><span>저장</span></button></div>
               </div>
               <button onClick={nextHomeVerse} style={{ width: '100%', textAlign: 'left', border: `1px solid ${th.line}`, borderRadius: 22, background: th.card, color: th.text, padding: '15px 16px', fontFamily: 'inherit', cursor: 'pointer', boxShadow: th.soft }}>
-                <p style={{ margin: 0, fontSize: fsize, lineHeight: 1.82, wordBreak: 'keep-all' }}>"{currentHomeVerse.content}"</p>
+                <p style={{ margin: 0, fontSize: fsize, lineHeight: 1.82, wordBreak: 'keep-all' }}>"{decodeHtml(currentHomeVerse.content)}"</p>
                 <div style={{ marginTop: 9, color: th.accent, fontWeight: 900, fontSize: 12 }}>{currentHomeVerse.book} {currentHomeVerse.chapter}:{currentHomeVerse.verse}</div>
               </button>
-              <div style={{ display: 'grid', gap: 8, marginTop: 10 }}><div className="serif-verse" style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 13 }}><div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 12 }}><KawaiiMeditationIcon size={18} /><span>{currentHomeDevotion.title || '묵상'}</span></div><div style={{ fontSize: fsize, lineHeight: 1.8 }}>{currentHomeDevotion.meditation}</div></div><div className="serif-verse" style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 13 }}><div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 12 }}><KawaiiPrayerIcon size={18} /><span>기도문</span></div><div style={{ fontSize: fsize, lineHeight: 1.8 }}>{currentHomeDevotion.prayer}</div></div></div>
+              <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
+                <div className="serif-verse" style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 13, position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 12 }}>
+                    <KawaiiMeditationIcon size={18} />
+                    <span className={homeDevotionLoading ? "animate-pulse" : ""}>
+                      {homeDevotionLoading ? '묵상할 바를 생각중입니다...' : (currentHomeDevotion.title || '묵상')}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: fsize, lineHeight: 1.8 }}>
+                    {decodeHtml(currentHomeDevotion.meditation)}
+                  </div>
+                </div>
+                <div className="serif-verse" style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 13, position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 12 }}>
+                    <KawaiiPrayerIcon size={18} />
+                    <span className={homeDevotionLoading ? "animate-pulse" : ""}>
+                      {homeDevotionLoading ? '기도할 바를 생각중입니다...' : '기도문'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: fsize, lineHeight: 1.8 }}>
+                    {decodeHtml(currentHomeDevotion.prayer)}
+                  </div>
+                </div>
+              </div>
             </section>
 
           </section>
@@ -465,7 +613,7 @@ export default function App() {
         </div>
       </div>}
       {tab === 'random' && <div style={{ display: 'grid', gap: 12 }}>
-        <section style={{ borderRadius: 24, background: th.panel, border: `1px solid ${th.line}`, boxShadow: th.shadow, padding: 12 }}><div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>{CATEGORIES.map(c => <button key={c} onClick={() => { setSelCat(c); pickRandom(c); }} style={chip(selCat === c)}>{c}</button>)}</div><div style={{ display: 'grid', gridTemplateColumns: 'minmax(120px,1.4fr) repeat(3,minmax(70px,0.8fr))', gap: 8 }} className="compact-menu-grid"><button onClick={() => pickRandom()} disabled={rndLoading} style={{ ...btn(true), padding: '10px 8px' }}>{rndLoading ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <KawaiiRandomIcon size={20} />}<span>새 말씀 받기</span></button><button onClick={() => setTab('read')} style={btn(false)}><KawaiiBibleIcon size={18} /><span>성경</span></button><button onClick={() => { if (rndVerse) setJournalRef(`${rndVerse.book} ${rndVerse.chapter}:${rndVerse.verse}`); setTab('saved'); setShowJournalForm(true); }} style={btn(false)}><KawaiiJournalIcon size={18} /><span>기록</span></button><button onClick={() => setTab('saved')} style={btn(false)}><KawaiiSavedIcon size={18} /><span>저장</span></button></div></section>
+        <section style={{ borderRadius: 24, background: th.panel, border: `1px solid ${th.line}`, boxShadow: th.shadow, padding: 12 }}><div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>{CATEGORIES.map(c => <button key={c} onClick={() => { setSelCat(c); pickRandom(c); }} style={chip(selCat === c)}>{c}</button>)}</div><div style={{ display: 'grid', gridTemplateColumns: 'minmax(120px,1.4fr) repeat(2,minmax(70px,0.8fr))', gap: 8 }} className="compact-menu-grid"><button onClick={() => pickRandom()} disabled={rndLoading} style={{ ...btn(true), padding: '10px 8px' }}>{rndLoading ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <KawaiiRandomIcon size={20} />}<span>새 말씀 받기</span></button><button onClick={() => setTab('read')} style={btn(false)}><KawaiiBibleIcon size={18} /><span>성경</span></button><button onClick={() => setTab('saved')} style={btn(false)}><KawaiiSavedIcon size={18} /><span>저장</span></button></div></section>
         {rndLoading && <Card title="준비 중" subtitle="은혜로운 말씀을 찾고 있습니다" T={th} compact><div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 20, color: th.sub }}><Loader2 size={22} style={{ animation: 'spin 1s linear infinite' }} />불러오는 중...</div></Card>}
         {!rndLoading && rndVerse && <VerseCard v={rndVerse} large />}
       </div>}
@@ -483,11 +631,12 @@ export default function App() {
             fontSize={fsize}
             readingRange={activeReadingRange}
             onExitRange={handleCompleteReadingFromRange}
+            onNavigate={handleBibleNavigate}
           />
         </div>
       )}
 
-      {tab === 'plan' && <ReadingPlanHome T={th} progress={readingProgress} onToggleDay={handleToggleReadingDay} onStartPlan={handleStartPlan} onSaveJournal={startJournalFromReading} onNavigateToBible={navigateToBible} onNavigateToRange={handleNavigateToRange} onTodayTaskLoaded={setTodayReadingTask} />}
+      {tab === 'plan' && <ReadingPlanHome T={th} progress={readingProgress} onToggleDay={handleToggleReadingDay} onStartPlan={handleStartPlan} onNavigateToBible={navigateToBible} onNavigateToRange={handleNavigateToRange} onTodayTaskLoaded={setTodayReadingTask} />}
 
       {tab === 'memory' && <MemoryHome T={th} savedVerses={saved} />}
 
@@ -547,17 +696,32 @@ export default function App() {
         </Card>
       </div>}
 
-      {tab === 'journal' && <div style={{ display: 'grid', gap: 12 }}>
-        <Card title="오늘 받은 은혜" subtitle="저장 화면 안에서 묵상 일기를 함께 관리" T={th} compact>
-          <div style={{ marginBottom: 10 }}><button onClick={() => setShowJournalForm(v => !v)} style={btn(true)}><KawaiiJournalIcon size={18} /><span>{showJournalForm ? '닫기' : '새 기록 작성'}</span></button></div>
-          {showJournalForm && <form onSubmit={saveJournal} style={{ display: 'grid', gap: 8, marginBottom: 12 }}><input value={journalRef} onChange={e => setJournalRef(e.target.value)} placeholder="관련 말씀" style={inputStyle(th)} /><textarea value={journalNote} onChange={e => setJournalNote(e.target.value)} rows={5} placeholder="묵상과 기도를 적어보세요" style={{ ...inputStyle(th), resize: 'vertical', lineHeight: 1.8 }} /><div style={{ display: 'flex', gap: 8 }}><button type="submit" style={btn(true)}>저장하기</button><button type="button" onClick={() => setShowJournalForm(false)} style={btn(false)}>취소</button></div></form>}
-          <div style={{ display: 'grid', gap: 8 }}>{journals.length === 0 && <div style={{ color: th.sub, fontSize: 14 }}>아직 작성된 묵상 일기가 없습니다.</div>}{journals.map(j => <div key={j.id} style={{ borderRadius: 16, border: `1px solid ${th.line}`, background: th.solid, padding: 12 }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}><div><div style={{ fontWeight: 900, fontSize: 13 }}>{j.ref}</div><div style={{ fontSize: 10, color: th.sub }}>{j.date}</div></div><button onClick={() => deleteJournal(j.id)} style={circle(false)}><X size={12} /></button></div><div style={{ fontSize: 13, lineHeight: 1.85, wordBreak: 'keep-all' }}>{j.note}</div></div>)}</div>
-        </Card>
-      </div>}
+
       {tab === 'settings' && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 12 }} className="screen-grid"><Card title="테마" subtitle="감성 전환" T={th} compact><div style={{ display: 'grid', gap: 8 }}>{([['a-soft', 'Soft'], ['a-dark', 'Dark']] as const).map(([k, l]) => <button key={k} onClick={() => { setTheme(k); localStorage.setItem(LS.THEME, k); }} style={{ ...btn(theme === k), justifyContent: 'flex-start' }}><KawaiiVerseIcon size={18} />{l}</button>)}</div></Card><Card title="글자 크기" subtitle="본문 크기" T={th} compact><div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 7 }}>{([['sm','작게'],['base','보통'],['lg','크게'],['xl','아주 크게']] as const).map(([k,l]) => <button key={k} onClick={() => { setFontSize(k); localStorage.setItem(LS.SIZE, k); }} style={chip(fontSize === k)}>{l}</button>)}</div></Card><Card title="앱 설치" subtitle="홈 화면에 추가" T={th} compact><button disabled={!installPrompt} onClick={async () => { await installPrompt?.prompt?.(); setInstallPrompt(null); }} style={{ ...btn(Boolean(installPrompt)), opacity: installPrompt ? 1 : 0.55 }}>설치하기</button></Card></div>}
     </main>
 
-    <nav style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 90, padding: '8px 8px calc(8px + env(safe-area-inset-bottom))', background: `linear-gradient(180deg, transparent, ${th.bg} 18%, ${th.bg})` }}><div style={{ maxWidth: 540, margin: '0 auto', display: 'grid', gridTemplateColumns: `repeat(${navItems.length}, 1fr)`, gap: 4, borderRadius: 22, background: th.panel, border: `1px solid ${th.line}`, boxShadow: th.shadow, padding: 6 }}>{navItems.map(n => <button key={n.id} aria-label={`${n.label} 탭`} onClick={() => setTab(n.id)} style={{ minWidth: 0, minHeight: 48, borderRadius: 15, border: `1px solid ${tab === n.id ? th.accent : 'transparent'}`, background: tab === n.id ? th.pill : 'transparent', color: tab === n.id ? th.accent : th.sub, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer', fontFamily: 'inherit', fontWeight: tab === n.id ? 900 : 700, fontSize: 9 }}>{n.icon}<span>{n.label}</span></button>)}</div></nav>
+    {tab === 'read' && !activeReadingRange && (
+      <>
+        <button
+          aria-label="이전 장"
+          disabled={!canGoPreviousChapter}
+          onClick={() => navigateChapterBy(-1)}
+          style={chapterSideButton('left', canGoPreviousChapter)}
+        >
+          <ChevronLeft size={30} strokeWidth={2.2} />
+        </button>
+        <button
+          aria-label="다음 장"
+          disabled={!canGoNextChapter}
+          onClick={() => navigateChapterBy(1)}
+          style={chapterSideButton('right', canGoNextChapter)}
+        >
+          <ChevronRight size={30} strokeWidth={2.2} />
+        </button>
+      </>
+    )}
+
+    <nav style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 90, padding: '8px 8px calc(8px + env(safe-area-inset-bottom))', background: `linear-gradient(180deg, transparent, ${th.bg} 18%, ${th.bg})` }}><div style={{ maxWidth: 540, margin: '0 auto', display: 'grid', gridTemplateColumns: `repeat(${navItems.length}, 1fr)`, gap: 4, borderRadius: 22, background: th.panel, border: `1px solid ${th.line}`, boxShadow: th.shadow, padding: 6 }}>{navItems.map(n => <button key={n.id} className={tab === n.id ? 'bottom-nav-item active' : 'bottom-nav-item'} aria-label={`${n.label} 탭`} onClick={() => setTab(n.id)} style={{ minWidth: 0, minHeight: 48, borderRadius: 15, border: `1px solid ${tab === n.id ? th.accent : 'transparent'}`, background: tab === n.id ? th.pill : 'transparent', color: tab === n.id ? th.accent : th.sub, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer', fontFamily: 'inherit', fontWeight: tab === n.id ? 900 : 700, fontSize: 9, transform: tab === n.id ? 'translateY(-6px) scale(1.08)' : 'translateY(0) scale(1)', transition: 'transform 180ms ease, background 180ms ease, border-color 180ms ease' }}>{n.icon}<span>{n.label}</span></button>)}</div></nav>
 
 
     {detail && <div style={{ position: 'fixed', inset: 0, zIndex: 120, display: 'flex', alignItems: 'flex-end' }}><div onClick={() => setDetail(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.38)', backdropFilter: 'blur(4px)' }} /><div style={{ position: 'relative', width: '100%', maxHeight: '85vh', overflowY: 'auto', background: th.panel, borderTopLeftRadius: 26, borderTopRightRadius: 26, border: `1px solid ${th.line}`, padding: 16 }}><div style={{ width: 38, height: 4, borderRadius: 4, background: th.line, margin: '0 auto 12px' }} /><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}><div style={{ fontWeight: 900, color: th.accent, fontSize: 15 }}>{detail.ref}</div><button onClick={() => setDetail(null)} style={circle(false)}><X size={12} /></button></div><div style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 14, marginBottom: 10 }}><div style={{ fontSize: fsize, lineHeight: 1.9, wordBreak: 'keep-all' }}>"{detail.text}"</div></div><VerseDevotionPanel selectedVerse={detail} onGoToMemory={handleGoToMemory} fontSize={fsize} /></div></div>}
@@ -565,8 +729,11 @@ export default function App() {
     <style>{`
       * { box-sizing: border-box; }
       @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
       @keyframes savedWiggle { 0%, 100% { transform: rotate(-0.35deg) translateY(0); } 50% { transform: rotate(0.35deg) translateY(-1px); } }
+      @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
       .reorder-card { animation: savedWiggle 0.22s ease-in-out infinite; touch-action: none; }
+      .animate-pulse { animation: pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
       @media (max-width: 900px) { .screen-grid { grid-template-columns: 1fr !important; } .compact-menu-grid { grid-template-columns: repeat(2, minmax(0,1fr)) !important; } }
       @media (max-width: 680px) { .mood-chip-grid { grid-template-columns: repeat(4, minmax(0,1fr)) !important; } }
       @media (max-width: 520px) { .book-grid { grid-template-columns: repeat(3,1fr) !important; } .detail-actions { grid-template-columns: repeat(2,1fr) !important; } .mood-chip-grid { grid-template-columns: repeat(3, minmax(0,1fr)) !important; } }
@@ -604,9 +771,7 @@ function getCardIcon(title: string) {
   return null;
 }
 
-function inputStyle(T: any): CSSProperties {
-  return { width: '100%', padding: '10px 11px', borderRadius: 13, border: `1px solid ${T.line}`, background: T.solid, color: T.text, fontSize: 13, fontFamily: 'inherit', outline: 'none' };
-}
+
 
 
 
