@@ -6,44 +6,36 @@ const QUESTION_GROUPS = [
   {
     label: '본문 이해',
     questions: [
-      '이 구절의 핵심 메시지는 무엇인가요?',
-      '이 말씀의 배경과 앞뒤 흐름을 알려주세요.',
-      '이 본문에서 가장 중요한 단어나 표현은 무엇인가요?',
+      '핵심 메시지는?',
+      '앞뒤 흐름은?',
+      '핵심 단어는?',
     ],
   },
   {
     label: '하나님 관점',
     questions: [
-      '하나님의 관점에서 이 구절은 무엇을 보여주나요?',
-      '이 구절은 내 안의 어떤 두려움이나 불신을 비추나요?',
+      '하나님은 어떤 분이신가요?',
+      '이 말씀이 비추는 내 마음은?',
     ],
   },
   {
-    label: '예수님 의지',
+    label: '예수님 연결',
     questions: [
-      '이 말씀은 예수 그리스도를 의지하는 삶과 어떻게 연결되나요?',
-      '이 구절을 잘못 적용하지 않으려면 무엇을 조심해야 하나요?',
-    ],
-  },
-  {
-    label: '성령 동행',
-    questions: [
-      '이 말씀을 성령과 동행하는 삶에 어떻게 적용할 수 있나요?',
-      '성령께 어떤 도움을 구하며 이 말씀을 살아내야 할까요?',
+      '예수님과 어떻게 연결되나요?',
     ],
   },
   {
     label: '오늘 적용',
     questions: [
-      '오늘 이 말씀에 순종한다면 구체적으로 무엇을 해야 할까요?',
-      '이 말씀과 연결되는 다른 성경 주제는 무엇인가요?',
+      '오늘 무엇에 순종할까요?',
+      '내려놓을 것은 무엇인가요?',
     ],
   },
   {
     label: '기도와 암송',
     questions: [
-      '이 말씀으로 어떻게 기도하면 좋을까요?',
-      '이 말씀을 암송할 때 붙들 핵심 단어는 무엇인가요?',
+      '어떻게 기도하면 좋을까요?',
+      '붙들 핵심 단어는?',
     ],
   },
 ];
@@ -151,15 +143,15 @@ export function VerseQuestionPanel({ verse, devotion }: VerseQuestionPanelProps)
 
           <div className="space-y-4">
             {QUESTION_GROUPS.map((group) => (
-              <div key={group.label} className="space-y-2">
-                <p className="px-1 text-[10px] font-black text-[#A17C5B]">{group.label}</p>
-                <div className="grid gap-2">
+              <div key={group.label} className="space-y-1.5">
+                <p className="px-1 text-[10px] font-black text-[#A17C5B] uppercase tracking-wider">{group.label}</p>
+                <div className="flex flex-wrap gap-1.5">
                   {group.questions.map((item) => (
                     <button
                       key={item}
                       type="button"
                       onClick={() => handleAsk(item)}
-                      className="w-full text-left rounded-2xl bg-white/80 px-4 py-3 text-[12px] font-bold text-[#5C4D42] border border-[#E8D8C8] hover:bg-[#FDF2E7] hover:border-[#F5C292] transition-all shadow-sm leading-relaxed"
+                      className="rounded-xl bg-white/80 px-3 py-2 text-[11px] font-bold text-[#5C4D42] border border-[#E8D8C8] hover:bg-[#FDF2E7] hover:border-[#F5C292] transition-all shadow-sm whitespace-nowrap"
                     >
                       {item}
                     </button>
