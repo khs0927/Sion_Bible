@@ -302,12 +302,25 @@ export default function App() {
     setDetail(cached ? { ref, text, ...cached, fromCache: true } : initial);
   };
   const installApp = async () => {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
+    if (isStandalone) {
+      alert('이미 앱이 설치되어 있습니다. 홈 화면의 아이콘을 통해 이용해 주세요!');
+      return;
+    }
+
     if (installPrompt?.prompt) {
-      await installPrompt.prompt();
+      const result = await installPrompt.prompt();
+      console.log('Install prompt result:', result);
       setInstallPrompt(null);
       return;
     }
-    alert('브라우저 메뉴에서 "앱 설치" 또는 "홈 화면에 추가"를 선택해 바로가기를 만들 수 있습니다.');
+
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS) {
+      alert('iPhone/iPad에서는 브라우저 하단의 [공유] 버튼을 누른 후, [홈 화면에 추가]를 선택하시면 바탕화면에 아이콘이 생성됩니다.');
+    } else {
+      alert('브라우저 메뉴(우측 상단 또는 하단 점 세개)에서 "앱 설치" 또는 "홈 화면에 추가"를 선택하시면 바탕화면에 아이콘이 생성됩니다.');
+    }
   };
   const startJournalFromReading = (reference: string, note = '') => {
     setJournalRef(reference);
