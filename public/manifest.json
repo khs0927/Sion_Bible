@@ -4,8 +4,8 @@
   "description": "무료로 즐기는 랜덤 성경말씀 구절, 묵상, 그리고 기도문 생성 앱입니다.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#faf8f5",
-  "theme_color": "#6b7280",
+  "background_color": "#EADDD2",
+  "theme_color": "#9A8FE3",
   "icons": [
     {
       "src": "/icon-512.png",
