@@ -215,6 +215,19 @@ export default function App() {
   /* ─── style helpers ─── */
   const th = TH(theme);
   const fsize = FS[fontSize];
+  const navItems = [
+    { id: 'home', label: '홈', icon: <Home size={18} /> },
+    { id: 'read', label: '읽기', icon: <BookOpen size={18} /> },
+    { id: 'random', label: '말씀', icon: <Sparkles size={18} /> },
+    { id: 'journal', label: '일기', icon: <PenTool size={18} /> },
+    { id: 'saved', label: '저장', icon: <Heart size={18} /> },
+  ] as const;
+
+  const goHome = () => {
+    setShowBookPicker(false);
+    setSelVerse(null);
+    setTab('home');
+  };
 
   const btn = (active: boolean): React.CSSProperties => ({
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -234,6 +247,17 @@ export default function App() {
     padding: '9px 11px', borderRadius: 13, border: `1px solid ${active ? th.accent : th.line}`,
     background: active ? th.pill : th.solid, color: active ? th.text : th.sub,
     cursor: 'pointer', fontWeight: active ? 800 : 600, fontSize: 12, fontFamily: 'inherit',
+  });
+
+  const chapterButton = (disabled: boolean): React.CSSProperties => ({
+    ...circle(false),
+    width: 44,
+    height: 44,
+    borderRadius: 16,
+    background: disabled ? 'rgba(255,255,255,0.34)' : th.accent,
+    color: disabled ? th.sub : theme === 'a-dark' ? '#1f342d' : '#ffffff',
+    opacity: disabled ? 0.46 : 1,
+    boxShadow: disabled ? 'none' : '0 10px 18px rgba(64, 120, 100, 0.24)',
   });
 
   /* ─── verse card component ─── */
@@ -284,20 +308,38 @@ export default function App() {
   /* ══════════════════════════════════════════════════════════ */
   return (
     <div style={{ minHeight: '100vh', background: th.bg, color: th.text, fontFamily: "'Pretendard', sans-serif" }}>
-      <main style={{ position: 'relative', zIndex: 2, maxWidth: 1260, margin: '0 auto', padding: '22px 16px 100px', overflowY: 'auto', maxHeight: '100vh' }}>
+      <main style={{ position: 'relative', zIndex: 2, maxWidth: 1260, margin: '0 auto', padding: '14px 16px 112px', overflowY: 'auto', maxHeight: '100vh' }}>
+
+        <header style={{ position: 'sticky', top: 0, zIndex: 20, display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0 14px', background: `linear-gradient(180deg, ${th.bg} 72%, transparent)` }}>
+          <button aria-label="홈으로 이동" onClick={goHome} style={{ ...circle(tab === 'home'), width: 42, height: 42, borderRadius: 16 }}>
+            <Home size={17} />
+          </button>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 11, color: th.sub, fontWeight: 800, letterSpacing: '0.12em' }}>SION BIBLE</div>
+            <div style={{ fontWeight: 900, fontSize: '1.04rem', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {tab === 'home' && '은혜의 말씀'}
+              {tab === 'read' && `${selBook.name} ${selChap}장`}
+              {tab === 'random' && '랜덤 말씀'}
+              {tab === 'journal' && '묵상 일기'}
+              {tab === 'saved' && '저장한 말씀'}
+              {tab === 'settings' && '설정'}
+            </div>
+          </div>
+          <button aria-label="설정" onClick={() => setTab('settings')} style={circle(tab === 'settings')}><Settings size={16} /></button>
+        </header>
 
         {/* ─── HEADER (no duplicate titles) ─── */}
         {tab === 'read' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-            <button onClick={() => setShowBookPicker(true)} style={circle(false)}><ChevronLeft size={18} /></button>
+          <div style={{ display: 'grid', gridTemplateColumns: '44px minmax(0, 1fr) 44px', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <button aria-label="이전 장" onClick={() => { if (selChap > 1) setSelChap(c => c - 1); }} style={chapterButton(selChap === 1)} disabled={selChap === 1}><ChevronLeft size={22} /></button>
             <div>
-              <div style={{ fontWeight: 800, fontSize: '1.25rem', lineHeight: 1.2 }}>{selBook.name} {selChap}장</div>
-              <div style={{ fontSize: 11, color: th.sub }}>{selBook.chapters}장 중 {selChap}장</div>
+              <button onClick={() => setShowBookPicker(true)} style={{ ...btn(false), width: '100%', justifyContent: 'center', padding: '12px 14px' }}>
+                <BookOpen size={16} />
+                <span>{selBook.name}</span>
+                <span style={{ color: th.sub }}>{selChap} / {selBook.chapters}장</span>
+              </button>
             </div>
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: 5 }}>
-              <button onClick={() => { if (selChap > 1) setSelChap(c => c - 1); }} style={circle(false)} disabled={selChap === 1}><ChevronLeft size={14} /></button>
-              <button onClick={() => { if (selChap < selBook.chapters) setSelChap(c => c + 1); }} style={circle(false)} disabled={selChap === selBook.chapters}><ChevronRight size={14} /></button>
-            </div>
+            <button aria-label="다음 장" onClick={() => { if (selChap < selBook.chapters) setSelChap(c => c + 1); }} style={chapterButton(selChap === selBook.chapters)} disabled={selChap === selBook.chapters}><ChevronRight size={22} /></button>
           </div>
         )}
 
@@ -502,7 +544,7 @@ export default function App() {
 
         {/* ─── READ TAB ─── */}
         {tab === 'read' && (
-          <Card title={`${selBook.name} ${selChap}장`} subtitle={`총 ${verses.length}절`} T={th} span="span 12">
+          <Card title={`총 ${verses.length}절`} subtitle={`${selBook.name} ${selChap}장을 읽고 있습니다`} T={th} span="span 12">
             {loading && <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, padding: 30, color: th.sub }}><Loader2 size={22} style={{ animation: 'spin 1s linear infinite' }} />말씀을 불러오는 중...</div>}
             {err && <div style={{ padding: 14, borderRadius: 14, background: 'rgba(255,120,120,0.08)', color: '#c95353', border: '1px solid rgba(255,120,120,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>{err}</span>
@@ -607,6 +649,36 @@ export default function App() {
           </div>
         )}
       </main>
+
+      <nav style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 90, padding: '8px 12px calc(8px + env(safe-area-inset-bottom))', background: `linear-gradient(180deg, transparent, ${th.bg} 18%, ${th.bg})` }}>
+        <div style={{ maxWidth: 520, margin: '0 auto', display: 'grid', gridTemplateColumns: `repeat(${navItems.length}, 1fr)`, gap: 6, borderRadius: 22, background: th.panel, border: `1px solid ${th.line}`, boxShadow: th.shadow, padding: 7 }}>
+          {navItems.map(n => {
+            const active = tab === n.id;
+            return (
+              <button key={n.id} aria-label={`${n.label} 탭`} onClick={() => setTab(n.id)} style={{
+                minWidth: 0,
+                minHeight: 48,
+                borderRadius: 16,
+                border: `1px solid ${active ? th.accent : 'transparent'}`,
+                background: active ? th.pill : 'transparent',
+                color: active ? th.accent : th.sub,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 3,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                fontWeight: active ? 900 : 700,
+                fontSize: 10,
+              }}>
+                {n.icon}
+                <span>{n.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
 
       {/* ─── BOOK PICKER MODAL ─── */}
       {showBookPicker && (
