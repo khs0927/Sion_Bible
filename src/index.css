@@ -1,5 +1,76 @@
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
-@import "tailwindcss";
+﻿@import "tailwindcss";
+
+@font-face {
+  font-family: 'OAGothic';
+  src: url('/fonts/OAGothic-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'OAGothic';
+  src: url('/fonts/OAGothic-ExtraBold.otf') format('opentype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MaruBuri';
+  src: url('/fonts/MaruBuriOTF/MaruBuri-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MaruBuri';
+  src: url('/fonts/MaruBuriOTF/MaruBuri-SemiBold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'S-Core Dream';
+  src: url('/fonts/SCDream4.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'S-Core Dream';
+  src: url('/fonts/SCDream6.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'S-Core Dream';
+  src: url('/fonts/SCDream8.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Giants';
+  src: url('/fonts/Giants-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Giants';
+  src: url('/fonts/Giants-Bold.otf') format('opentype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -15,21 +86,26 @@ html, body, #root {
 }
 
 body {
-  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont,
+  font-family: 'S-Core Dream', -apple-system, BlinkMacSystemFont,
     'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
   word-break: keep-all;
   overflow-wrap: break-word;
 }
 
 button {
-  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont,
+  font-family: 'S-Core Dream', -apple-system, BlinkMacSystemFont,
     'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
   word-break: keep-all;
 }
 
 input, textarea, select {
-  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont,
+  font-family: 'S-Core Dream', -apple-system, BlinkMacSystemFont,
     'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+}
+
+.title-font {
+  font-family: 'OAGothic', 'S-Core Dream', sans-serif;
+  letter-spacing: 0;
 }
 
 ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -45,3 +121,10 @@ input, textarea, select {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+.serif-verse {
+  font-family: 'MaruBuri', 'S-Core Dream', serif;
+  font-style: normal;
+}
+
+
