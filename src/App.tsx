@@ -759,9 +759,9 @@ export default function App() {
     <ChapterNavigatorSheet 
         open={isChapterSheetOpen}
         onClose={() => setIsChapterSheetOpen(false)}
-        bookName={selBook.name}
+        selectedBook={selBook}
         currentChapter={selChap}
-        totalChapters={selBook.chapters}
+        onSelectBook={setSelBook}
         onSelectChapter={handleSelectChapter}
         T={th}
     />
