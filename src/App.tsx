@@ -10,8 +10,8 @@ import { MemoryHome } from './components/memory/MemoryHome';
 import { getDailyDevotion } from './services/dailyDevotions';
 import { readCachedVerseDevotion } from './services/verseDevotionApi';
 import { VerseDevotionPanel } from './components/bible/VerseDevotionPanel';
+import { ChapterNavigatorSheet } from './components/bible/ChapterNavigatorSheet';
 import { addMemoryVerse, isVerseMemorized } from './services/memoryStorage';
-import { BibleBookChapterSelector } from './components/bible/BibleBookChapterSelector';
 import { BibleVersePicker } from './components/bible/BibleVersePicker';
 import { convertTaskToBibleRange } from './services/readingPlanToBibleRange';
 import type { ReadingDayTask } from './types/readingPlan';
@@ -159,9 +159,9 @@ export default function App() {
   const [activeReadingRange, setActiveReadingRange] = useState<BibleReadRange | null>(null);
   const [readingProgress, setReadingProgress] = useState<import('./types/readingPlan').ReadingPlanProgress | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isChapterSheetOpen, setIsChapterSheetOpen] = useState(false);
   const [homeDevotion, setHomeDevotion] = useState<import('./services/verseDevotionApi').VerseDevotionResult | null>(null);
   const [homeDevotionLoading, setHomeDevotionLoading] = useState(false);
-  const [isLocationSelectorOpen, setIsLocationSelectorOpen] = useState(false);
 
   useEffect(() => {
     setReadingProgress(getActiveReadingPlan());
@@ -226,6 +226,12 @@ export default function App() {
     fetchDevotion();
     return () => { active = false; };
   }, [currentHomeVerse]);
+
+  const handleSelectChapter = (chapter: number) => {
+    setSelChap(chapter);
+    setIsChapterSheetOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   useEffect(() => {
     try { const s = localStorage.getItem(LS.SAVED); if (s) setSaved(JSON.parse(s)); } catch {}
@@ -541,25 +547,6 @@ export default function App() {
 
   return <div style={{ minHeight: '100vh', background: th.bg, color: th.text, fontFamily: "'S-Core Dream', sans-serif" }}>
     {isSearchOpen && <BibleSearchSheet onClose={() => setIsSearchOpen(false)} onNavigate={handleSearchNavigate} T={th} fontSize={fsize} />}
-    {isLocationSelectorOpen && (
-      <BibleBookChapterSelector 
-        selectedBook={selBook} 
-        selectedChapter={selChap} 
-        onSelectBook={(book) => {
-          setSelBook(book);
-          setSelChap(1);
-          setIsLocationSelectorOpen(false);
-          handlePickerNavigate(book, 1);
-        }}
-        onSelectChapter={(chap) => {
-          setSelChap(chap);
-          setIsLocationSelectorOpen(false);
-          handlePickerNavigate(selBook, chap);
-        }}
-        isOpen={isLocationSelectorOpen}
-        onClose={() => setIsLocationSelectorOpen(false)}
-      />
-    )}
     
     <main style={{ position: 'relative', maxWidth: 1220, margin: '0 auto', padding: '14px 16px 112px', minHeight: '100vh' }}>
       <header style={{ position: 'sticky', top: 0, zIndex: 20, display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0 12px', background: `linear-gradient(180deg, ${th.bg} 74%, transparent)` }}>
@@ -574,11 +561,27 @@ export default function App() {
         ) : tab === 'read' ? (
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, flex: '0 0 auto' }}>
             <button 
-              aria-label="장 선택"
-              onClick={() => setIsLocationSelectorOpen(true)}
-              style={{ height: 38, display: 'inline-flex', alignItems: 'center', padding: '0 12px', borderRadius: 15, border: 'none', background: th.solid, color: th.accent, boxShadow: th.soft, fontWeight: 900, fontSize: 12, whiteSpace: 'nowrap', cursor: 'pointer', outline: 'none', WebkitTapHighlightColor: 'transparent' }}
+              aria-label={`${selBook.name} 장 선택`}
+              onClick={() => !activeReadingRange && setIsChapterSheetOpen(true)}
+              style={{ 
+                height: 38, 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                padding: '0 12px', 
+                borderRadius: 15, 
+                border: activeReadingRange ? 'none' : `1px solid ${th.line}`, 
+                background: activeReadingRange ? 'transparent' : th.solid, 
+                color: th.accent, 
+                boxShadow: activeReadingRange ? 'none' : th.soft, 
+                fontWeight: 900, 
+                fontSize: 12, 
+                whiteSpace: 'nowrap',
+                cursor: activeReadingRange ? 'default' : 'pointer',
+                outline: 'none',
+                WebkitTapHighlightColor: 'transparent'
+              }}
             >
-              {selChap}/{selBook.chapters}장
+              {selChap}/{selBook.chapters}{selBook.name === '시편' ? '편' : '장'}
             </button>
             <button aria-label="성경 검색" onClick={() => setIsSearchOpen(true)} style={circle(false)}><Search size={22} /></button>
           </div>
@@ -659,7 +662,6 @@ export default function App() {
             readingRange={activeReadingRange}
             onExitRange={handleCompleteReadingFromRange}
             onNavigate={handleBibleNavigate}
-            onOpenSelector={() => setIsLocationSelectorOpen(true)}
           />
         </div>
       )}
@@ -753,6 +755,16 @@ export default function App() {
 
 
     {detail && <div style={{ position: 'fixed', inset: 0, zIndex: 120, display: 'flex', alignItems: 'flex-end' }}><div onClick={() => setDetail(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.38)', backdropFilter: 'blur(4px)' }} /><div style={{ position: 'relative', width: '100%', maxHeight: '85vh', overflowY: 'auto', background: th.panel, borderTopLeftRadius: 26, borderTopRightRadius: 26, border: `1px solid ${th.line}`, padding: 16 }}><div style={{ width: 38, height: 4, borderRadius: 4, background: th.line, margin: '0 auto 12px' }} /><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}><div style={{ fontWeight: 900, color: th.accent, fontSize: 15 }}>{detail.ref}</div><button onClick={() => setDetail(null)} style={circle(false)}><X size={12} /></button></div><div style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 14, marginBottom: 10 }}><div style={{ fontSize: fsize, lineHeight: 1.9, wordBreak: 'keep-all' }}>"{detail.text}"</div></div><VerseDevotionPanel selectedVerse={detail} onGoToMemory={handleGoToMemory} fontSize={fsize} /></div></div>}
+
+    <ChapterNavigatorSheet 
+        open={isChapterSheetOpen}
+        onClose={() => setIsChapterSheetOpen(false)}
+        bookName={selBook.name}
+        currentChapter={selChap}
+        totalChapters={selBook.chapters}
+        onSelectChapter={handleSelectChapter}
+        T={th}
+    />
 
     <style>{`
       * { box-sizing: border-box; }
