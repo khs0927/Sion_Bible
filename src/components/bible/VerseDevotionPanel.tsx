@@ -197,9 +197,8 @@ function DevotionLoadingMessage() {
       </div>
 
       <p className="text-lg font-black text-[#3D3129] mb-2">
-        묵상할 바를 생각중입니다.
+        묵상할 바를 생각중입니다...
       </p>
-
       <p className="text-xs leading-5 text-[#7B6A5D] font-medium serif-verse">
         말씀을 다시 읽어보고 그 의미를 묵상해봅시다.
       </p>
