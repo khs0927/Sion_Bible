@@ -3,7 +3,7 @@ import {
   BookOpen, Heart, Share2, Volume2, RefreshCw,
   Bookmark, BookmarkCheck, Search, PenTool, Settings,
   ChevronRight, ChevronLeft, Loader2, Home, Sparkles,
-  PanelsTopLeft, Library, Calendar, X, Hand, Star,
+  Library, Calendar, X, Hand, Star,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { BIBLE_BOOKS, type BibleBook } from './data/bibleBooks';
@@ -61,18 +61,20 @@ async function fetchChapter(book: BibleBook, chap: number): Promise<Verse[]> {
 function TH(theme: Theme) {
   return {
     'a-soft': {
-      bg: '#cfddd3', panel: 'linear-gradient(180deg, rgba(247,236,226,0.97), rgba(220,239,227,0.97))',
-      card: 'linear-gradient(180deg, rgba(255,248,241,0.96), rgba(228,244,235,0.96))',
-      solid: 'rgba(248,240,233,0.94)', line: 'rgba(111,146,132,0.18)',
-      text: '#314840', sub: '#69867b', accent: '#5c9f87', pill: 'rgba(255,255,255,0.72)',
-      shadow: '22px 22px 40px rgba(117,150,137,0.22), -16px -16px 32px rgba(255,255,255,0.82)',
-      soft: '10px 10px 18px rgba(137,169,157,0.15), -8px -8px 16px rgba(255,255,255,0.78)',
+      bg: '#ead9cc', panel: 'linear-gradient(145deg, rgba(255,250,245,0.96), rgba(244,225,211,0.92))',
+      card: 'linear-gradient(150deg, rgba(255,253,247,0.98), rgba(249,226,216,0.94) 48%, rgba(225,241,238,0.92))',
+      solid: 'rgba(255,247,239,0.9)', line: 'rgba(156,118,101,0.18)',
+      text: '#403831', sub: '#8c786e', accent: '#8d95d8', pill: 'rgba(255,255,255,0.66)',
+      peach: '#f5b9a6', mint: '#a9d9d7', butter: '#f3d390', lavender: '#b5b3e8',
+      shadow: '18px 18px 42px rgba(154,116,93,0.18), -14px -14px 28px rgba(255,255,255,0.76)',
+      soft: '9px 9px 18px rgba(151,111,91,0.15), -7px -7px 16px rgba(255,255,255,0.72), inset 1px 1px 0 rgba(255,255,255,0.65)',
     },
     'a-dark': {
-      bg: '#7f9b92', panel: 'linear-gradient(180deg, rgba(118,147,138,0.96), rgba(139,168,157,0.96))',
-      card: 'linear-gradient(180deg, rgba(101,129,121,0.96), rgba(124,152,142,0.96))',
+      bg: '#8a9b98', panel: 'linear-gradient(145deg, rgba(130,150,148,0.96), rgba(112,132,128,0.96))',
+      card: 'linear-gradient(150deg, rgba(126,149,145,0.96), rgba(154,137,137,0.92) 48%, rgba(105,129,135,0.95))',
       solid: 'rgba(105,132,124,0.94)', line: 'rgba(255,255,255,0.10)',
-      text: '#edf7f1', sub: '#d2e5dc', accent: '#bde7d5', pill: 'rgba(255,255,255,0.08)',
+      text: '#fff8ef', sub: '#e8d8ce', accent: '#f3d390', pill: 'rgba(255,255,255,0.12)',
+      peach: '#f2b4a3', mint: '#a9d9d7', butter: '#f3d390', lavender: '#b5b3e8',
       shadow: '22px 22px 40px rgba(68,88,82,0.28), -16px -16px 32px rgba(176,207,196,0.18)',
       soft: '10px 10px 18px rgba(70,90,83,0.20), -8px -8px 16px rgba(170,210,198,0.10)',
     },
@@ -147,9 +149,10 @@ export default function App() {
   }, []);
 
   /* random verse from category */
-  const goRandom = useCallback(() => {
+  const goRandom = useCallback((category?: Category) => {
     setRndLoading(true); setRndOpen(false);
-    const pool = selCat === '전체' ? BIBLE_VERSES : BIBLE_VERSES.filter(v => v.category === selCat);
+    const nextCat = category ?? selCat;
+    const pool = nextCat === '전체' ? BIBLE_VERSES : BIBLE_VERSES.filter(v => v.category === nextCat);
     const pick = pool[Math.floor(Math.random() * pool.length)];
     setTimeout(() => { setRndVerse(pick); setRndLoading(false); setRndOpen(true); confetti({ particleCount: 35, spread: 45, origin: { y: 0.5 } }); }, 400);
   }, [selCat]);
@@ -168,6 +171,14 @@ export default function App() {
   }, []);
 
   useEffect(() => { if (tab === 'read') loadChapter(selBook, selChap); }, [tab, selBook.id, selChap, loadChapter]);
+
+  useEffect(() => {
+    if (tab === 'random' && !rndVerse && !rndLoading) {
+      const pool = selCat === '전체' ? BIBLE_VERSES : BIBLE_VERSES.filter(v => v.category === selCat);
+      setRndVerse(pool[Math.floor(Math.random() * pool.length)]);
+      setRndOpen(true);
+    }
+  }, [tab, rndVerse, rndLoading, selCat]);
 
   /* actions */
   const toggleSave = (ref: string, text: string) => {
@@ -231,22 +242,35 @@ export default function App() {
 
   const btn = (active: boolean): React.CSSProperties => ({
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-    padding: '10px 14px', borderRadius: 16, border: `1px solid ${active ? th.accent : th.line}`,
-    background: active ? th.pill : th.solid, color: th.text, cursor: 'pointer',
+    padding: '10px 14px', borderRadius: 18, border: `1px solid ${active ? 'rgba(255,255,255,0.7)' : th.line}`,
+    background: active ? `linear-gradient(145deg, ${th.butter}, ${th.peach})` : th.solid, color: th.text, cursor: 'pointer',
     fontWeight: 700, fontSize: 13, fontFamily: 'inherit', boxShadow: th.soft,
   });
 
   const circle = (active: boolean): React.CSSProperties => ({
-    width: 36, height: 36, borderRadius: 14, border: `1px solid ${active ? th.accent : th.line}`,
-    background: active ? th.pill : th.solid, color: active ? th.accent : th.text,
+    width: 38, height: 38, borderRadius: 18, border: `1px solid ${active ? 'rgba(255,255,255,0.72)' : th.line}`,
+    background: active ? `linear-gradient(145deg, ${th.lavender}, ${th.mint})` : th.solid, color: active ? '#ffffff' : th.text,
     cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: th.soft,
   });
 
   const chip = (active: boolean): React.CSSProperties => ({
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-    padding: '9px 11px', borderRadius: 13, border: `1px solid ${active ? th.accent : th.line}`,
-    background: active ? th.pill : th.solid, color: active ? th.text : th.sub,
+    padding: '9px 12px', borderRadius: 999, border: `1px solid ${active ? 'rgba(255,255,255,0.72)' : th.line}`,
+    background: active ? `linear-gradient(145deg, ${th.mint}, ${th.lavender})` : th.solid, color: active ? '#ffffff' : th.sub,
     cursor: 'pointer', fontWeight: active ? 800 : 600, fontSize: 12, fontFamily: 'inherit',
+  });
+
+  const iconTile = (tone: string): React.CSSProperties => ({
+    width: 46,
+    height: 46,
+    borderRadius: 18,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: tone,
+    border: '1px solid rgba(255,255,255,0.62)',
+    color: '#ffffff',
+    boxShadow: '7px 8px 16px rgba(132,94,78,0.18), -5px -5px 12px rgba(255,255,255,0.72), inset 1px 1px 0 rgba(255,255,255,0.7)',
   });
 
   const chapterButton = (disabled: boolean): React.CSSProperties => ({
@@ -345,7 +369,7 @@ export default function App() {
 
         {/* ─── HOME TAB ─── */}
         {tab === 'home' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 380px) minmax(0, 1fr)', gap: 18, alignItems: 'start' }}>
+          <div className="screen-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 380px) minmax(0, 1fr)', gap: 18, alignItems: 'start' }}>
             {/* LEFT PANEL */}
             <section style={{ borderRadius: 30, background: th.panel, border: `1px solid ${th.line}`, boxShadow: th.shadow, padding: 16, position: 'sticky', top: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -397,23 +421,17 @@ export default function App() {
                 ))}
               </div>
 
-              {/* nav */}
-              <div style={{ borderRadius: 20, background: th.card, border: `1px solid ${th.line}`, padding: 8, boxShadow: th.soft }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
                 {[
-                  { id: 'home', label: '홈', icon: <Home size={14} /> },
-                  { id: 'random', label: '랜덤 말씀', icon: <Sparkles size={14} /> },
-                  { id: 'read', label: '성경 읽기', icon: <BookOpen size={14} /> },
-                  { id: 'journal', label: '묵상 일기', icon: <PenTool size={14} /> },
-                  { id: 'saved', label: '저장한 말씀', icon: <Heart size={14} /> },
-                  { id: 'settings', label: '설정', icon: <PanelsTopLeft size={14} /> },
-                ].map(n => (
-                  <button key={n.id} onClick={() => setTab(n.id as Tab)} style={{
-                    width: '100%', display: 'flex', alignItems: 'center', gap: 9,
-                    padding: '10px 10px', borderRadius: 14, border: 'none',
-                    background: tab === n.id ? th.pill : 'transparent',
-                    color: tab === n.id ? th.text : th.sub, fontWeight: tab === n.id ? 700 : 600,
-                    cursor: 'pointer', fontFamily: 'inherit', marginBottom: 3,
-                  }}>{n.icon}<span>{n.label}</span><span style={{ marginLeft: 'auto' }}><ChevronRight size={13} /></span></button>
+                  { label: '말씀', icon: <Sparkles size={16} />, tone: `linear-gradient(145deg, ${th.butter}, ${th.peach})`, action: () => setTab('random') },
+                  { label: '읽기', icon: <BookOpen size={16} />, tone: `linear-gradient(145deg, ${th.mint}, ${th.lavender})`, action: () => setTab('read') },
+                  { label: '일기', icon: <PenTool size={16} />, tone: `linear-gradient(145deg, ${th.peach}, ${th.butter})`, action: () => { setTab('journal'); setShowJournalForm(true); } },
+                  { label: '저장', icon: <Bookmark size={16} />, tone: `linear-gradient(145deg, ${th.lavender}, ${th.mint})`, action: () => setTab('saved') },
+                ].map(item => (
+                  <button key={item.label} onClick={item.action} style={{ border: 'none', background: 'transparent', padding: 0, color: th.sub, fontFamily: 'inherit', fontWeight: 800, fontSize: 10, display: 'grid', justifyItems: 'center', gap: 6, cursor: 'pointer' }}>
+                    <span style={iconTile(item.tone)}>{item.icon}</span>
+                    <span>{item.label}</span>
+                  </button>
                 ))}
               </div>
             </section>
@@ -452,7 +470,7 @@ export default function App() {
                     { title: '묵상 일기', desc: '오늘의 은혜를 기록하세요.', action: () => { setTab('journal'); setShowJournalForm(true); } },
                     { title: '보관함', desc: '마음에 남는 말씀을 저장합니다.', action: () => setTab('saved') },
                   ].map(c => (
-                    <button key={c.title} onClick={c.action} style={{ border: `1px solid ${th.line}`, background: th.solid, borderRadius: 18, padding: 14, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', color: th.text }}>
+                    <button key={c.title} onClick={c.action} style={{ border: `1px solid ${th.line}`, background: th.solid, borderRadius: 22, padding: 14, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', color: th.text, boxShadow: th.soft }}>
                       <div style={{ fontWeight: 800, marginBottom: 4, fontSize: 14 }}>{c.title}</div>
                       <div style={{ color: th.sub, fontSize: 11, lineHeight: 1.6 }}>{c.desc}</div>
                     </button>
@@ -465,9 +483,28 @@ export default function App() {
 
         {/* ─── RANDOM TAB (categorized) ─── */}
         {tab === 'random' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 380px) minmax(0, 1fr)', gap: 18, alignItems: 'start' }}>
-            {/* LEFT */}
-            <section style={{ borderRadius: 30, background: th.panel, border: `1px solid ${th.line}`, boxShadow: th.shadow, padding: 16, position: 'sticky', top: 14 }}>
+          <div className="screen-grid random-screen" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(300px, 360px)', gap: 18, alignItems: 'start' }}>
+            {/* MAIN: random verse card first for mobile */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {rndLoading && (
+                <div style={{ borderRadius: 30, background: th.card, border: `1px solid ${th.line}`, boxShadow: th.shadow, padding: 40, textAlign: 'center' }}>
+                  <Loader2 size={32} style={{ animation: 'spin 1s linear infinite', color: th.accent, margin: '0 auto 12px', display: 'block' }} />
+                  <div style={{ fontWeight: 800, fontSize: 16 }}>은혜로운 말씀을 찾고 있습니다...</div>
+                  <div style={{ fontSize: 12, color: th.sub, marginTop: 4 }}>{selCat === '전체' ? '모든 카테고리' : `"${selCat}" 카테고리`}</div>
+                </div>
+              )}
+              {!rndLoading && rndOpen && rndVerse && <VerseCard v={rndVerse} large />}
+              {!rndLoading && !rndOpen && (
+                <div style={{ borderRadius: 30, background: th.card, border: `1px solid ${th.line}`, boxShadow: th.shadow, padding: 34, textAlign: 'center' }}>
+                  <div style={{ ...iconTile(`linear-gradient(145deg, ${th.butter}, ${th.peach})`), margin: '0 auto 14px' }}><Sparkles size={20} /></div>
+                  <div style={{ fontWeight: 900, fontSize: 20, marginBottom: 6 }}>오늘의 랜덤 말씀</div>
+                  <div style={{ fontSize: 13, color: th.sub }}>카테고리를 고르거나 새 말씀을 받아보세요.</div>
+                </div>
+              )}
+            </div>
+
+            {/* CONTROLS */}
+            <section style={{ borderRadius: 30, background: th.panel, border: `1px solid ${th.line}`, boxShadow: th.shadow, padding: 16, position: 'sticky', top: 76 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                 <div>
                   <div style={{ fontSize: 11, letterSpacing: '0.3em', color: th.sub, marginBottom: 3 }}>RANDOM VERSE</div>
@@ -479,66 +516,29 @@ export default function App() {
               {/* category chips */}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 14 }}>
                 {CATEGORIES.map(c => (
-                  <button key={c} onClick={() => { setSelCat(c); goRandom(); }} style={chip(selCat === c)}>{c}</button>
+                  <button key={c} onClick={() => { setSelCat(c); goRandom(c); }} style={chip(selCat === c)}>{c}</button>
                 ))}
               </div>
 
               {/* big random button */}
-              <button onClick={goRandom} style={{ ...btn(true), width: '100%', justifyContent: 'center', padding: '16px 0', fontSize: 15 }} disabled={rndLoading}>
+              <button onClick={() => goRandom()} style={{ ...btn(true), width: '100%', justifyContent: 'center', padding: '16px 0', fontSize: 15 }} disabled={rndLoading}>
                 {rndLoading ? <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> : <Sparkles size={18} />}
                 <span>{rndLoading ? '생성 중...' : '새 말씀 받기'}</span>
               </button>
 
-              {/* stats */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7, marginTop: 14 }}>
-                {[{ l: '저장', v: saved.length, i: <Bookmark size={14} /> }, { l: '일기', v: journals.length, i: <PenTool size={14} /> }, { l: '66권', v: '전체', i: <Library size={14} /> }].map(s => (
-                  <div key={s.l} style={{ borderRadius: 18, background: th.card, border: `1px solid ${th.line}`, padding: '10px 6px', textAlign: 'center', boxShadow: th.soft }}>
-                    <div style={{ width: 30, height: 30, margin: '0 auto 5px', borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', background: th.pill, color: th.accent }}>{s.i}</div>
-                    <div style={{ fontWeight: 800, fontSize: 16 }}>{s.v}</div>
-                    <div style={{ fontSize: 10, color: th.sub }}>{s.l}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* nav */}
-              <div style={{ borderRadius: 20, background: th.card, border: `1px solid ${th.line}`, padding: 8, marginTop: 12, boxShadow: th.soft }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginTop: 14 }}>
                 {[
-                  { id: 'home', label: '홈', icon: <Home size={14} /> },
-                  { id: 'random', label: '랜덤 말씀', icon: <Sparkles size={14} /> },
-                  { id: 'read', label: '성경 읽기', icon: <BookOpen size={14} /> },
-                  { id: 'journal', label: '묵상 일기', icon: <PenTool size={14} /> },
-                  { id: 'saved', label: '저장한 말씀', icon: <Heart size={14} /> },
-                  { id: 'settings', label: '설정', icon: <PanelsTopLeft size={14} /> },
-                ].map(n => (
-                  <button key={n.id} onClick={() => setTab(n.id as Tab)} style={{
-                    width: '100%', display: 'flex', alignItems: 'center', gap: 9,
-                    padding: '10px 10px', borderRadius: 14, border: 'none',
-                    background: tab === n.id ? th.pill : 'transparent',
-                    color: tab === n.id ? th.text : th.sub, fontWeight: tab === n.id ? 700 : 600,
-                    cursor: 'pointer', fontFamily: 'inherit', marginBottom: 3,
-                  }}>{n.icon}<span>{n.label}</span><span style={{ marginLeft: 'auto' }}><ChevronRight size={13} /></span></button>
+                  { label: '읽기', icon: <BookOpen size={15} />, tone: `linear-gradient(145deg, ${th.mint}, ${th.lavender})`, action: () => setTab('read') },
+                  { label: '기록', icon: <PenTool size={15} />, tone: `linear-gradient(145deg, ${th.peach}, ${th.butter})`, action: () => { if (rndVerse) setJournalRef(`${rndVerse.book} ${rndVerse.chapter}:${rndVerse.verse}`); setTab('journal'); setShowJournalForm(true); } },
+                  { label: '저장함', icon: <Bookmark size={15} />, tone: `linear-gradient(145deg, ${th.lavender}, ${th.mint})`, action: () => setTab('saved') },
+                ].map(item => (
+                  <button key={item.label} onClick={item.action} style={{ border: `1px solid ${th.line}`, background: th.solid, borderRadius: 20, padding: '10px 6px', display: 'grid', justifyItems: 'center', gap: 6, color: th.sub, fontFamily: 'inherit', fontWeight: 800, fontSize: 11, cursor: 'pointer', boxShadow: th.soft }}>
+                    <span style={{ ...iconTile(item.tone), width: 38, height: 38, borderRadius: 15 }}>{item.icon}</span>
+                    <span>{item.label}</span>
+                  </button>
                 ))}
               </div>
             </section>
-
-            {/* RIGHT: random verse card */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {rndLoading && (
-                <div style={{ borderRadius: 26, background: th.card, border: `1px solid ${th.line}`, boxShadow: th.soft, padding: 40, textAlign: 'center' }}>
-                  <Loader2 size={32} style={{ animation: 'spin 1s linear infinite', color: th.accent, margin: '0 auto 12px', display: 'block' }} />
-                  <div style={{ fontWeight: 700, fontSize: 16 }}>은혜로운 말씀을 찾고 있습니다...</div>
-                  <div style={{ fontSize: 12, color: th.sub, marginTop: 4 }}>{selCat === '전체' ? '모든 카테고리' : `"${selCat}" 카테고리`}</div>
-                </div>
-              )}
-              {!rndLoading && rndOpen && rndVerse && <VerseCard v={rndVerse} large />}
-              {!rndLoading && !rndOpen && !rndLoading && (
-                <div style={{ borderRadius: 26, background: th.card, border: `1px solid ${th.line}`, boxShadow: th.soft, padding: 50, textAlign: 'center' }}>
-                  <div style={{ fontSize: 40, marginBottom: 12 }}>📖</div>
-                  <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 6 }}>랜덤 말씀을 선택해 주세요</div>
-                  <div style={{ fontSize: 13, color: th.sub }}>좌측에서 카테고리를 고르고<br/>"새 말씀 받기" 버튼을 눌러보세요</div>
-                </div>
-              )}
-            </div>
           </div>
         )}
 
@@ -738,7 +738,7 @@ export default function App() {
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         * { box-sizing: border-box; }
         @media (max-width: 960px) {
-          main > div:first-child { grid-template-columns: 1fr !important; }
+          .screen-grid { grid-template-columns: 1fr !important; }
           section[style*='sticky'] { position: relative !important; top: 0 !important; }
         }
       `}</style>
@@ -749,7 +749,7 @@ export default function App() {
 /* ─── sub ─── */
 function Card({ title, subtitle, T, span, children }: { title: string; subtitle: string; T: any; span: string; children: React.ReactNode }) {
   return (
-    <div style={{ gridColumn: span, borderRadius: 26, background: T.panel, border: `1px solid ${T.line}`, boxShadow: T.shadow, padding: 14 }}>
+    <div className="surface-card" style={{ gridColumn: span, borderRadius: 28, background: T.panel, border: `1px solid ${T.line}`, boxShadow: T.shadow, padding: 14 }}>
       <div style={{ marginBottom: 10 }}>
         <div style={{ fontWeight: 800, fontSize: 20, lineHeight: 1.15 }}>{title}</div>
         <div style={{ color: T.sub, fontSize: 11, marginTop: 3 }}>{subtitle}</div>
