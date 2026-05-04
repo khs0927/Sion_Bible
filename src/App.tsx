@@ -11,6 +11,7 @@ import { getDailyDevotion } from './services/dailyDevotions';
 import { readCachedVerseDevotion } from './services/verseDevotionApi';
 import { VerseDevotionPanel } from './components/bible/VerseDevotionPanel';
 import { addMemoryVerse, isVerseMemorized } from './services/memoryStorage';
+import { BibleBookChapterSelector } from './components/bible/BibleBookChapterSelector';
 import { BibleVersePicker } from './components/bible/BibleVersePicker';
 import { convertTaskToBibleRange } from './services/readingPlanToBibleRange';
 import type { ReadingDayTask } from './types/readingPlan';

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { BibleBookChapterSelector } from './BibleBookChapterSelector';
 import { BibleVerseSelectableList } from './BibleVerseSelectableList';
 import { type BibleBook } from '../../data/bibleBooks';
 import { Loader2 } from 'lucide-react';
