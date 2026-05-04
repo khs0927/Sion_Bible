@@ -11,6 +11,7 @@ import { getDailyDevotion } from './services/dailyDevotions';
 import { readCachedVerseDevotion } from './services/verseDevotionApi';
 import { VerseDevotionPanel } from './components/bible/VerseDevotionPanel';
 import { ChapterNavigatorSheet } from './components/bible/ChapterNavigatorSheet';
+import { AppNavIcon } from './components/ui/AppNavIcon';
 import { addMemoryVerse, isVerseMemorized } from './services/memoryStorage';
 import { BibleVersePicker } from './components/bible/BibleVersePicker';
 import { convertTaskToBibleRange } from './services/readingPlanToBibleRange';
@@ -272,12 +273,20 @@ export default function App() {
     return Array.from(groups.entries());
   }, [saved, savedMode]);
 
+  const NAV_ICON_TUNING = {
+    home: { scale: 1.0, nudgeX: 0, nudgeY: 0 },
+    read: { scale: 0.96, nudgeX: 0, nudgeY: 1 },
+    plan: { scale: 0.98, nudgeX: 0, nudgeY: 0 },
+    memory: { scale: 0.95, nudgeX: 0, nudgeY: 1 },
+    saved: { scale: 0.98, nudgeX: 0, nudgeY: 0 },
+  } as const;
+
   const navItems = [
-    { id: 'home', label: '홈', icon: <KawaiiHomeIcon size={24} /> },
-    { id: 'read', label: '성경', icon: <KawaiiBibleIcon size={24} /> },
-    { id: 'plan', label: '통독', icon: <KawaiiApplicationIcon size={24} /> },
-    { id: 'memory', label: '암송', icon: <KawaiiWisdomIcon size={24} /> },
-    { id: 'saved', label: '저장', icon: <KawaiiSavedIcon size={24} /> },
+    { id: 'home', label: '홈', icon: <KawaiiHomeIcon size={24} />, ...NAV_ICON_TUNING.home },
+    { id: 'read', label: '성경', icon: <KawaiiBibleIcon size={24} />, ...NAV_ICON_TUNING.read },
+    { id: 'plan', label: '통독', icon: <KawaiiApplicationIcon size={24} />, ...NAV_ICON_TUNING.plan },
+    { id: 'memory', label: '암송', icon: <KawaiiWisdomIcon size={24} />, ...NAV_ICON_TUNING.memory },
+    { id: 'saved', label: '저장', icon: <KawaiiSavedIcon size={24} />, ...NAV_ICON_TUNING.saved },
   ] as const;
 
   const pageTitle = { home: '은혜의 말씀', random: '오늘의 말씀', read: `${selBook.name} ${selChap}장`, plan: '통독', memory: '암송', saved: '저장한 말씀', settings: '설정' }[tab];
@@ -757,7 +766,52 @@ export default function App() {
       </>
     )}
 
-    <nav style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 90, padding: '8px 8px calc(8px + env(safe-area-inset-bottom))', background: `linear-gradient(180deg, transparent, ${th.bg} 18%, ${th.bg})` }}><div style={{ maxWidth: 540, margin: '0 auto', display: 'grid', gridTemplateColumns: `repeat(${navItems.length}, 1fr)`, gap: 4, borderRadius: 22, background: th.panel, border: `1px solid ${th.line}`, boxShadow: th.shadow, padding: 6 }}>{navItems.map(n => <button key={n.id} className={tab === n.id ? 'bottom-nav-item active' : 'bottom-nav-item'} aria-label={`${n.label} 탭`} onClick={() => setTab(n.id)} style={{ minWidth: 0, minHeight: 48, borderRadius: 15, border: 'none', background: tab === n.id ? th.pill : 'transparent', color: tab === n.id ? th.accent : th.sub, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer', fontFamily: 'inherit', fontWeight: tab === n.id ? 900 : 700, fontSize: 9, transform: tab === n.id ? 'translateY(-6px) scale(1.08)' : 'translateY(0) scale(1)', transition: 'transform 180ms ease, background 180ms ease, border-color 180ms ease', outline: 'none', WebkitTapHighlightColor: 'transparent' }}>{n.icon}<span>{n.label}</span></button>)}</div></nav>
+    <nav style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 90, padding: '8px 8px calc(8px + env(safe-area-inset-bottom))', background: `linear-gradient(180deg, transparent, ${th.bg} 18%, ${th.bg})` }}>
+      <div style={{ maxWidth: 540, margin: '0 auto', display: 'grid', gridTemplateColumns: `repeat(${navItems.length}, 1fr)`, gap: 4, borderRadius: 22, background: th.panel, border: `1px solid ${th.line}`, boxShadow: th.shadow, padding: 6 }}>
+        {navItems.map(n => (
+          <button 
+            key={n.id} 
+            className={tab === n.id ? 'bottom-nav-item active' : 'bottom-nav-item'} 
+            aria-label={`${n.label} 탭`} 
+            onClick={() => setTab(n.id)} 
+            style={{ 
+              minWidth: 0, 
+              minHeight: 68, 
+              borderRadius: 18, 
+              border: 'none', 
+              background: 'transparent', 
+              color: tab === n.id ? th.accent : th.sub, 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              cursor: 'pointer', 
+              fontFamily: 'inherit', 
+              fontWeight: tab === n.id ? 900 : 700, 
+              fontSize: 10, 
+              transition: 'all 200ms ease', 
+              outline: 'none', 
+              WebkitTapHighlightColor: 'transparent',
+              position: 'relative',
+              paddingBottom: 6
+            }}
+          >
+            <AppNavIcon active={tab === n.id} nudgeX={n.nudgeX} nudgeY={n.nudgeY} scale={n.scale * (tab === n.id ? 1.05 : 1)}>
+              {n.icon}
+            </AppNavIcon>
+            <span style={{ 
+              marginTop: -6, 
+              opacity: tab === n.id ? 1 : 0.7,
+              transform: tab === n.id ? 'scale(1.05)' : 'scale(1)',
+              transition: 'all 200ms ease'
+            }}>{n.label}</span>
+            {tab === n.id && (
+              <div style={{ position: 'absolute', bottom: 4, width: 4, height: 4, borderRadius: '50%', background: th.accent, animation: 'pulse 1.5s infinite' }} />
+            )}
+          </button>
+        ))}
+      </div>
+    </nav>
 
 
     {detail && <div style={{ position: 'fixed', inset: 0, zIndex: 120, display: 'flex', alignItems: 'flex-end' }}><div onClick={() => setDetail(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.38)', backdropFilter: 'blur(4px)' }} /><div style={{ position: 'relative', width: '100%', maxHeight: '85vh', overflowY: 'auto', background: th.panel, borderTopLeftRadius: 26, borderTopRightRadius: 26, border: `1px solid ${th.line}`, padding: 16 }}><div style={{ width: 38, height: 4, borderRadius: 4, background: th.line, margin: '0 auto 12px' }} /><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}><div style={{ fontWeight: 900, color: th.accent, fontSize: 15 }}>{detail.ref}</div><button onClick={() => setDetail(null)} style={circle(false)}><X size={12} /></button></div><div style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 14, marginBottom: 10 }}><div style={{ fontSize: fsize, lineHeight: 1.9, wordBreak: 'keep-all' }}>"{detail.text}"</div></div><VerseDevotionPanel selectedVerse={detail} onGoToMemory={handleGoToMemory} fontSize={fsize} /></div></div>}
