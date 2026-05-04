@@ -566,7 +566,7 @@ export default function App() {
     <main style={{ position: 'relative', maxWidth: 1220, margin: '0 auto', padding: '14px 16px 112px', minHeight: '100vh' }}>
       <header style={{ position: 'sticky', top: 0, zIndex: 20, display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0 12px', background: `linear-gradient(180deg, ${th.bg} 74%, transparent)` }}>
         <button aria-label="홈으로 이동" onClick={() => { setDetail(null); setTab('home'); setActiveReadingRange(null); }} style={{ ...circle(tab === 'home'), width: 46, height: 46, borderRadius: 18 }}>{pageIcon}</button>
-        <div style={{ minWidth: 0, flex: 1 }}><div className="title-font" style={{ fontSize: 11, color: th.sub, fontWeight: 800 }}>SION BIBLE</div><div className="title-font" style={{ fontWeight: 800, fontSize: '1.15rem', lineHeight: 1.22, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pageTitle}</div></div>
+        <div style={{ minWidth: 0, flex: 1 }}><div className="title-font" style={{ fontSize: 11, color: th.sub, fontWeight: 800 }}>시온성경</div><div className="title-font" style={{ fontWeight: 800, fontSize: '1.15rem', lineHeight: 1.22, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pageTitle}</div></div>
         
         {tab === 'home' ? (
           <>
