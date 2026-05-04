@@ -227,8 +227,14 @@ export default function App() {
     return () => { active = false; };
   }, [currentHomeVerse]);
 
-  const handleSelectChapter = (chapter: number) => {
-    setSelChap(chapter);
+  const handleSelectChapter = ({ bookId, chapter }: { bookId: string; bookName: string; chapter: number }) => {
+    const book = BIBLE_BOOKS.find(b => b.id === bookId);
+    if (book) {
+      setSelBook(book);
+      setSelChap(chapter);
+      localStorage.setItem(LS.LAST_BOOK, bookId);
+      localStorage.setItem(LS.LAST_CHAP, String(chapter));
+    }
     setIsChapterSheetOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -759,9 +765,9 @@ export default function App() {
     <ChapterNavigatorSheet 
         open={isChapterSheetOpen}
         onClose={() => setIsChapterSheetOpen(false)}
-        selectedBook={selBook}
+        currentBookId={selBook.id}
+        currentBookName={selBook.name}
         currentChapter={selChap}
-        onSelectBook={setSelBook}
         onSelectChapter={handleSelectChapter}
         T={th}
     />
