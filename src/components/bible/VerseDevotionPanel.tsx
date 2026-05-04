@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Info } from 'lucide-react';
 import { getOrGenerateVerseDevotion, readCachedVerseDevotion, type VerseDevotionResult } from '../../services/verseDevotionApi';
 import { speakText } from '../../services/speech';
 import { VerseQuestionPanel } from './VerseQuestionPanel';
@@ -20,6 +19,10 @@ interface VerseDevotionPanelProps {
   fontSize?: string;
 }
 
+function stripMarkdown(text: string) {
+  return text.replace(/\*\*/g, '');
+}
+
 export function VerseDevotionPanel({
   selectedVerse,
   onGoToMemory,
@@ -38,9 +41,11 @@ export function VerseDevotionPanel({
       if (selectedVerse.meditation || selectedVerse.prayer) {
         setDevotion({
           title: selectedVerse.title || '말씀 묵상',
+          keyPhrase: '',
           meditation: selectedVerse.meditation || '',
           prayer: selectedVerse.prayer || '',
           application: selectedVerse.application || '',
+          reflectionQuestion: '',
           fallback: false,
         });
         setLoading(false);
@@ -83,10 +88,10 @@ export function VerseDevotionPanel({
         selectedVerse.text,
         '',
         '묵상',
-        devotion.meditation,
+        stripMarkdown(devotion.meditation),
         '',
         '기도문',
-        devotion.prayer,
+        stripMarkdown(devotion.prayer),
       ].join('\n'),
       { lang: 'ko-KR', rate: 0.85 },
     );
@@ -95,54 +100,56 @@ export function VerseDevotionPanel({
   if (!selectedVerse) return null;
 
   return (
-    <div className="mt-4 space-y-4">
-      {loading && (
+    <div className="mt-2 space-y-3">
+      {devotion && (
         <>
-          <DevotionLoadingMessage />
-          <div className="space-y-4 animate-pulse">
-            <div className="h-40 rounded-[22px] bg-white/40 border border-white/50" />
-            <div className="h-32 rounded-[22px] bg-white/40 border border-white/50" />
-          </div>
-        </>
-      )}
-
-      {devotion && !loading && (
-        <>
-          {devotion.fallback && (
-            <div className="flex items-center gap-2 px-4 py-3 bg-[#fdf2e7] border border-[#f5c292]/30 rounded-2xl text-[11px] font-bold text-[#A17C5B] animate-in fade-in duration-300">
-              <Info size={14} className="flex-shrink-0" />
-              <span>AI 응답이 지연되어 기본 묵상 안내를 먼저 보여드려요.</span>
-            </div>
-          )}
-
           <article className="rounded-[22px] bg-white/70 p-5 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <div className="flex items-center gap-2 mb-3 text-[#A17C5B]">
-              <KawaiiMeditationIcon size={20} />
-              <p className="text-xs font-bold">묵상</p>
+            <div className="flex items-center gap-2 mb-2 text-[#A17C5B]">
+              <KawaiiMeditationIcon size={18} />
+              <p className={`text-xs font-bold ${loading ? 'animate-pulse' : ''}`}>
+                {loading ? '묵상할 바를 생각중입니다...' : '묵상'}
+              </p>
             </div>
-            <h3 className="text-lg font-black text-[#3D3129] mb-3 leading-tight title-font">
+            <h3 className="text-lg font-black text-[#3D3129] mb-2 leading-tight title-font">
               {devotion.title}
             </h3>
+            {devotion.keyPhrase && (
+              <div className="mb-3 inline-flex max-w-full items-center gap-2 rounded-full bg-[#FFF8F1] px-3 py-1.5 text-[11px] font-black text-[#A17C5B] border border-[#F5E6D3]">
+                <span className="opacity-70">핵심 표현</span>
+                <span className="truncate text-[#3D3129]">{devotion.keyPhrase}</span>
+              </div>
+            )}
             <p className="whitespace-pre-line text-[#5C4D42] leading-relaxed serif-verse" style={{ fontSize }}>
-              {devotion.meditation}
+              {stripMarkdown(devotion.meditation)}
             </p>
           </article>
 
-          <article className="rounded-[22px] bg-white/70 p-5 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100">
-            <div className="flex items-center gap-2 mb-3 text-[#A17C5B]">
-              <KawaiiPrayerIcon size={20} />
-              <p className="text-xs font-bold">기도문</p>
+          <article className="rounded-[22px] bg-white/70 p-5 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-75">
+            <div className="flex items-center gap-2 mb-2 text-[#A17C5B]">
+              <KawaiiPrayerIcon size={18} />
+              <p className={`text-xs font-bold ${loading ? 'animate-pulse' : ''}`}>
+                {loading ? '기도할 바를 생각중입니다...' : '기도문'}
+              </p>
             </div>
             <p className="whitespace-pre-line text-[#5C4D42] leading-relaxed serif-verse" style={{ fontSize }}>
-              {devotion.prayer}
+              {stripMarkdown(devotion.prayer)}
             </p>
           </article>
 
           {devotion.application && (
-            <article className="rounded-[22px] bg-white/70 p-5 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-200">
-              <p className="text-xs font-bold text-[#A17C5B] mb-2">오늘의 적용</p>
-              <p className="whitespace-pre-line text-[#5C4D42] leading-relaxed font-medium serif-verse" style={{ fontSize }}>
-                {devotion.application}
+            <article className="rounded-[20px] bg-white/70 p-4 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100">
+              <p className="text-[11px] font-bold text-[#A17C5B] mb-1.5">오늘의 적용</p>
+              <p className="whitespace-pre-line text-[#5C4D42] leading-relaxed font-medium serif-verse" style={{ fontSize: `calc(${fontSize} * 0.95)` }}>
+                {stripMarkdown(devotion.application)}
+              </p>
+            </article>
+          )}
+
+          {devotion.reflectionQuestion && (
+            <article className="rounded-[20px] bg-white/70 p-4 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-150">
+              <p className="text-[11px] font-bold text-[#A17C5B] mb-1.5">오늘 붙들 질문</p>
+              <p className="whitespace-pre-line text-[#5C4D42] leading-relaxed font-black serif-verse" style={{ fontSize: `calc(${fontSize} * 0.95)` }}>
+                {stripMarkdown(devotion.reflectionQuestion)}
               </p>
             </article>
           )}
@@ -151,7 +158,7 @@ export function VerseDevotionPanel({
             <button
               type="button"
               onClick={speakVerseDevotion}
-              className="rounded-full bg-white px-4 py-3.5 font-black text-[#3D3129] shadow-sm hover:bg-[#FDF2E7] transition-colors border border-white/50"
+              className="rounded-full bg-white px-4 py-3 font-black text-[#3D3129] shadow-sm hover:bg-[#FDF2E7] transition-colors border border-white/50 text-sm"
             >
               듣기
             </button>
@@ -159,7 +166,7 @@ export function VerseDevotionPanel({
             <button
               type="button"
               onClick={() => onGoToMemory(selectedVerse)}
-              className="rounded-full bg-[#F5C292] px-4 py-3.5 font-black text-[#3D3129] shadow-sm hover:bg-[#F3B070] transition-colors"
+              className="rounded-full bg-[#F5C292] px-4 py-3 font-black text-[#3D3129] shadow-sm hover:bg-[#F3B070] transition-colors text-sm"
             >
               암송하러 가기
             </button>
@@ -168,23 +175,33 @@ export function VerseDevotionPanel({
           <VerseQuestionPanel verse={selectedVerse} devotion={devotion} />
         </>
       )}
+
+      {loading && !devotion && (
+        <>
+          <DevotionLoadingMessage />
+          <div className="space-y-3 animate-pulse">
+            <div className="h-40 rounded-[22px] bg-white/40 border border-white/50" />
+            <div className="h-32 rounded-[22px] bg-white/40 border border-white/50" />
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
 function DevotionLoadingMessage() {
   return (
-    <div className="rounded-[24px] bg-white/60 p-8 text-center border border-white/80 backdrop-blur-sm">
-      <div className="mx-auto mb-5 h-12 w-12 animate-pulse rounded-full bg-[#F5C292] flex items-center justify-center">
-        <div className="h-6 w-6 rounded-full bg-white opacity-40 animate-ping" />
+    <div className="rounded-[24px] bg-white/60 p-6 text-center border border-white/80 backdrop-blur-sm">
+      <div className="mx-auto mb-4 h-10 w-10 animate-pulse rounded-full bg-[#F5C292] flex items-center justify-center">
+        <div className="h-5 w-5 rounded-full bg-white opacity-40 animate-ping" />
       </div>
 
-      <p className="text-xl font-black text-[#3D3129] mb-3">
-        묵상과 기도문이 작성되고 있어요 :)
+      <p className="text-lg font-black text-[#3D3129] mb-2">
+        묵상할 바를 생각중입니다.
       </p>
 
-      <p className="text-sm leading-6 text-[#7B6A5D] font-medium serif-verse">
-        본문 구절을 읽고 잠시 눈을 감고 묵상해봅시다.
+      <p className="text-xs leading-5 text-[#7B6A5D] font-medium serif-verse">
+        말씀을 다시 읽어보고 그 의미를 묵상해봅시다.
       </p>
     </div>
   );

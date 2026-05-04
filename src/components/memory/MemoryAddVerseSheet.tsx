@@ -81,19 +81,19 @@ export function MemoryAddVerseSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-end">
+    <div className="fixed inset-0 flex items-end" style={{ zIndex: 1000 }}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full h-[90vh] bg-[#FDF6F0] rounded-t-[40px] flex flex-col shadow-2xl overflow-hidden border-t" style={{ borderColor: theme.line }}>
-        <div className="w-10 h-1.5 bg-gray-300/40 rounded-full mx-auto my-4 flex-shrink-0" />
+      <div className="relative w-full h-[92dvh] max-h-[calc(100dvh-12px)] min-h-0 bg-[#FDF6F0] rounded-t-[32px] flex flex-col shadow-2xl overflow-hidden border-t" style={{ borderColor: theme.line }}>
+        <div className="w-10 h-1.5 bg-gray-300/40 rounded-full mx-auto my-3 flex-shrink-0" />
         
-        <header className="px-7 pb-6 flex items-center justify-between flex-shrink-0">
+        <header className="px-5 pb-4 flex items-center justify-between flex-shrink-0">
           <h2 className="title-font text-2xl font-black" style={{ color: theme.text }}>암송 구절 추가</h2>
           <button onClick={onClose} className="p-2 rounded-full hover:bg-black/5 transition-colors">
             <X size={24} style={{ color: theme.text }} />
           </button>
         </header>
 
-        <nav className="px-7 flex gap-2 overflow-x-auto no-scrollbar mb-8 flex-shrink-0">
+        <nav className="px-5 flex gap-2 overflow-x-auto no-scrollbar mb-4 flex-shrink-0">
           {(['picker', 'search', 'saved'] as const).map(tab => (
             <button
               key={tab}
@@ -118,7 +118,7 @@ export function MemoryAddVerseSheet({
           ))}
         </nav>
 
-        <main className="flex-1 overflow-y-auto px-7 pb-6">
+        <main className="min-h-0 flex-1 overflow-y-auto px-5 pb-28">
           {activeTab === 'picker' && (
             <div className="bg-white p-4 rounded-3xl border shadow-sm" style={{ borderColor: theme.line }}>
               <BibleVersePicker
@@ -181,16 +181,26 @@ export function MemoryAddVerseSheet({
         </main>
 
         <footer 
-          className="flex-shrink-0 p-7 bg-white border-t" 
+          className="relative z-10 flex-shrink-0 px-5 pt-4 bg-white border-t shadow-[0_-10px_24px_rgba(61,49,41,0.06)]" 
           style={{ 
+            position: 'fixed',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1100,
             borderColor: theme.line, 
-            paddingBottom: `calc(1.75rem + env(safe-area-inset-bottom))` 
+            paddingBottom: `calc(80px + env(safe-area-inset-bottom))` 
           }}
         >
+          {selectedList.length > 0 && (
+            <div className="mb-2 truncate text-xs font-bold" style={{ color: theme.sub }}>
+              선택됨: {selectedList.map(item => item.ref).join(', ')}
+            </div>
+          )}
           <button
             onClick={handleAdd}
             disabled={selectedList.length === 0}
-            className="w-full py-5 rounded-[22px] font-black text-lg shadow-xl transition-all disabled:opacity-40 disabled:grayscale active:scale-[0.98]"
+            className="w-full min-h-[56px] rounded-[20px] font-black text-base shadow-xl transition-all disabled:opacity-40 disabled:grayscale active:scale-[0.98]"
             style={{ background: theme.peach, color: theme.text }}
           >
             {selectedList.length > 0 

@@ -9,6 +9,7 @@ export interface AskVerseQuestionParams {
 export interface VerseQuestionAnswer {
   question: string;
   answer: string;
+  followUpQuestion?: string;
 }
 
 export async function askVerseQuestion(

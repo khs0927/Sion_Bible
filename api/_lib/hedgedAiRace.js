@@ -17,6 +17,7 @@ export async function hedgedNvidiaRace({
   timeoutMs = 10000,
   temperature = 0.5,
   maxTokens = 1024,
+  responseFormat = null,
   validate,
 }) {
   const uniqueModels = [...new Set(models.filter(Boolean))].slice(0, 2);
@@ -42,6 +43,7 @@ export async function hedgedNvidiaRace({
         messages,
         temperature,
         maxTokens,
+        responseFormat,
         signal: controllers[index].signal,
       });
 

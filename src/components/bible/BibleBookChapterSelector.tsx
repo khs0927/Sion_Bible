@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { BIBLE_BOOKS, type BibleBook } from '../../data/bibleBooks';
-import { Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { KawaiiBibleIcon } from '../icons';
 
 interface BibleBookChapterSelectorProps {
@@ -12,7 +12,6 @@ interface BibleBookChapterSelectorProps {
 
 export function BibleBookChapterSelector({
   selectedBook,
-  selectedChapter,
   onSelectBook,
   onSelectChapter,
 }: BibleBookChapterSelectorProps) {
@@ -30,34 +29,8 @@ export function BibleBookChapterSelector({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => onSelectChapter(Math.max(1, selectedChapter - 1))}
-          disabled={selectedChapter === 1}
-          className="p-2 rounded-xl border border-white/20 bg-white/10 disabled:opacity-30"
-        >
-          <ChevronLeft size={20} />
-        </button>
-        
-        <button
-          onClick={() => setShowPicker(true)}
-          className="flex-1 flex items-center justify-between px-4 py-3 rounded-2xl bg-white/20 border border-white/30 text-sm font-bold"
-        >
-          <div className="flex items-center gap-2">
-            <KawaiiBibleIcon size={18} />
-            <span>{selectedBook.name}</span>
-          </div>
-          <span className="opacity-60">{selectedChapter}/{selectedBook.chapters}장</span>
-        </button>
+      {/* Removed duplicate icon button as it is already in the main header */}
 
-        <button
-          onClick={() => onSelectChapter(Math.min(selectedBook.chapters, selectedChapter + 1))}
-          disabled={selectedChapter === selectedBook.chapters}
-          className="p-2 rounded-xl border border-white/20 bg-white/10 disabled:opacity-30"
-        >
-          <ChevronRight size={20} />
-        </button>
-      </div>
 
       {showPicker && (
         <div className="fixed inset-0 z-[200] flex items-end">

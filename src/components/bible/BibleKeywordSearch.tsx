@@ -1,7 +1,6 @@
-import { useState, useMemo } from 'react';
-import { Search, Info, X } from 'lucide-react';
-import { BIBLE_VERSE_INDEX } from '../../data/generated/bibleVerseIndex';
-import { normalizeKoreanSearchText, highlightKeyword } from '../../services/bibleSearch';
+import { useState, useEffect } from 'react';
+import { Search, Info, X, Loader2 } from 'lucide-react';
+import { searchBibleVerses, highlightKeyword } from '../../services/bibleSearch';
 import { BibleSearchResult } from '../../types/bible';
 
 interface BibleKeywordSearchProps {
@@ -14,23 +13,42 @@ export function BibleKeywordSearch({
   selectedRefs,
 }: BibleKeywordSearchProps) {
   const [query, setQuery] = useState('');
-  
-  const results = useMemo(() => {
-    const q = normalizeKoreanSearchText(query);
-    if (q.length < 2) return [];
+  const [results, setResults] = useState<BibleSearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
-    return BIBLE_VERSE_INDEX.filter(v => 
-      v.searchText.includes(q) || 
-      normalizeKoreanSearchText(v.bookName).includes(q)
-    ).map(v => ({
-      ref: `${v.bookName} ${v.chapter}:${v.verse}`,
-      text: v.text,
-      bookId: v.bookId,
-      bookName: v.bookName,
-      chapter: v.chapter,
-      verse: v.verse
-    })) as BibleSearchResult[];
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (query.trim().length >= 2) {
+        handleSearch();
+      } else {
+        setResults([]);
+        setTotalCount(0);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
   }, [query]);
+
+  const handleSearch = async () => {
+    setLoading(true);
+    try {
+      const { items, totalCount: total } = await searchBibleVerses(query, { limit: 50 });
+      setResults(items.map(v => ({
+        ref: `${v.bookName} ${v.chapter}:${v.verse}`,
+        text: v.text,
+        bookId: v.bookId,
+        bookName: v.bookName,
+        chapter: v.chapter,
+        verse: v.verse
+      })));
+      setTotalCount(total);
+    } catch (error) {
+      console.error('Search failed:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleToggleResult = (res: BibleSearchResult) => {
     const isSelected = selectedRefs.includes(res.ref);
@@ -59,23 +77,30 @@ export function BibleKeywordSearch({
       </div>
 
       <div className="flex-1">
-        {query.length > 0 && query.length < 2 && (
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-12 text-[#8c786e] gap-3">
+            <Loader2 size={32} className="animate-spin opacity-40" />
+            <p className="text-sm font-bold">검색 중...</p>
+          </div>
+        )}
+
+        {!loading && query.length > 0 && query.trim().length < 2 && (
           <div className="flex items-center gap-2 p-4 text-[#8c786e] bg-[#FFF8F1] rounded-2xl border border-[#e8d8ce] text-xs font-bold">
             <Info size={16} />
             <span>두 글자 이상 입력해 주세요.</span>
           </div>
         )}
 
-        {query.length >= 2 && results.length === 0 && (
+        {!loading && query.trim().length >= 2 && results.length === 0 && (
           <div className="text-center py-12">
             <p className="text-[#8c786e] font-bold">검색 결과가 없습니다 :(</p>
           </div>
         )}
 
-        {results.length > 0 && (
+        {!loading && results.length > 0 && (
           <div className="space-y-3 pb-8">
             <p className="text-[10px] font-black text-[#A17C5B] uppercase tracking-widest px-1">
-              검색 결과 {results.length}건
+              검색 결과 {totalCount > 50 ? '50+' : totalCount}건
             </p>
             {results.map(res => {
               const isSelected = selectedRefs.includes(res.ref);

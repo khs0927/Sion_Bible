@@ -7,9 +7,10 @@ interface BibleSearchSheetProps {
   onClose: () => void;
   onNavigate: (verse: BibleVerseRecord) => void;
   T: Record<string, string>;
+  fontSize?: string;
 }
 
-export function BibleSearchSheet({ onClose, onNavigate, T }: BibleSearchSheetProps) {
+export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem' }: BibleSearchSheetProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<BibleVerseRecord[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -126,8 +127,8 @@ export function BibleSearchSheet({ onClose, onNavigate, T }: BibleSearchSheetPro
                     <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: T.accent }} />
                   </div>
                   <p 
-                    className="text-sm leading-relaxed serif-verse line-clamp-3"
-                    style={{ color: T.text }}
+                    className="leading-relaxed serif-verse line-clamp-3"
+                    style={{ color: T.text, fontSize }}
                     dangerouslySetInnerHTML={{ __html: highlightKeyword(v.text, query) }}
                   />
                 </button>

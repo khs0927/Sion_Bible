@@ -8,7 +8,12 @@ const AUTO_REMINDER_KEY = 'sion_memory_auto_reminders';
 export function getMemoryVerses(): MemoryVerse[] {
   try {
     const raw = localStorage.getItem(MEMORY_KEY);
-    return raw ? JSON.parse(raw) as MemoryVerse[] : [];
+    const parsed = raw ? JSON.parse(raw) as MemoryVerse[] : [];
+    return parsed.map((verse) => ({
+      ...verse,
+      level: Math.min(5, Math.max(1, Number(verse.level) || 1)) as MemoryVerse['level'],
+      box: Math.min(7, Math.max(1, Number(verse.box) || 1)),
+    }));
   } catch {
     return [];
   }
@@ -84,7 +89,7 @@ export function moveMemoryVerseLevel(id: string, delta: number) {
   const next = verses.map((verse) => {
     if (verse.id !== id) return verse;
     const nextLevel = Math.min(5, Math.max(1, verse.level + delta));
-    return { ...verse, level: nextLevel as any, updatedAt: new Date().toISOString() };
+    return { ...verse, level: nextLevel as MemoryVerse['level'], updatedAt: new Date().toISOString() };
   });
   saveMemoryVerses(next);
   return next.find((v) => v.id === id) || null;
@@ -95,7 +100,7 @@ export function setMemoryVerseLevel(id: string, level: number) {
   const next = verses.map((verse) => {
     if (verse.id !== id) return verse;
     const nextLevel = Math.min(5, Math.max(1, level));
-    return { ...verse, level: nextLevel as any, updatedAt: new Date().toISOString() };
+    return { ...verse, level: nextLevel as MemoryVerse['level'], updatedAt: new Date().toISOString() };
   });
   saveMemoryVerses(next);
   return next.find((v) => v.id === id) || null;

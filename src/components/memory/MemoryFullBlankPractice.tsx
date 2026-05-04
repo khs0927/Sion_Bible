@@ -28,7 +28,7 @@ export function MemoryFullBlankPractice({ text }: { text: string; T: ThemeTokens
     <section className="space-y-4 p-5 rounded-[28px] bg-white border border-[#e8d8ce] shadow-sm">
       <header className="flex items-center justify-between">
         <div className="text-[10px] font-black text-[#8d95d8] uppercase tracking-widest">
-          Level 3 · 전체 빈칸
+          3단계 · 전체 빈칸
         </div>
         <button 
           onClick={toggleAll}

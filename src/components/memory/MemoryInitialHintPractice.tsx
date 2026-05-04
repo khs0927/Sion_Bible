@@ -12,7 +12,7 @@ export function MemoryInitialHintPractice({ text }: { text: string; T: ThemeToke
     <section className="space-y-4 p-6 rounded-[28px] bg-white border border-[#e8d8ce] shadow-sm relative overflow-hidden">
       <header className="flex items-center justify-between relative z-10">
         <div className="text-[10px] font-black text-[#8d95d8] uppercase tracking-widest">
-          Level 4 · 초성 힌트
+          5단계 · 첫 글자 힌트
         </div>
         <button 
           onClick={() => setRevealed(!revealed)}
