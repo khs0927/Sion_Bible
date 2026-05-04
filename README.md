@@ -2,7 +2,7 @@
 
 성경 PWA 앱 _ Product by SionBible
 
-ARENA.AI에서 생성한 React/Vite 기반 성경말씀 PWA입니다.
+ React/Vite 기반 성경말씀 PWA입니다.
 
 ## 실행
 
