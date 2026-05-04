@@ -2,7 +2,6 @@ import { useState, useMemo, type CSSProperties } from 'react';
 import { X, ChevronLeft } from 'lucide-react';
 import { KawaiiBibleIcon } from '../icons';
 import { BIBLE_BOOKS, type BibleBook } from '../../data/bibleBooks';
-import { getSectionTheme, TESTAMENT_THEMES } from '../../services/bibleSectionTheme';
 
 interface ChapterNavigatorSheetProps {
   open: boolean;
@@ -39,18 +38,6 @@ export function ChapterNavigatorSheet({
     if (filter === 'all') return true;
     return b.testament === filter;
   });
-
-  // Grouped books for better navigation
-  const groupedBooks = useMemo(() => {
-    const groups: Record<string, { label: string; books: BibleBook[] }> = {};
-    filteredBooks.forEach(book => {
-      if (!groups[book.section]) {
-        groups[book.section] = { label: book.sectionLabel, books: [] };
-      }
-      groups[book.section].books.push(book);
-    });
-    return Object.values(groups);
-  }, [filteredBooks]);
 
   const isPsalm = navBook.name === '시편';
   const chapters = Array.from({ length: navBook.chapters }, (_, i) => i + 1);
@@ -128,77 +115,59 @@ export function ChapterNavigatorSheet({
         {/* Tabs for Books view */}
         {view === 'books' && (
           <div style={{ display: 'flex', gap: 8, padding: '0 20px 16px' }}>
-            {(['all', 'old', 'new'] as const).map(k => {
-              const tabTheme = TESTAMENT_THEMES[k];
-              const isActive = filter === k;
-              return (
-                <button
-                  key={k}
-                  onClick={() => setFilter(k)}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: 20,
-                    fontSize: '0.75rem',
-                    fontWeight: 800,
-                    border: isActive ? `1px solid ${tabTheme.border}` : 'none',
-                    background: isActive ? tabTheme.bg : T.solid,
-                    color: isActive ? tabTheme.text : T.sub,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  {k === 'all' ? '전체' : k === 'old' ? '구약' : '신약'}
-                </button>
-              );
-            })}
+            {(['all', 'old', 'new'] as const).map(k => (
+              <button
+                key={k}
+                onClick={() => setFilter(k)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 20,
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                  border: 'none',
+                  background: filter === k ? T.pill : T.solid,
+                  color: filter === k ? T.accent : T.sub,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {k === 'all' ? '전체' : k === 'old' ? '구약' : '신약'}
+              </button>
+            ))}
           </div>
         )}
 
         {/* Main Content */}
         <div style={{ padding: '0 16px 40px', maxHeight: '60vh', overflowY: 'auto', minHeight: '30vh' }}>
           {view === 'books' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {groupedBooks.map(group => (
-                <div key={group.label} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 900, color: T.sub, paddingLeft: 4, opacity: 0.8 }}>
-                    {group.label}
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                    {group.books.map(book => {
-                      const isSelected = book.id === navBook.id;
-                      const sTheme = getSectionTheme(book.section);
-                      return (
-                        <button
-                          key={book.id}
-                          onClick={() => handleSelectBook(book)}
-                          aria-label={`${book.name} 선택`}
-                          style={{
-                            minHeight: 52,
-                            borderRadius: 14,
-                            border: isSelected ? `2px solid ${T.accent}` : `1px solid ${sTheme.border}`,
-                            background: sTheme.bg,
-                            color: sTheme.text,
-                            fontWeight: 900,
-                            fontSize: '0.9rem',
-                            boxShadow: isSelected ? '0 4px 12px rgba(0,0,0,0.1)' : T.soft,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '6px 4px',
-                            WebkitTapHighlightColor: 'transparent',
-                            transition: 'all 0.15s ease',
-                          }}
-                        >
-                          <span style={{ fontSize: '0.6rem', opacity: 0.6, marginBottom: 2 }}>{book.sectionLabel}</span>
-                          {book.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {filteredBooks.map(book => {
+                const isSelected = book.id === navBook.id;
+                return (
+                  <button
+                    key={book.id}
+                    onClick={() => handleSelectBook(book)}
+                    aria-label={`${book.name} 선택`}
+                    style={{
+                      height: 48,
+                      borderRadius: 14,
+                      border: 'none',
+                      background: isSelected ? 'linear-gradient(145deg, #fff7ed, #ffe9d3)' : T.solid,
+                      color: isSelected ? '#e8aa78' : T.text,
+                      fontWeight: isSelected ? 900 : 700,
+                      fontSize: '0.9rem',
+                      boxShadow: isSelected ? '0 4px 10px rgba(232, 170, 120, 0.15)' : T.soft,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      WebkitTapHighlightColor: 'transparent',
+                    }}
+                  >
+                    {book.name}
+                  </button>
+                );
+              })}
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>

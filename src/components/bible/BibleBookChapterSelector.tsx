@@ -10,8 +10,6 @@ interface BibleBookChapterSelectorProps {
   onSelectChapter: (chapter: number) => void;
 }
 
-import { getSectionTheme, TESTAMENT_THEMES } from '../../services/bibleSectionTheme';
-
 export function BibleBookChapterSelector({
   selectedBook,
   onSelectBook,
@@ -51,25 +49,19 @@ export function BibleBookChapterSelector({
             </div>
 
             <div className="flex gap-2 mb-4">
-              {(['all', 'old', 'new'] as const).map(k => {
-                const tabTheme = TESTAMENT_THEMES[k];
-                const isActive = testament === k;
-                return (
-                  <button
-                    key={k}
-                    onClick={() => setTestament(k)}
-                    className="px-4 py-2 rounded-full text-xs font-bold transition-all"
-                    style={{
-                      background: isActive ? tabTheme.bg : 'white',
-                      color: isActive ? tabTheme.text : '#8c786e',
-                      border: `1px solid ${isActive ? tabTheme.border : '#e8d8ce'}`,
-                      boxShadow: isActive ? '0 4px 10px rgba(0,0,0,0.05)' : 'none',
-                    }}
-                  >
-                    {k === 'all' ? '전체' : k === 'old' ? '구약' : '신약'}
-                  </button>
-                );
-              })}
+              {(['all', 'old', 'new'] as const).map(k => (
+                <button
+                  key={k}
+                  onClick={() => setTestament(k)}
+                  className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+                    testament === k 
+                    ? 'bg-[#8d95d8] text-white shadow-md' 
+                    : 'bg-white text-[#8c786e] border border-[#e8d8ce]'
+                  }`}
+                >
+                  {k === 'all' ? '전체' : k === 'old' ? '구약' : '신약'}
+                </button>
+              ))}
             </div>
 
             <div className="flex items-center gap-3 bg-white rounded-2xl border border-[#e8d8ce] px-4 py-3 mb-6 focus-within:border-[#8d95d8] transition-colors">
@@ -83,32 +75,27 @@ export function BibleBookChapterSelector({
             </div>
 
             <div className="flex-1 overflow-y-auto pr-1">
-              <div className="grid grid-cols-4 gap-2 pb-8">
-                {filteredBooks.map(book => {
-                  const isSelected = selectedBook.id === book.id;
-                  const sTheme = getSectionTheme(book.section);
-                  return (
-                    <button
-                      key={book.id}
-                      onClick={() => {
-                        onSelectBook(book);
-                        onSelectChapter(1);
-                        setShowPicker(false);
-                      }}
-                      className="flex flex-col items-center justify-center py-3 rounded-xl border transition-all"
-                      style={{
-                        background: sTheme.bg,
-                        borderColor: isSelected ? '#8d95d8' : sTheme.border,
-                        color: sTheme.text,
-                        borderWidth: isSelected ? 2 : 1,
-                        boxShadow: isSelected ? '0 4px 10px rgba(0,0,0,0.1)' : 'none',
-                      }}
-                    >
-                      <span className="text-[9px] opacity-60 mb-0.5">{book.sectionLabel}</span>
-                      <span className="text-[11px] font-black">{book.name}</span>
-                    </button>
-                  );
-                })}
+              <div className="grid grid-cols-4 gap-3 pb-8">
+                {filteredBooks.map(book => (
+                  <button
+                    key={book.id}
+                    onClick={() => {
+                      onSelectBook(book);
+                      onSelectChapter(1);
+                      setShowPicker(false);
+                    }}
+                    className={`flex flex-col items-center justify-center py-4 rounded-2xl border transition-all ${
+                      selectedBook.id === book.id
+                      ? 'bg-[#8d95d8] border-[#8d95d8] text-white shadow-lg'
+                      : 'bg-white border-[#e8d8ce] text-[#3D3129] hover:bg-[#FDF2E7]'
+                    }`}
+                  >
+                    <span className="text-xs font-black">{book.name}</span>
+                    <span className={`text-[10px] mt-1 ${selectedBook.id === book.id ? 'opacity-80' : 'text-[#8c786e]'}`}>
+                      {book.chapters}장
+                    </span>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
