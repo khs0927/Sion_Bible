@@ -65,4 +65,25 @@ export const iconPacks = [
       rowHeights: [205, 205, 160],
     },
   },
+  {
+    name: 'v2',
+    src: 'src/assets/icon-packs/clay-icon-full.png',
+    outDir: 'src/assets/clay-icons/v2',
+    columns: 4,
+    rows: 4,
+    names: [
+      'home', 'bible', 'scroll', 'calendar',
+      'meditation', 'comfort', 'journal', 'prayer',
+      'wisdom', 'search', 'refresh', 'settings',
+      'cloud_heart', 'check', 'audio', 'share'
+    ],
+    crop: {
+      startX: 0,
+      startY: 0,
+      tileW: 256,
+      tileH: 256,
+      gapX: 0,
+      gapY: 0,
+    },
+  },
 ];

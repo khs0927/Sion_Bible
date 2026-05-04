@@ -71,10 +71,14 @@ export function ClayIcon({
           justifyContent: 'center',
           flex: '0 0 auto',
           overflow: 'hidden',
-          borderRadius: Math.max(10, Math.round(size * 0.24)),
-          border: `1.5px solid ${borderColor}`,
-          background: 'linear-gradient(145deg, #fff9ef 0%, #fff1e4 100%)',
-          boxShadow: '0 8px 15px rgba(125, 86, 58, 0.2), inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 2px rgba(160, 103, 64, 0.08)',
+          borderRadius: Math.max(12, Math.round(size * 0.28)),
+          background: 'linear-gradient(145deg, #ffffff 0%, #fdf6f0 100%)',
+          boxShadow: `
+            0 ${Math.round(size * 0.15)}px ${Math.round(size * 0.3)}px rgba(125, 86, 58, 0.14),
+            inset 0 1px 0 rgba(255,255,255,0.95),
+            inset 0 -2px 4px rgba(160, 103, 64, 0.05)
+          `,
+          position: 'relative',
           boxSizing: 'border-box',
           ...style,
         }}
@@ -82,20 +86,23 @@ export function ClayIcon({
         <img
           src={clayIconMap[name]}
           alt={alt}
-          width={Math.round(size * 1.05)}
-          height={Math.round(size * 1.05)}
+          width={Math.round(size * 0.95)}
+          height={Math.round(size * 0.95)}
           loading="lazy"
           draggable={false}
           style={{
-            width: '105%',
-            height: '105%',
+            width: '95%',
+            height: '95%',
             objectFit: 'contain',
             userSelect: 'none',
             pointerEvents: 'none',
-            transform: 'translateY(-1%) scale(1.18)',
-            filter: 'contrast(1.34) saturate(1.38) brightness(0.94) drop-shadow(0 3px 4px rgba(94, 62, 43, 0.3))',
+            transform: 'translateY(-2%) scale(1.22)',
+            filter: 'contrast(1.2) saturate(1.3) brightness(0.96) drop-shadow(0 4px 6px rgba(94, 62, 43, 0.25))',
+            zIndex: 2,
           }}
         />
+        {/* Subtle inner highlight */}
+        <span style={{ position: 'absolute', inset: 0, borderRadius: 'inherit', border: '1px solid rgba(232, 200, 168, 0.25)', pointerEvents: 'none' }} />
       </span>
     );
   }
