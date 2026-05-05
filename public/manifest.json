@@ -1,25 +1,32 @@
 {
   "name": "시온성경",
   "short_name": "시온성경",
-  "description": "무료로 즐기는 랜덤 성경말씀 구절, 묵상, 그리고 기도문 생성 앱입니다.",
+  "description": "매일 말씀을 읽고 묵상하며 암송하는 시온성경(SION BIBLE) 앱",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#EADDD2",
-  "theme_color": "#9A8FE3",
+  "theme_color": "#EADDD2",
   "icons": [
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
     {
       "src": "/icon-512.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "categories": ["lifestyle", "books"],
+  "categories": ["books", "education", "lifestyle"],
   "orientation": "portrait-primary"
 }
