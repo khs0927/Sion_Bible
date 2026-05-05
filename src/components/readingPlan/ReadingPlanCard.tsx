@@ -10,6 +10,7 @@ const TONE_LABEL: Record<ReadingPlanTemplate['tone'], string> = {
   gospels: '복음서',
   wisdom: '지혜서',
   pentateuch: '오경',
+  custom: '나만의',
 };
 
 export function ReadingPlanCard({ template, active, T, onStart }: { template: ReadingPlanTemplate; active: boolean; T: ThemeTokens; onStart: () => void }) {

@@ -134,6 +134,7 @@ function makePlan(
   days: number,
   tone: ReadingPlanTemplate['tone'],
   books: BookSpec[],
+  options: Pick<ReadingPlanTemplate, 'bookIds' | 'editable'> = {},
 ): ReadingPlanTemplate {
   return {
     id,
@@ -143,11 +144,44 @@ function makePlan(
     days,
     tone,
     tasks: buildTasks(books, days),
+    ...options,
   };
 }
 
 export function formatReadingReference(ref: ReadingReference) {
   return refLabel(ref);
+}
+
+export const READING_PLAN_BOOK_OPTIONS = BOOKS.map((book) => ({ ...book }));
+
+export function createCustomReadingPlanTemplate({
+  id,
+  title,
+  days,
+  bookIds,
+}: {
+  id: string;
+  title: string;
+  days: number;
+  bookIds: string[];
+}): ReadingPlanTemplate {
+  const uniqueBookIds = Array.from(new Set(bookIds));
+  const selectedBooks = rangeBooks(uniqueBookIds.length > 0 ? uniqueBookIds : ['jhn']);
+  const safeDays = Math.min(365, Math.max(1, Math.round(days)));
+  const bookTitle = selectedBooks.length === 1
+    ? selectedBooks[0].name
+    : `${selectedBooks[0].name} 외 ${selectedBooks.length - 1}권`;
+
+  return makePlan(
+    id,
+    title.trim() || '나만의 통독 코스',
+    `${safeDays}일 직접 구성`,
+    `${bookTitle}을 선택한 기간에 맞춰 나누어 읽습니다.`,
+    safeDays,
+    'custom',
+    selectedBooks,
+    { bookIds: selectedBooks.map((book) => book.id), editable: true },
+  );
 }
 
 export const READING_PLAN_TEMPLATES: ReadingPlanTemplate[] = [
@@ -159,4 +193,19 @@ export const READING_PLAN_TEMPLATES: ReadingPlanTemplate[] = [
   makePlan('proverbs-30', '잠언 30일', '매일 지혜 한 걸음', '잠언 전체를 한 달 동안 삶의 지혜로 받아들입니다.', 30, 'wisdom', rangeBooks(['pro'])),
   makePlan('psalms-30', '시편 30일', '기도와 찬양의 언어', '시편을 매일 넉넉히 읽으며 기도의 말을 회복합니다.', 30, 'wisdom', rangeBooks(['psa'])),
   makePlan('pentateuch-90', '모세오경 90일', '시작과 언약의 길', '창세기부터 신명기까지 말씀의 큰 뿌리를 읽습니다.', 90, 'pentateuch', rangeBooks(PENTATEUCH_IDS)),
+  makePlan('custom-gospel-14', '복음서 맛보기', '14일 동안 예수님의 이야기', '처음 통독을 시작하는 분을 위해 사복음서의 흐름을 가볍게 잡습니다.', 14, 'gospels', rangeBooks(GOSPEL_IDS)),
+  makePlan('custom-morning-21', '아침 10분 코스', '21일 작은 습관 만들기', '시편과 잠언을 짧게 읽으며 매일의 시작을 말씀으로 열 수 있게 구성했습니다.', 21, 'wisdom', rangeBooks(['psa', 'pro'])),
+  makePlan('custom-new-30', '신약 핵심 30일', '복음서부터 서신까지', '신약 전체를 너무 길지 않은 호흡으로 훑어보고 싶은 분에게 맞춘 코스입니다.', 30, 'new-testament', rangeBooks(NEW_TESTAMENT_IDS)),
+  makePlan('custom-john-10', '요한복음 천천히', '10일 깊이 읽기', '요한복음을 부담 없이 나누어 읽고 묵상 질문을 남기기 좋게 만들었습니다.', 10, 'gospels', rangeBooks(['jhn'])),
+  makePlan('acts-28', '사도행전 28일', '초대교회 여정 따라가기', '하루 한 장씩 사도행전의 흐름을 따라가며 교회의 시작을 봅니다.', 28, 'new-testament', rangeBooks(['act'])),
+  makePlan('paul-45', '바울서신 45일', '복음의 적용 읽기', '로마서부터 빌레몬서까지 교리와 삶의 권면을 균형 있게 읽습니다.', 45, 'new-testament', rangeBooks(['rom', '1co', '2co', 'gal', 'eph', 'php', 'col', '1th', '2th', '1ti', '2ti', 'tit', 'phm'])),
+  makePlan('wisdom-60', '지혜서 60일', '시와 지혜의 길', '욥기, 시편, 잠언, 전도서, 아가를 천천히 읽으며 마음의 언어를 넓힙니다.', 60, 'wisdom', rangeBooks(['job', 'psa', 'pro', 'ecc', 'sng'])),
+  makePlan('history-120', '역사서 120일', '이스라엘 이야기', '여호수아부터 에스더까지 성경 역사 흐름을 큰 그림으로 읽습니다.', 120, 'fast', rangeBooks(['jos', 'jdg', 'rut', '1sa', '2sa', '1ki', '2ki', '1ch', '2ch', 'ezr', 'neh', 'est'])),
+];
+
+export const CUSTOM_READING_PLAN_TEMPLATES: ReadingPlanTemplate[] = [];
+
+export const ALL_READING_PLAN_TEMPLATES: ReadingPlanTemplate[] = [
+  ...READING_PLAN_TEMPLATES,
+  ...CUSTOM_READING_PLAN_TEMPLATES,
 ];

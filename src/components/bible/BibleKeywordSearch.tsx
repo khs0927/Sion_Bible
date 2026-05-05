@@ -12,10 +12,13 @@ export function BibleKeywordSearch({
   onSelectVerses,
   selectedRefs,
 }: BibleKeywordSearchProps) {
+  const pageSize = 50;
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<BibleSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -24,45 +27,54 @@ export function BibleKeywordSearch({
       } else {
         setResults([]);
         setTotalCount(0);
+        setHasMore(false);
       }
     }, 400);
 
     return () => clearTimeout(timer);
   }, [query]);
 
-  const handleSearch = async () => {
-    setLoading(true);
+  const mapResult = (v: Awaited<ReturnType<typeof searchBibleVerses>>['items'][number]): BibleSearchResult => ({
+    ref: `${v.bookName} ${v.chapter}:${v.verse}`,
+    text: v.text,
+    bookId: v.bookId,
+    bookName: v.bookName,
+    chapter: v.chapter,
+    verse: v.verse
+  });
+
+  const handleSearch = async (append = false) => {
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
+
     try {
-      const { items, totalCount: total } = await searchBibleVerses(query, { limit: 50 });
-      setResults(items.map(v => ({
-        ref: `${v.bookName} ${v.chapter}:${v.verse}`,
-        text: v.text,
-        bookId: v.bookId,
-        bookName: v.bookName,
-        chapter: v.chapter,
-        verse: v.verse
-      })));
+      const { items, totalCount: total, hasMore: more } = await searchBibleVerses(query, { 
+        limit: pageSize, 
+        offset: append ? results.length : 0 
+      });
+      const next = items.map(mapResult);
+      setResults(append ? [...results, ...next] : next);
       setTotalCount(total);
+      setHasMore(more);
     } catch (error) {
       console.error('Search failed:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
   const handleToggleResult = (res: BibleSearchResult) => {
-    const isSelected = selectedRefs.includes(res.ref);
-    if (isSelected) {
-      onSelectVerses([]); // This logic will be handled by the parent
-    } else {
-      onSelectVerses([{ ref: res.ref, text: res.text }]);
-    }
+    onSelectVerses([{ ref: res.ref, text: res.text }]);
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-[24px] border border-[#e8d8ce] px-5 py-4 flex items-center gap-3 shadow-sm focus-within:border-[#8d95d8] transition-all">
-        <Search size={20} className="text-[#A17C5B]" />
+    <div className="space-y-3">
+      <div className="sticky top-0 z-10 bg-white rounded-[16px] border border-[#e8d8ce] px-4 py-3 flex items-center gap-3 shadow-sm focus-within:border-[#8d95d8] transition-all">
+        <Search size={18} className="text-[#A17C5B]" />
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
@@ -70,7 +82,7 @@ export function BibleKeywordSearch({
           className="flex-1 bg-transparent outline-none text-sm font-bold text-[#3D3129]"
         />
         {query && (
-          <button onClick={() => setQuery('')} className="p-1 rounded-full bg-gray-100">
+          <button aria-label="검색어 지우기" onClick={() => setQuery('')} className="p-1 rounded-full bg-gray-100">
             <X size={14} className="text-gray-400" />
           </button>
         )}
@@ -98,9 +110,9 @@ export function BibleKeywordSearch({
         )}
 
         {!loading && results.length > 0 && (
-          <div className="space-y-3 pb-8">
+          <div className="space-y-2 pb-3">
             <p className="text-[10px] font-black text-[#A17C5B] uppercase tracking-widest px-1">
-              검색 결과 {totalCount > 50 ? '50+' : totalCount}건
+              검색 결과 {results.length}/{totalCount}건
             </p>
             {results.map(res => {
               const isSelected = selectedRefs.includes(res.ref);
@@ -108,13 +120,13 @@ export function BibleKeywordSearch({
                 <button
                   key={res.ref}
                   onClick={() => handleToggleResult(res)}
-                  className={`w-full text-left p-5 rounded-[22px] border transition-all ${
+                  className={`w-full text-left px-4 py-3 rounded-[16px] border transition-all ${
                     isSelected
                     ? 'bg-[#8d95d8]/10 border-[#8d95d8] shadow-sm'
                     : 'bg-white border-white shadow-sm hover:border-[#F5C292]'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-1.5">
                     <span className="text-xs font-black text-[#8d95d8]">{res.ref}</span>
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                       isSelected ? 'bg-[#8d95d8] border-[#8d95d8]' : 'border-[#e8d8ce] bg-white'
@@ -129,10 +141,19 @@ export function BibleKeywordSearch({
                 </button>
               );
             })}
+            {hasMore && (
+              <button
+                onClick={() => handleSearch(true)}
+                disabled={loadingMore}
+                className="w-full min-h-[46px] rounded-[16px] border bg-white text-sm font-black shadow-sm disabled:opacity-60"
+                style={{ borderColor: '#e8d8ce', color: '#3D3129' }}
+              >
+                {loadingMore ? '더 불러오는 중...' : `구절 더보기 (${totalCount - results.length}개 남음)`}
+              </button>
+            )}
           </div>
         )}
       </div>
     </div>
   );
 }
-

@@ -18,8 +18,10 @@ export interface ReadingPlanTemplate {
   subtitle: string;
   description: string;
   days: number;
-  tone: 'full' | 'fast' | 'new-testament' | 'gospels' | 'wisdom' | 'pentateuch';
+  tone: 'full' | 'fast' | 'new-testament' | 'gospels' | 'wisdom' | 'pentateuch' | 'custom';
   tasks: ReadingDayTask[];
+  bookIds?: string[];
+  editable?: boolean;
 }
 
 export interface ReadingPlanProgress {

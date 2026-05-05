@@ -1,4 +1,4 @@
-import { Check, Bookmark, BookmarkCheck, Copy } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { decodeHtml } from '../../utils/textUtils';
 
 interface Verse {
@@ -16,6 +16,7 @@ interface BibleVerseSelectableListProps {
   onToggleSave?: (verse: Verse) => void;
   isSaved?: (verseNumber: number) => boolean;
   onCopy?: (verse: Verse) => void;
+  selectionMode?: boolean;
 }
 
 export function BibleVerseSelectableList({
@@ -25,70 +26,43 @@ export function BibleVerseSelectableList({
   mode,
   onVerseClick,
   fontSize,
-  onToggleSave,
-  isSaved,
-  onCopy,
+  selectionMode = false,
 }: BibleVerseSelectableListProps) {
 
   return (
-    <div className="space-y-3">
+    <div className="overflow-hidden rounded-[18px] border border-[#E8D8C8] bg-white shadow-sm divide-y divide-[#EFE5DA]">
       {verses.map((v) => {
         const isSelected = selectedVerses.includes(v.verse);
-        const saved = isSaved ? isSaved(v.verse) : false;
+        const showCheckbox = mode === 'select' || selectionMode;
         
         return (
           <button
             key={v.verse}
             id={`verse-${v.verse}`}
             onClick={() => {
-              if (mode === 'select') {
+              if (showCheckbox) {
                 onToggleVerse(v.verse);
               } else {
                 onVerseClick(v);
               }
             }}
-            className={`w-full text-left p-4 rounded-2xl border transition-all relative ${
+            className={`w-full text-left px-3 py-2.5 transition-all relative ${
               isSelected && mode === 'select'
-                ? 'bg-[#8d95d8]/10 border-[#8d95d8] shadow-sm'
-                : 'bg-white border-white shadow-sm hover:border-[#F5C292]'
+                ? 'bg-[#8d95d8]/10'
+                : 'bg-white hover:bg-[#FFF8F1]'
             }`}
           >
-            <div className="flex items-center justify-between mb-3">
-              <div className={`flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black transition-all ${
-                isSelected && mode === 'select'
+            <div className="flex items-start gap-2.5">
+              <span className={`mt-[0.18em] inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-black leading-none ${
+                isSelected && showCheckbox
                   ? 'bg-[#8d95d8] text-white'
-                  : 'bg-[#FFF8F1] text-[#A17C5B]'
+                  : 'bg-[#F7EFE7] text-[#8C6F55]'
               }`}>
-                {isSelected && mode === 'select' ? <Check size={14} strokeWidth={4} /> : v.verse}
-              </div>
+                {isSelected && showCheckbox ? <Check size={12} strokeWidth={4} /> : v.verse}
+              </span>
 
-              {mode === 'read' && (
-                <div className="flex items-center gap-1">
-                   {onCopy && (
-                    <span 
-                      className="p-2 rounded-xl bg-[#FFF8F1] text-[#A17C5B] hover:bg-[#FDF2E7] transition-colors"
-                      onClick={(e) => { e.stopPropagation(); onCopy(v); }}
-                    >
-                      <Copy size={14} />
-                    </span>
-                  )}
-                  {onToggleSave && (
-                    <span 
-                      className={`p-2 rounded-xl transition-colors ${
-                        saved ? 'bg-[#8d95d8] text-white' : 'bg-[#FFF8F1] text-[#A17C5B] hover:bg-[#FDF2E7]'
-                      }`}
-                      onClick={(e) => { e.stopPropagation(); onToggleSave(v); }}
-                    >
-                      {saved ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-            
-            <div className="flex-1">
               <p 
-                className="leading-relaxed text-[#3D3129] serif-verse"
+                className="min-w-0 flex-1 leading-[1.72] text-[#3D3129] serif-verse"
                 style={{ fontSize }}
               >
                 {decodeHtml(v.text)}

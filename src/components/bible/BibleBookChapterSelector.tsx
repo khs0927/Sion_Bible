@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { BIBLE_BOOKS, type BibleBook } from '../../data/bibleBooks';
 import { Search, X } from 'lucide-react';
-import { KawaiiBibleIcon } from '../icons';
 
 interface BibleBookChapterSelectorProps {
   selectedBook: BibleBook;

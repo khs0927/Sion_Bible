@@ -102,7 +102,7 @@ export function ClayIcon({
           }}
         />
         {/* Subtle inner highlight */}
-        <span style={{ position: 'absolute', inset: 0, borderRadius: 'inherit', border: '1px solid rgba(232, 200, 168, 0.25)', pointerEvents: 'none' }} />
+        <span style={{ position: 'absolute', inset: 0, borderRadius: 'inherit', border: `1px solid ${borderColor}33`, pointerEvents: 'none' }} />
       </span>
     );
   }
