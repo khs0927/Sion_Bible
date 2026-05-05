@@ -570,7 +570,7 @@ export default function App() {
             <button aria-label="공유" onClick={() => shareVerse(ref, v.content)} style={circle(false)}><KawaiiShareIcon size={18} /></button>
           </div>
         </div>
-        <p style={{ margin: 0, lineHeight: 1.88, fontSize: large ? fsize : '0.96rem', wordBreak: 'keep-all' }}>"{v.content}"</p>
+        <p className="serif-verse" style={{ margin: 0, lineHeight: 1.88, fontSize: large ? fsize : '0.96rem', wordBreak: 'keep-all' }}>"{v.content}"</p>
         <button onClick={() => openCuratedDetail(v)} style={{ ...btn(false), marginTop: 11, padding: '7px 10px' }}>{ref}</button>
       </div>
       <div style={{ padding: '0 14px 14px' }}><InsightBlocks {...devotion} /></div>
@@ -624,6 +624,15 @@ export default function App() {
     saveUserReadingTemplates(userReadingTemplates.map(item => item.id === template.id ? template : item));
     if (readingProgress?.templateId === template.id) {
       setReadingProgress(startReadingPlan(template));
+    }
+  };
+
+  const handleDeleteCustomPlan = (templateId: string) => {
+    saveUserReadingTemplates(userReadingTemplates.filter(item => item.id !== templateId));
+    if (readingProgress?.templateId === templateId) {
+      setReadingProgress(null);
+      setTodayReadingTask(null);
+      setActiveReadingRange(null);
     }
   };
 
@@ -778,7 +787,7 @@ export default function App() {
                 <div style={{ display: 'flex', gap: 6, flex: '0 0 auto' }}><button onClick={nextHomeVerse} style={{ ...btn(false), padding: '7px 10px', whiteSpace: 'nowrap' }}>말씀 더보기</button><button onClick={() => toggleSave(`${currentHomeVerse.book} ${currentHomeVerse.chapter}:${currentHomeVerse.verse}`, currentHomeVerse.content, currentHomeVerse.meditation, currentHomeVerse.prayer)} style={{ ...btn(isSaved(`${currentHomeVerse.book} ${currentHomeVerse.chapter}:${currentHomeVerse.verse}`)), padding: '7px 10px', whiteSpace: 'nowrap' }}><KawaiiSavedIcon size={17} /><span>저장</span></button></div>
               </div>
               <button onClick={nextHomeVerse} style={{ width: '100%', textAlign: 'left', border: `1px solid ${th.line}`, borderRadius: 18, background: th.card, color: th.text, padding: '15px 16px', fontFamily: 'inherit', cursor: 'pointer', boxShadow: th.soft }}>
-                <p style={{ margin: 0, fontSize: fsize, lineHeight: 1.82, wordBreak: 'keep-all' }}>"{decodeHtml(currentHomeVerse.content)}"</p>
+                <p className="serif-verse" style={{ margin: 0, fontSize: fsize, lineHeight: 1.82, wordBreak: 'keep-all' }}>"{decodeHtml(currentHomeVerse.content)}"</p>
                 <div style={{ marginTop: 9, color: th.accent, fontWeight: 900, fontSize: 12 }}>{currentHomeVerse.book} {currentHomeVerse.chapter}:{currentHomeVerse.verse}</div>
               </button>
               <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
@@ -842,7 +851,7 @@ export default function App() {
         </div>
       )}
 
-      {tab === 'plan' && <ReadingPlanHome T={th} progress={readingProgress} userTemplates={userReadingTemplates} onToggleDay={handleToggleReadingDay} onStartPlan={handleStartPlan} onStartPlanAndRead={handleStartPlanAndRead} onSaveCustomPlan={handleSaveCustomPlan} onUpdateCustomPlan={handleUpdateCustomPlan} onNavigateToBible={navigateToBible} onNavigateToRange={handleNavigateToRange} onTodayTaskLoaded={setTodayReadingTask} />}
+      {tab === 'plan' && <ReadingPlanHome T={th} progress={readingProgress} userTemplates={userReadingTemplates} onToggleDay={handleToggleReadingDay} onStartPlan={handleStartPlan} onStartPlanAndRead={handleStartPlanAndRead} onSaveCustomPlan={handleSaveCustomPlan} onUpdateCustomPlan={handleUpdateCustomPlan} onDeleteCustomPlan={handleDeleteCustomPlan} onNavigateToBible={navigateToBible} onNavigateToRange={handleNavigateToRange} onTodayTaskLoaded={setTodayReadingTask} />}
 
       {tab === 'memory' && <MemoryHome T={th} savedVerses={saved} />}
 
@@ -898,7 +907,7 @@ export default function App() {
           </div>
           {saved.length === 0 && <div style={{ color: th.sub, fontSize: 14 }}>저장된 말씀이 없습니다.</div>}
           {isReorderingSaved && <div style={{ color: th.sub, fontSize: 11, marginBottom: 8 }}>카드를 길게 잡고 원하는 위치로 끌어 옮겨보세요.</div>}
-          <div style={{ display: 'grid', gap: 12 }}>{savedGroups.map(([label, items]) => <section key={label} style={{ display: 'grid', gap: 7 }}><div style={{ display: 'flex', alignItems: 'center', gap: 6, color: th.sub, fontWeight: 900, fontSize: 12 }}><KawaiiCalendarIcon size={17} />{label}</div>{items.map(s => <button key={`${label}-${s.ref}`} draggable={isReorderingSaved} onDragStart={() => setDraggedSavedRef(s.ref)} onDragOver={e => { if (isReorderingSaved) e.preventDefault(); }} onDrop={e => { e.preventDefault(); if (draggedSavedRef) moveSavedVerse(draggedSavedRef, s.ref); setDraggedSavedRef(null); }} onDragEnd={() => setDraggedSavedRef(null)} onClick={() => { if (!isReorderingSaved) openVerseDetail(s.ref, s.text); }} className={isReorderingSaved ? 'reorder-card' : undefined} style={{ textAlign: 'left', border: `1px solid ${draggedSavedRef === s.ref ? th.accent : th.line}`, borderRadius: 16, background: th.solid, color: th.text, padding: 12, fontFamily: 'inherit', cursor: isReorderingSaved ? 'grab' : 'pointer', boxShadow: th.soft }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}><span style={{ fontWeight: 900, color: th.accent, fontSize: 13 }}>{s.ref}</span><span onClick={e => { e.stopPropagation(); if (!isReorderingSaved) toggleSave(s.ref, s.text); }}>{isReorderingSaved ? <GripVertical size={14} color={th.sub} /> : <X size={13} color={th.sub} />}</span></div><div style={{ fontSize: fsize, lineHeight: 1.85, wordBreak: 'keep-all' }}>"{s.text}"</div></button>)}</section>)}</div>
+          <div style={{ display: 'grid', gap: 12 }}>{savedGroups.map(([label, items]) => <section key={label} style={{ display: 'grid', gap: 7 }}><div style={{ display: 'flex', alignItems: 'center', gap: 6, color: th.sub, fontWeight: 900, fontSize: 12 }}><KawaiiCalendarIcon size={17} />{label}</div>{items.map(s => <button key={`${label}-${s.ref}`} draggable={isReorderingSaved} onDragStart={() => setDraggedSavedRef(s.ref)} onDragOver={e => { if (isReorderingSaved) e.preventDefault(); }} onDrop={e => { e.preventDefault(); if (draggedSavedRef) moveSavedVerse(draggedSavedRef, s.ref); setDraggedSavedRef(null); }} onDragEnd={() => setDraggedSavedRef(null)} onClick={() => { if (!isReorderingSaved) openVerseDetail(s.ref, s.text); }} className={isReorderingSaved ? 'reorder-card' : undefined} style={{ textAlign: 'left', border: `1px solid ${draggedSavedRef === s.ref ? th.accent : th.line}`, borderRadius: 16, background: th.solid, color: th.text, padding: 12, fontFamily: 'inherit', cursor: isReorderingSaved ? 'grab' : 'pointer', boxShadow: th.soft }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}><span style={{ fontWeight: 900, color: th.accent, fontSize: 13 }}>{s.ref}</span><span onClick={e => { e.stopPropagation(); if (!isReorderingSaved) toggleSave(s.ref, s.text); }}>{isReorderingSaved ? <GripVertical size={14} color={th.sub} /> : <X size={13} color={th.sub} />}</span></div><div className="serif-verse" style={{ fontSize: fsize, lineHeight: 1.85, wordBreak: 'keep-all' }}>"{s.text}"</div></button>)}</section>)}</div>
         </Card>
       </div>}
 
@@ -981,7 +990,7 @@ export default function App() {
             </div>
           </div>
           <div style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 14, marginBottom: 10 }}>
-            <div style={{ fontSize: fsize, lineHeight: 1.9, wordBreak: 'keep-all' }}>"{detail.text}"</div>
+            <div className="serif-verse" style={{ fontSize: fsize, lineHeight: 1.9, wordBreak: 'keep-all' }}>"{detail.text}"</div>
           </div>
           <VerseDevotionPanel selectedVerse={detail} onGoToMemory={handleGoToMemory} fontSize={fsize} />
         </div>

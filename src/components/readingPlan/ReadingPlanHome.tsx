@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { CalendarClock, Check, PlusCircle, SlidersHorizontal, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, SlidersHorizontal, X } from 'lucide-react';
 import { createCustomReadingPlanTemplate, READING_PLAN_BOOK_OPTIONS, READING_PLAN_TEMPLATES } from '../../data/readingPlans';
 import { getTodayReadingDay, isDayCompleted } from '../../services/readingPlanStats';
 import type { ReadingPlanProgress, ReadingDayTask, ReadingPlanTemplate } from '../../types/readingPlan';
@@ -12,12 +12,25 @@ import { WeeklyProgressBar } from './WeeklyProgressBar';
 type ThemeTokens = Record<string, string>;
 
 const DURATION_PRESETS = [
+  { label: '직접', value: 0 },
   { label: '5일', value: 5 },
   { label: '10일', value: 10 },
   { label: '한주', value: 7 },
   { label: '한달', value: 30 },
   { label: '세달', value: 90 },
-  { label: '직접', value: 0 },
+];
+
+const BOOK_GROUPS: Array<{ title: string; ids: string[] }> = [
+  { title: '모세오경', ids: ['gen', 'exo', 'lev', 'num', 'deu'] },
+  { title: '역사서', ids: ['jos', 'jdg', 'rut', '1sa', '2sa', '1ki', '2ki', '1ch', '2ch', 'ezr', 'neh', 'est'] },
+  { title: '시가서', ids: ['job', 'psa', 'pro', 'ecc', 'sng'] },
+  { title: '대선지서', ids: ['isa', 'jer', 'lam', 'ezk', 'dan'] },
+  { title: '소선지서', ids: ['hos', 'jol', 'amo', 'oba', 'jon', 'mic', 'nam', 'hab', 'zep', 'hag', 'zec', 'mal'] },
+  { title: '복음서', ids: ['mat', 'mrk', 'luk', 'jhn'] },
+  { title: '역사서(신약)', ids: ['act'] },
+  { title: '바울서신', ids: ['rom', '1co', '2co', 'gal', 'eph', 'php', 'col', '1th', '2th', '1ti', '2ti', 'tit', 'phm'] },
+  { title: '공동서신', ids: ['heb', 'jas', '1pe', '2pe', '1jn', '2jn', '3jn', 'jud'] },
+  { title: '예언서(신약)', ids: ['rev'] },
 ];
 
 export function ReadingPlanHome({ 
@@ -33,6 +46,7 @@ export function ReadingPlanHome({
   onStartPlanAndRead,
   onSaveCustomPlan,
   onUpdateCustomPlan,
+  onDeleteCustomPlan,
 }: { 
   T: ThemeTokens; 
   progress: ReadingPlanProgress | null;
@@ -46,6 +60,7 @@ export function ReadingPlanHome({
   onStartPlanAndRead?: (template: ReadingPlanTemplate) => void;
   onSaveCustomPlan?: (template: ReadingPlanTemplate) => void;
   onUpdateCustomPlan?: (template: ReadingPlanTemplate) => void;
+  onDeleteCustomPlan?: (templateId: string) => void;
 }) {
   const [meditationTask, setMeditationTask] = useState<ReadingDayTask | null>(null);
   const [courseTab, setCourseTab] = useState<'recommended' | 'custom'>('recommended');
@@ -55,6 +70,7 @@ export function ReadingPlanHome({
   const [courseTitle, setCourseTitle] = useState('');
   const [pendingTemplate, setPendingTemplate] = useState<ReadingPlanTemplate | null>(null);
   const [editDays, setEditDays] = useState<Record<string, number>>({});
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
 
   const allTemplates = useMemo(() => [...READING_PLAN_TEMPLATES, ...userTemplates], [userTemplates]);
   const activeTemplate = useMemo(
@@ -66,6 +82,7 @@ export function ReadingPlanHome({
   const completed = isDayCompleted(progress, todayDay);
   const selectedDays = durationPreset === 0 ? manualDays : durationPreset;
   const selectedBooks = READING_PLAN_BOOK_OPTIONS.filter((book) => selectedBookIds.includes(book.id));
+  const isAllSelected = selectedBookIds.length === READING_PLAN_BOOK_OPTIONS.length;
 
   useEffect(() => {
     onTodayTaskLoaded?.(todayTask);
@@ -108,7 +125,13 @@ export function ReadingPlanHome({
     if (group === 'gospels') setSelectedBookIds(['mat', 'mrk', 'luk', 'jhn']);
     if (group === 'new') setSelectedBookIds(READING_PLAN_BOOK_OPTIONS.slice(39).map((book) => book.id));
     if (group === 'old') setSelectedBookIds(READING_PLAN_BOOK_OPTIONS.slice(0, 39).map((book) => book.id));
-    if (group === 'all') setSelectedBookIds(READING_PLAN_BOOK_OPTIONS.map((book) => book.id));
+    if (group === 'all') {
+      if (isAllSelected) {
+        setSelectedBookIds([]);
+      } else {
+        setSelectedBookIds(READING_PLAN_BOOK_OPTIONS.map((book) => book.id));
+      }
+    }
   };
 
   const createPlan = () => {
@@ -122,6 +145,7 @@ export function ReadingPlanHome({
     onSaveCustomPlan?.(template);
     setPendingTemplate(template);
     setCourseTitle('');
+    setEditingTemplateId(null);
   };
 
   const updateCustomDays = (template: ReadingPlanTemplate) => {
@@ -133,6 +157,7 @@ export function ReadingPlanHome({
       bookIds: template.bookIds ?? ['jhn'],
     });
     onUpdateCustomPlan?.(next);
+    setEditingTemplateId(null);
   };
 
   if (meditationTask) {
@@ -222,6 +247,8 @@ export function ReadingPlanHome({
                 placeholder="코스 이름을 입력하세요"
                 style={{ width: '100%', borderRadius: 14, border: `1px solid ${T.line}`, background: T.solid, color: T.text, padding: '11px 12px', fontFamily: 'inherit', fontWeight: 800, outline: 'none' }}
               />
+              <div>
+                <div className="title-font" style={{ fontWeight: 900, fontSize: 16, marginBottom: 7 }}>통독기간</div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {DURATION_PRESETS.map((preset) => (
                   <button key={preset.label} onClick={() => setDurationPreset(preset.value)} style={chip(T, durationPreset === preset.value)}>
@@ -229,35 +256,53 @@ export function ReadingPlanHome({
                   </button>
                 ))}
                 {durationPreset === 0 && (
-                  <input
-                    type="number"
-                    min={1}
-                    max={365}
-                    value={manualDays}
-                    onChange={(event) => setManualDays(Number(event.target.value))}
-                    style={{ width: 82, borderRadius: 999, border: `1px solid ${T.line}`, background: T.solid, color: T.text, padding: '7px 10px', fontFamily: 'inherit', fontWeight: 900 }}
-                  />
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, borderRadius: 999, border: `1px solid ${T.line}`, background: T.card, minHeight: 32, padding: '4px 8px' }}>
+                    <button
+                      onClick={() => setManualDays((days) => Math.max(1, days - 1))}
+                      style={{ ...primaryIconButton(T), width: 24, height: 24, borderRadius: 10 }}
+                      aria-label="기간 하루 줄이기"
+                    >
+                      <ChevronDown size={14} />
+                    </button>
+                    <span style={{ minWidth: 46, textAlign: 'center', fontWeight: 900, fontSize: 12, color: T.text }}>{manualDays}일</span>
+                    <button
+                      onClick={() => setManualDays((days) => Math.min(365, days + 1))}
+                      style={{ ...primaryIconButton(T), width: 24, height: 24, borderRadius: 10 }}
+                      aria-label="기간 하루 늘리기"
+                    >
+                      <ChevronUp size={14} />
+                    </button>
+                  </div>
                 )}
               </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                <button onClick={() => selectBookGroup('gospels')} style={chip(T, false)}>사복음서</button>
-                <button onClick={() => selectBookGroup('new')} style={chip(T, false)}>신약 전체</button>
-                <button onClick={() => selectBookGroup('old')} style={chip(T, false)}>구약 전체</button>
-                <button onClick={() => selectBookGroup('all')} style={chip(T, false)}>성경 전체</button>
               </div>
-              <div style={{ maxHeight: 260, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6, paddingRight: 2 }} className="book-grid">
-                {READING_PLAN_BOOK_OPTIONS.map((book) => {
-                  const selected = selectedBookIds.includes(book.id);
-                  return (
-                    <button key={book.id} onClick={() => toggleBook(book.id)} style={{ ...chip(T, selected), borderRadius: 12, justifyContent: 'space-between', padding: '8px 9px' }}>
-                      <span>{book.name}</span>
-                      {selected && <Check size={13} />}
-                    </button>
-                  );
-                })}
+              <div>
+                <div className="title-font" style={{ fontWeight: 900, fontSize: 16, marginBottom: 7 }}>통독구간</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <button onClick={() => selectBookGroup('all')} style={chip(T, isAllSelected)}>성경 전체</button>
+                <button onClick={() => selectBookGroup('old')} style={chip(T, selectedBookIds.length === 39)}>구약 전체</button>
+                <button onClick={() => selectBookGroup('new')} style={chip(T, selectedBookIds.length === 27)}>신약 전체</button>
+              </div>
+              </div>
+              <div style={{ maxHeight: 320, overflowY: 'auto', display: 'grid', gap: 10, paddingRight: 2 }}>
+                {BOOK_GROUPS.map((group) => (
+                  <section key={group.title} style={{ display: 'grid', gap: 6 }}>
+                    <div style={{ fontWeight: 900, fontSize: 12, color: T.sub }}>{group.title}</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }} className="book-grid">
+                      {READING_PLAN_BOOK_OPTIONS.filter((book) => group.ids.includes(book.id)).map((book) => {
+                        const selected = selectedBookIds.includes(book.id);
+                        return (
+                          <button key={book.id} onClick={() => toggleBook(book.id)} style={{ ...chip(T, selected), borderRadius: 12, justifyContent: 'space-between', padding: '8px 9px' }}>
+                            <span>{book.name}</span>
+                            {selected && <Check size={13} />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
               </div>
               <button onClick={createPlan} style={primaryButton(T)}>
-                <PlusCircle size={17} />
                 <span>나만의 코스 만들기</span>
               </button>
             </section>
@@ -272,22 +317,41 @@ export function ReadingPlanHome({
                         <div className="title-font" style={{ fontSize: 18, fontWeight: 800 }}>{template.title}</div>
                         <div style={{ color: T.sub, fontSize: 12, fontWeight: 800, marginTop: 3 }}>{template.description}</div>
                       </div>
-                      <button onClick={() => beginPlan(template)} style={{ ...primaryIconButton(T), flex: '0 0 auto' }} aria-label={`${template.title} 시작`}><PlusCircle size={17} /></button>
+                      <div style={{ display: 'inline-flex', alignItems: 'flex-start', gap: 6 }}>
+                        <button onClick={() => onDeleteCustomPlan?.(template.id)} style={{ ...primaryIconButton(T), width: 34, height: 34, borderRadius: 12 }} aria-label={`${template.title} 삭제`}>
+                          <X size={14} />
+                        </button>
+                        <button onClick={() => onStartPlanAndRead?.(template)} style={{ ...primaryButton(T), minHeight: 38, padding: '8px 10px', flex: '0 0 auto' }} aria-label={`${template.title} 읽으러 가기`}>
+                          읽으러 가기
+                        </button>
+                      </div>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 8 }}>
-                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, borderRadius: 14, border: `1px solid ${T.line}`, background: T.solid, padding: '8px 10px', color: T.sub, fontWeight: 900, fontSize: 12 }}>
-                        <CalendarClock size={15} />
-                        <input
-                          type="number"
-                          min={1}
-                          max={365}
-                          value={editDays[template.id] ?? template.days}
-                          onChange={(event) => setEditDays((current) => ({ ...current, [template.id]: Number(event.target.value) }))}
-                          style={{ width: 58, border: 'none', background: 'transparent', color: T.text, fontFamily: 'inherit', fontWeight: 900, outline: 'none' }}
-                        />
-                        일
-                      </label>
-                      <button onClick={() => updateCustomDays(template)} style={secondaryButton(T)}>기간 수정</button>
+                    <div style={{ display: 'grid', gap: 8 }}>
+                      <button onClick={() => setEditingTemplateId((current) => (current === template.id ? null : template.id))} style={secondaryButton(T)}>기간 수정</button>
+                      {editingTemplateId === template.id && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0,1fr) auto', gap: 8, alignItems: 'center' }}>
+                          <button
+                            onClick={() => setEditDays((current) => ({ ...current, [template.id]: Math.max(1, (current[template.id] ?? template.days) - 1) }))}
+                            style={primaryIconButton(T)}
+                            aria-label={`${template.title} 기간 줄이기`}
+                          >
+                            <ChevronDown size={16} />
+                          </button>
+                          <div style={{ textAlign: 'center', fontWeight: 900, fontSize: 14, color: T.text }}>
+                            {(editDays[template.id] ?? template.days)}일
+                          </div>
+                          <button
+                            onClick={() => setEditDays((current) => ({ ...current, [template.id]: Math.min(365, (current[template.id] ?? template.days) + 1) }))}
+                            style={primaryIconButton(T)}
+                            aria-label={`${template.title} 기간 늘리기`}
+                          >
+                            <ChevronUp size={16} />
+                          </button>
+                        </div>
+                      )}
+                      {editingTemplateId === template.id && (
+                        <button onClick={() => updateCustomDays(template)} style={primaryButton(T)}>확인</button>
+                      )}
                     </div>
                   </article>
                 ))}
