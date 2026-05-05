@@ -21,6 +21,8 @@ import type { BibleReadRange } from './types/bible';
 import { getActiveReadingPlan, toggleReadingDay, completeReadingDay, startReadingPlan } from './services/readingPlanStorage';
 import { READING_PLAN_TEMPLATES } from './data/readingPlans';
 import { BibleSearchSheet } from './components/bible/BibleSearchSheet';
+import { usePwaInstall } from './hooks/usePwaInstall';
+import { PwaInstallGuideSheet } from './components/pwa/PwaInstallGuideSheet';
 
 interface SavedVerse { ref: string; text: string; date?: string; meditation?: string; prayer?: string; }
 interface VerseDetail { ref: string; text: string; title?: string; meditation?: string; prayer?: string; application?: string; model?: string; fromCache?: boolean; }
@@ -154,7 +156,6 @@ export default function App() {
   const [draggedSavedRef, setDraggedSavedRef] = useState<string | null>(null);
   const [detail, setDetail] = useState<VerseDetail | null>(null);
   const [speaking, setSpeaking] = useState(false);
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [selectedMood, setSelectedMood] = useState<Mood | null>(null);
   const [todayReadingTask, setTodayReadingTask] = useState<ReadingDayTask | null>(null);
   const [activeReadingRange, setActiveReadingRange] = useState<BibleReadRange | null>(null);
@@ -163,6 +164,17 @@ export default function App() {
   const [isChapterSheetOpen, setIsChapterSheetOpen] = useState(false);
   const [homeDevotion, setHomeDevotion] = useState<import('./services/verseDevotionApi').VerseDevotionResult | null>(null);
   const [homeDevotionLoading, setHomeDevotionLoading] = useState(false);
+  const [isPwaGuideOpen, setIsPwaGuideOpen] = useState(false);
+  
+  const { 
+    platform, 
+    isInstalled, 
+    canInstall, 
+    install, 
+    instructions, 
+    buttonLabel, 
+    guideTitle,
+  } = usePwaInstall();
 
   useEffect(() => {
     setReadingProgress(getActiveReadingPlan());
@@ -249,9 +261,7 @@ export default function App() {
     if (lb) { const bk = BIBLE_BOOKS.find(b => b.id === lb); if (bk) setSelBook(bk); }
     if (lc) setSelChap(Number(lc));
     setHomeHistory([BIBLE_VERSES[getDailyIdx()]]);
-    const handleInstall = (e: Event) => { e.preventDefault(); setInstallPrompt(e); };
-    window.addEventListener('beforeinstallprompt', handleInstall);
-    return () => { window.removeEventListener('beforeinstallprompt', handleInstall); window.speechSynthesis?.cancel(); };
+    return () => { window.speechSynthesis?.cancel(); };
   }, []);
 
   useEffect(() => { if (tab === 'random' && !rndVerse) pickRandom(selCat); }, [tab]);
@@ -436,24 +446,12 @@ export default function App() {
     setDetail(cached ? { ref, text, ...cached, fromCache: true } : initial);
   };
   const installApp = async () => {
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
-    if (isStandalone) {
-      alert('이미 앱이 설치되어 있습니다. 홈 화면의 아이콘을 통해 이용해 주세요!');
-      return;
-    }
+    if (isInstalled) return;
 
-    if (installPrompt?.prompt) {
-      const result = await installPrompt.prompt();
-      console.log('Install prompt result:', result);
-      setInstallPrompt(null);
-      return;
-    }
-
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    if (isIOS) {
-      alert('iPhone/iPad에서는 브라우저 하단의 [공유] 버튼을 누른 후, [홈 화면에 추가]를 선택하시면 바탕화면에 아이콘이 생성됩니다.');
-    } else {
-      alert('브라우저 메뉴(우측 상단 또는 하단 점 세개)에서 "앱 설치" 또는 "홈 화면에 추가"를 선택하시면 바탕화면에 아이콘이 생성됩니다.');
+    const { outcome } = await install();
+    
+    if (outcome === 'manual-guide-required' || outcome === 'open-safari-guide-required' || outcome === 'unavailable') {
+      setIsPwaGuideOpen(true);
     }
   };
 
@@ -563,6 +561,14 @@ export default function App() {
   return <div style={{ minHeight: '100vh', background: th.bg, color: th.text, fontFamily: "'S-Core Dream', sans-serif" }}>
     {isSearchOpen && <BibleSearchSheet onClose={() => setIsSearchOpen(false)} onNavigate={handleSearchNavigate} T={th} fontSize={fsize} />}
     
+    <PwaInstallGuideSheet 
+      open={isPwaGuideOpen} 
+      onClose={() => setIsPwaGuideOpen(false)} 
+      platform={platform} 
+      instructions={instructions}
+      title={guideTitle}
+    />
+    
     <main style={{ position: 'relative', maxWidth: 1220, margin: '0 auto', padding: '14px 16px 112px', minHeight: '100vh' }}>
       <header style={{ position: 'sticky', top: 0, zIndex: 20, display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0 12px', background: `linear-gradient(180deg, ${th.bg} 74%, transparent)` }}>
         <button aria-label="홈으로 이동" onClick={() => { setDetail(null); setTab('home'); setActiveReadingRange(null); }} style={{ ...circle(tab === 'home'), width: 46, height: 46, borderRadius: 18 }}>{pageIcon}</button>
@@ -570,7 +576,12 @@ export default function App() {
         
         {tab === 'home' ? (
           <>
-            <button aria-label="앱 설치" onClick={installApp} style={installBtn(Boolean(installPrompt))}><Download size={16} /><span>APP 설치</span></button>
+            {!isInstalled && (
+              <button aria-label="앱 설치" onClick={installApp} style={installBtn(canInstall)}>
+                <Download size={15} />
+                <span>{buttonLabel}</span>
+              </button>
+            )}
             <button aria-label="설정" onClick={() => setTab('settings')} style={circle(false)}><KawaiiSettingsIcon size={23} /></button>
           </>
         ) : tab === 'read' ? (
