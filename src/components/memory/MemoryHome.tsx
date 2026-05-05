@@ -78,7 +78,7 @@ export function MemoryHome({ T, savedVerses }: { T: ThemeTokens; savedVerses: Sa
       {/* 0. 자동 복습 알림 대기 (지나간 알림) */}
       {dueAutoReminders.length > 0 && (
         <section className="animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="p-5 rounded-[32px] border bg-white flex items-center justify-between gap-4 shadow-lg border-[#F5C292]">
+          <div className="p-5 rounded-[20px] border flex items-center justify-between gap-4 shadow-lg" style={{ background: T.card, borderColor: T.peach }}>
             <div className="flex items-center gap-3">
               <div className="p-3 rounded-2xl bg-[#FFF8F1]">
                 <BellRing size={22} className="animate-bounce" style={{ color: T.accent }} />
@@ -101,7 +101,7 @@ export function MemoryHome({ T, savedVerses }: { T: ThemeTokens; savedVerses: Sa
 
       {/* 1. 오늘 복습 카드 */}
       <section 
-        className="p-7 rounded-[32px] border transition-all shadow-sm"
+        className="p-6 rounded-[22px] border transition-all shadow-sm"
         style={{ background: T.panel, borderColor: T.line }}
       >
         <div className="text-[10px] font-black uppercase tracking-widest mb-3" style={{ color: T.accent }}>
@@ -125,16 +125,16 @@ export function MemoryHome({ T, savedVerses }: { T: ThemeTokens; savedVerses: Sa
       <section className="grid grid-cols-2 gap-3">
         <button 
           onClick={() => setShowAddSheet(true)}
-          className="h-14 rounded-2xl border flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all bg-white"
-          style={{ borderColor: T.line, color: T.text }}
+          className="h-14 rounded-[16px] border flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all"
+          style={{ borderColor: T.line, color: T.text, background: T.card }}
         >
           <Plus size={18} strokeWidth={3} style={{ color: T.accent }} />
           <span className="title-font text-sm font-black">구절 추가</span>
         </button>
         <button 
           onClick={() => setShowReminderSheet(true)}
-          className="h-14 rounded-2xl border flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all bg-white"
-          style={{ borderColor: T.line, color: T.text }}
+          className="h-14 rounded-[16px] border flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all"
+          style={{ borderColor: T.line, color: T.text, background: T.card }}
         >
           <Settings2 size={18} strokeWidth={2} style={{ color: T.sub }} />
           <span className="title-font text-sm font-black">알림 설정</span>
@@ -151,7 +151,7 @@ export function MemoryHome({ T, savedVerses }: { T: ThemeTokens; savedVerses: Sa
         </div>
         
         {verses.length === 0 && (
-          <div className="py-12 text-center rounded-[28px] border-2 border-dashed" style={{ borderColor: T.line, color: T.sub }}>
+          <div className="py-12 text-center rounded-[20px] border-2 border-dashed" style={{ borderColor: T.line, color: T.sub }}>
             <p className="text-sm font-bold">아직 암송 구절이 없습니다.</p>
           </div>
         )}
@@ -178,6 +178,7 @@ export function MemoryHome({ T, savedVerses }: { T: ThemeTokens; savedVerses: Sa
             </div>
             <button 
               onClick={() => { setShowReminderSheet(false); refresh(); }}
+              aria-label="알림 설정 닫기"
               className="w-10 h-10 rounded-2xl border flex items-center justify-center transition-all active:scale-90"
               style={{ borderColor: T.line, background: T.solid, color: T.sub }}
             >

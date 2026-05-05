@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { Bookmark, BookmarkCheck, ChevronLeft, ChevronRight, Copy, Download, GripVertical, Loader2, X, Search } from 'lucide-react';
+import { Bookmark, BookmarkCheck, CheckSquare, ChevronLeft, ChevronRight, Copy, Download, GripVertical, Loader2, Send, X, Search } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { decodeHtml } from './utils/textUtils';
 import { BIBLE_BOOKS } from './data/bibleBooks';
@@ -15,11 +15,11 @@ import { AppNavIcon } from './components/ui/AppNavIcon';
 import { addMemoryVerse, isVerseMemorized } from './services/memoryStorage';
 import { BibleVersePicker } from './components/bible/BibleVersePicker';
 import { convertTaskToBibleRange } from './services/readingPlanToBibleRange';
-import type { ReadingDayTask } from './types/readingPlan';
+import type { ReadingDayTask, ReadingPlanTemplate } from './types/readingPlan';
 import type { BibleReadRange } from './types/bible';
 
 import { getActiveReadingPlan, toggleReadingDay, completeReadingDay, startReadingPlan } from './services/readingPlanStorage';
-import { READING_PLAN_TEMPLATES } from './data/readingPlans';
+import { ALL_READING_PLAN_TEMPLATES } from './data/readingPlans';
 import { BibleSearchSheet } from './components/bible/BibleSearchSheet';
 import { usePwaInstall } from './hooks/usePwaInstall';
 import { PwaInstallGuideSheet } from './components/pwa/PwaInstallGuideSheet';
@@ -27,6 +27,7 @@ import { PwaInstallGuideSheet } from './components/pwa/PwaInstallGuideSheet';
 interface SavedVerse { ref: string; text: string; date?: string; meditation?: string; prayer?: string; }
 interface VerseDetail { ref: string; text: string; title?: string; meditation?: string; prayer?: string; application?: string; model?: string; fromCache?: boolean; }
 interface JournalEntry { id: string; ref: string; date: string; [key: string]: unknown; }
+interface ReadSelectedVerse { ref: string; text: string; verse: number; }
 
 type Tab = 'home' | 'random' | 'read' | 'plan' | 'memory' | 'saved' | 'settings';
 type FontSize = 'sm' | 'base' | 'lg' | 'xl';
@@ -75,28 +76,28 @@ const MOOD_KEYWORDS: Record<Mood, string[]> = {
   '축복': ['복', '축복', '형통', '은택', '넘치', '복이'],
 };
 const FS: Record<FontSize, string> = { sm: '0.9rem', base: '1rem', lg: '1.13rem', xl: '1.25rem' };
-const LS = { SAVED: 'gb_saved', JOURNAL: 'gb_journal', THEME: 'gb_theme', SIZE: 'gb_size', LAST_BOOK: 'gb_last_book', LAST_CHAP: 'gb_last_chap', DAILY_DATE: 'gb_daily_date', DAILY_IDX: 'gb_daily_idx' };
+const LS = { SAVED: 'gb_saved', JOURNAL: 'gb_journal', THEME: 'gb_theme', SIZE: 'gb_size', LAST_BOOK: 'gb_last_book', LAST_CHAP: 'gb_last_chap', DAILY_DATE: 'gb_daily_date', DAILY_IDX: 'gb_daily_idx', CUSTOM_PLANS: 'gb_custom_reading_plans' };
 
 function TH(theme: Theme) {
   return {
     'a-soft': { 
-      bg: '#EADDD2', 
-      panel: '#FFF8F1', 
-      card: '#FFF8F1', 
-      solid: '#FDF6F0', 
-      line: '#E8D8C8', 
-      text: '#3D3129', 
-      sub: '#7B6A5D', 
-      accent: '#9A8FE3', 
-      pill: 'rgba(255,255,255,0.8)', 
-      peach: '#F5C292', 
-      mint: '#A9D9D7', 
-      butter: '#F1C5AA', 
-      lavender: '#B5B3E8', 
-      shadow: '0 8px 30px rgba(61,49,41,0.06)', 
-      soft: '0 4px 12px rgba(61,49,41,0.04)' 
+      bg: '#F1EEE7', 
+      panel: '#FFFCF7', 
+      card: '#FFFFFF', 
+      solid: '#F8F3EC', 
+      line: '#E4D8CA', 
+      text: '#342D27', 
+      sub: '#756B61', 
+      accent: '#6F8F72', 
+      pill: 'rgba(255,255,255,0.88)', 
+      peach: '#E9A86F', 
+      mint: '#86B7AD', 
+      butter: '#F4D79F', 
+      lavender: '#9E97C9', 
+      shadow: '0 14px 36px rgba(52,45,39,0.08)', 
+      soft: '0 8px 20px rgba(52,45,39,0.05)' 
     },
-    'a-dark': { bg: '#8a9b98', panel: 'linear-gradient(145deg, rgba(130,150,148,0.96), rgba(112,132,128,0.96))', card: 'linear-gradient(150deg, rgba(126,149,145,0.96), rgba(154,137,137,0.92) 48%, rgba(105,129,135,0.95))', solid: 'rgba(105,132,124,0.94)', line: 'rgba(255,255,255,0.12)', text: '#fff8ef', sub: '#e8d8ce', accent: '#f3d390', pill: 'rgba(255,255,255,0.12)', peach: '#f2b4a3', mint: '#a9d9d7', butter: '#f3d390', lavender: '#b5b3e8', shadow: '20px 20px 36px rgba(68,88,82,0.26), -14px -14px 28px rgba(176,207,196,0.16)', soft: '8px 8px 16px rgba(70,90,83,0.2), -6px -6px 14px rgba(170,210,198,0.1)' },
+    'a-dark': { bg: '#24312E', panel: 'linear-gradient(145deg, rgba(50,68,63,0.96), rgba(38,54,50,0.98))', card: 'linear-gradient(150deg, rgba(54,73,67,0.98), rgba(75,64,59,0.94) 52%, rgba(37,56,58,0.98))', solid: 'rgba(255,255,255,0.08)', line: 'rgba(255,255,255,0.13)', text: '#fff8ef', sub: '#d8cbc0', accent: '#f2cf87', pill: 'rgba(255,255,255,0.12)', peach: '#f0a77e', mint: '#9fd1c4', butter: '#f2cf87', lavender: '#b9addc', shadow: '0 18px 42px rgba(10,18,17,0.26)', soft: '0 10px 24px rgba(10,18,17,0.18)' },
   }[theme];
 }
 
@@ -138,7 +139,20 @@ function groupLabel(mode: SavedGroupMode, value?: string) {
   return todayText(d);
 }
 
+function getInitialReadingLocation() {
+  try {
+    const lastBookId = localStorage.getItem(LS.LAST_BOOK);
+    const lastChapter = Number(localStorage.getItem(LS.LAST_CHAP));
+    const book = BIBLE_BOOKS.find(item => item.id === lastBookId) ?? BIBLE_BOOKS[42];
+    const chapter = Number.isFinite(lastChapter) && lastChapter >= 1 && lastChapter <= book.chapters ? lastChapter : 3;
+    return { book, chapter };
+  } catch {
+    return { book: BIBLE_BOOKS[42], chapter: 3 };
+  }
+}
+
 export default function App() {
+  const initialReadingLocation = useMemo(() => getInitialReadingLocation(), []);
   const [tab, setTab] = useState<Tab>('home');
   const [theme, setTheme] = useState<Theme>('a-soft');
   const [fontSize, setFontSize] = useState<FontSize>('base');
@@ -147,8 +161,8 @@ export default function App() {
   const [selCat, setSelCat] = useState<Category>('전체');
   const [rndVerse, setRndVerse] = useState<BibleVerse | null>(null);
   const [rndLoading, setRndLoading] = useState(false);
-  const [selBook, setSelBook] = useState(BIBLE_BOOKS[42]);
-  const [selChap, setSelChap] = useState(3);
+  const [selBook, setSelBook] = useState(initialReadingLocation.book);
+  const [selChap, setSelChap] = useState(initialReadingLocation.chapter);
   const [saved, setSaved] = useState<SavedVerse[]>([]);
   const [journals, setJournals] = useState<JournalEntry[]>([]);
   const [savedMode, setSavedMode] = useState<SavedGroupMode>('date');
@@ -160,11 +174,20 @@ export default function App() {
   const [todayReadingTask, setTodayReadingTask] = useState<ReadingDayTask | null>(null);
   const [activeReadingRange, setActiveReadingRange] = useState<BibleReadRange | null>(null);
   const [readingProgress, setReadingProgress] = useState<import('./types/readingPlan').ReadingPlanProgress | null>(null);
+  const [userReadingTemplates, setUserReadingTemplates] = useState<ReadingPlanTemplate[]>([]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isChapterSheetOpen, setIsChapterSheetOpen] = useState(false);
   const [homeDevotion, setHomeDevotion] = useState<import('./services/verseDevotionApi').VerseDevotionResult | null>(null);
   const [homeDevotionLoading, setHomeDevotionLoading] = useState(false);
   const [isPwaGuideOpen, setIsPwaGuideOpen] = useState(false);
+  const [isReadSelectMode, setIsReadSelectMode] = useState(false);
+  const [readSelectedVerses, setReadSelectedVerses] = useState<ReadSelectedVerse[]>([]);
+  const [readSelectionResetKey, setReadSelectionResetKey] = useState(0);
+  const [isNavVisible, setIsNavVisible] = useState(true);
+  const allReadingPlanTemplates = useMemo(
+    () => [...ALL_READING_PLAN_TEMPLATES, ...userReadingTemplates],
+    [userReadingTemplates],
+  );
   
   const { 
     platform, 
@@ -179,6 +202,27 @@ export default function App() {
   useEffect(() => {
     setReadingProgress(getActiveReadingPlan());
   }, []);
+
+  useEffect(() => {
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const nextY = window.scrollY;
+      if (Math.abs(nextY - lastY) < 8) return;
+      setIsNavVisible(nextY < lastY || nextY < 32);
+      lastY = nextY;
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (tab !== 'read') {
+      setIsReadSelectMode(false);
+      setReadSelectedVerses([]);
+      setReadSelectionResetKey(k => k + 1);
+    }
+  }, [tab]);
 
   const handleToggleReadingDay = (day: number) => {
     if (readingProgress) {
@@ -255,11 +299,9 @@ export default function App() {
   useEffect(() => {
     try { const s = localStorage.getItem(LS.SAVED); if (s) setSaved(JSON.parse(s)); } catch {}
     try { const j = localStorage.getItem(LS.JOURNAL); if (j) setJournals(JSON.parse(j)); } catch {}
+    try { const plans = localStorage.getItem(LS.CUSTOM_PLANS); if (plans) setUserReadingTemplates(JSON.parse(plans)); } catch {}
     const t = localStorage.getItem(LS.THEME) as Theme | null; if (t) setTheme(t);
     const sz = localStorage.getItem(LS.SIZE) as FontSize | null; if (sz) setFontSize(sz);
-    const lb = localStorage.getItem(LS.LAST_BOOK); const lc = localStorage.getItem(LS.LAST_CHAP);
-    if (lb) { const bk = BIBLE_BOOKS.find(b => b.id === lb); if (bk) setSelBook(bk); }
-    if (lc) setSelChap(Number(lc));
     setHomeHistory([BIBLE_VERSES[getDailyIdx()]]);
     return () => { window.speechSynthesis?.cancel(); };
   }, []);
@@ -299,7 +341,7 @@ export default function App() {
     { id: 'saved', label: '저장', icon: <KawaiiSavedIcon size={24} />, ...NAV_ICON_TUNING.saved },
   ] as const;
 
-  const pageTitle = { home: '은혜의 말씀', random: '오늘의 말씀', read: `${selBook.name} ${selChap}장`, plan: '통독', memory: '암송', saved: '저장한 말씀', settings: '설정' }[tab];
+  const pageTitle = { home: '은혜의 말씀', random: '오늘의 말씀', read: activeReadingRange?.label ?? `${selBook.name} ${selChap}장`, plan: '통독', memory: '암송', saved: '저장한 말씀', settings: '설정' }[tab];
 
   const pageIcon = tab === 'read'
     ? <KawaiiBibleIcon size={25} />
@@ -333,29 +375,58 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const btn = (active: boolean): CSSProperties => ({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, minWidth: 0, padding: '9px 12px', borderRadius: 16, border: active ? 'none' : `1px solid ${th.line}`, background: active ? `linear-gradient(145deg, ${th.butter}, ${th.peach})` : th.solid, color: th.text, cursor: 'pointer', fontWeight: 800, fontSize: 12, fontFamily: 'inherit', boxShadow: active ? '0 8px 16px rgba(116, 81, 57, 0.15)' : th.soft, outline: 'none', WebkitTapHighlightColor: 'transparent' });
-  const circle = (active: boolean): CSSProperties => ({ width: 38, height: 38, borderRadius: 16, border: 'none', background: active ? 'linear-gradient(145deg, #fff7ed, #ffe9d3)' : th.solid, color: th.text, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: active ? '0 6px 12px rgba(116, 81, 57, 0.12)' : th.soft, flex: '0 0 auto', outline: 'none', WebkitTapHighlightColor: 'transparent' });
-  const installBtn = (active: boolean): CSSProperties => ({ minWidth: 78, height: 38, borderRadius: 16, border: active ? 'none' : `1px solid ${th.line}`, background: active ? `linear-gradient(145deg, ${th.lavender}, ${th.mint})` : th.solid, color: active ? '#fff' : th.text, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, boxShadow: active ? '0 8px 16px rgba(116, 81, 57, 0.15)' : th.soft, flex: '0 0 auto', fontFamily: 'inherit', fontWeight: 900, fontSize: 11, outline: 'none', WebkitTapHighlightColor: 'transparent' });
-  const chip = (active: boolean): CSSProperties => ({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '7px 10px', minHeight: 32, borderRadius: 999, border: active ? 'none' : `1px solid ${th.line}`, background: active ? `linear-gradient(145deg, ${th.mint}, ${th.lavender})` : th.solid, color: active ? '#fff' : th.sub, cursor: 'pointer', fontWeight: active ? 900 : 700, fontSize: 11, fontFamily: 'inherit', outline: 'none', WebkitTapHighlightColor: 'transparent' });
-  const iconTile = (_tone: string): CSSProperties => ({ width: 42, height: 42, borderRadius: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: '0', color: '#fff', boxShadow: 'none', outline: 'none', WebkitTapHighlightColor: 'transparent' });
-  const chapterSideButton = (side: 'left' | 'right', enabled: boolean): CSSProperties => ({
-    position: 'fixed',
-    top: '50%',
-    [side]: 4,
-    transform: 'translateY(-50%)',
-    width: 42,
-    height: '40vh',
-    border: 'none',
-    background: 'transparent',
-    color: enabled ? th.accent : 'transparent',
-    display: enabled ? 'inline-flex' : 'none',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    zIndex: 84,
-    WebkitTapHighlightColor: 'transparent',
-  });
+  const clearReadSelection = () => {
+    setReadSelectedVerses([]);
+    setReadSelectionResetKey(k => k + 1);
+  };
 
+  const toggleReadSelectMode = () => {
+    setIsReadSelectMode(active => {
+      const next = !active;
+      if (!next) clearReadSelection();
+      return next;
+    });
+  };
+
+  const copyReadSelection = async () => {
+    if (readSelectedVerses.length === 0) return;
+    const text = readSelectedVerses
+      .map(item => `${decodeHtml(item.text)}\n${item.ref}`)
+      .join('\n\n');
+    await navigator.clipboard.writeText(text);
+    alert('선택한 말씀이 복사되었습니다.');
+  };
+
+  const saveReadSelection = () => {
+    if (readSelectedVerses.length === 0) return;
+    const next = [...saved];
+    readSelectedVerses.forEach(item => {
+      if (!next.some(savedItem => savedItem.ref === item.ref)) {
+        next.unshift({ ref: item.ref, text: item.text, date: new Date().toISOString() });
+      }
+    });
+    saveSaved(next);
+    confetti({ particleCount: 42, spread: 45, origin: { y: 0.78 } });
+  };
+
+  const sendReadSelectionToMemory = () => {
+    if (readSelectedVerses.length === 0) return;
+    let addedCount = 0;
+    readSelectedVerses.forEach(item => {
+      if (!isVerseMemorized(item.ref, item.text)) {
+        addMemoryVerse({ ref: item.ref, text: item.text });
+        addedCount++;
+      }
+    });
+    if (addedCount > 0) confetti({ particleCount: 46, spread: 48, origin: { y: 0.76 } });
+    alert(addedCount > 0 ? '암송 목록으로 보냈습니다.' : '이미 암송 목록에 있는 말씀입니다.');
+  };
+
+  const btn = (active: boolean): CSSProperties => ({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, minWidth: 0, padding: '9px 12px', borderRadius: 12, border: active ? 'none' : `1px solid ${th.line}`, background: active ? `linear-gradient(145deg, ${th.mint}, ${th.accent})` : th.card, color: active ? '#fff' : th.text, cursor: 'pointer', fontWeight: 800, fontSize: 12, fontFamily: 'inherit', boxShadow: active ? '0 10px 20px rgba(74, 112, 86, 0.2)' : th.soft, outline: 'none', WebkitTapHighlightColor: 'transparent' });
+  const circle = (active: boolean): CSSProperties => ({ width: 38, height: 38, borderRadius: 13, border: `1px solid ${active ? 'rgba(255,255,255,0.7)' : th.line}`, background: active ? `linear-gradient(145deg, ${th.butter}, ${th.peach})` : th.card, color: th.text, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: active ? '0 8px 16px rgba(126, 89, 55, 0.16)' : th.soft, flex: '0 0 auto', outline: 'none', WebkitTapHighlightColor: 'transparent' });
+  const installBtn = (active: boolean): CSSProperties => ({ minWidth: 78, height: 38, borderRadius: 12, border: active ? 'none' : `1px solid ${th.line}`, background: active ? `linear-gradient(145deg, ${th.accent}, ${th.mint})` : th.card, color: active ? '#fff' : th.text, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, boxShadow: active ? '0 10px 20px rgba(74, 112, 86, 0.2)' : th.soft, flex: '0 0 auto', fontFamily: 'inherit', fontWeight: 900, fontSize: 11, outline: 'none', WebkitTapHighlightColor: 'transparent' });
+  const chip = (active: boolean): CSSProperties => ({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '7px 10px', minHeight: 32, borderRadius: 999, border: active ? 'none' : `1px solid ${th.line}`, background: active ? `linear-gradient(145deg, ${th.accent}, ${th.mint})` : th.card, color: active ? '#fff' : th.sub, cursor: 'pointer', fontWeight: active ? 900 : 700, fontSize: 11, fontFamily: 'inherit', outline: 'none', WebkitTapHighlightColor: 'transparent' });
+  const iconTile = (_tone: string): CSSProperties => ({ width: 42, height: 42, borderRadius: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: '0', color: '#fff', boxShadow: 'none', outline: 'none', WebkitTapHighlightColor: 'transparent' });
   const saveSaved = (next: SavedVerse[]) => { setSaved(next); localStorage.setItem(LS.SAVED, JSON.stringify(next)); };
   const isSaved = (ref: string) => saved.some(s => s.ref === ref);
   const toggleSave = (ref: string, text: string, meditation?: string, prayer?: string) => {
@@ -375,6 +446,10 @@ export default function App() {
     saveSaved(next);
   };
   const copyText = async (ref: string, text: string) => { await navigator.clipboard.writeText(`${compactRef(ref)} ${text}`); alert('복사되었습니다!'); };
+  const copyVerseBlock = async (ref: string, text: string) => {
+    await navigator.clipboard.writeText(`${decodeHtml(text)}\n${ref}`);
+    alert('복사되었습니다!');
+  };
   const speak = (text: string) => {
     if (!('speechSynthesis' in window)) return;
     if (speaking) { window.speechSynthesis.cancel(); setSpeaking(false); return; }
@@ -520,17 +595,53 @@ export default function App() {
     window.scrollTo(0, 0);
   };
 
+  const handleNavTab = (nextTab: Tab) => {
+    if (nextTab !== 'read') {
+      setActiveReadingRange(null);
+      clearReadSelection();
+    }
+    setTab(nextTab);
+  };
+
   const handleBibleNavigate = (book: import('./data/bibleBooks').BibleBook, chapter: number) => {
     setSelBook(book);
     setSelChap(chapter);
     localStorage.setItem(LS.LAST_BOOK, book.id);
     localStorage.setItem(LS.LAST_CHAP, chapter.toString());
+    clearReadSelection();
   };
 
-  const handleStartPlan = (templateId: string) => {
-    const template = READING_PLAN_TEMPLATES.find((t: any) => t.id === templateId);
+  const saveUserReadingTemplates = (templates: ReadingPlanTemplate[]) => {
+    setUserReadingTemplates(templates);
+    localStorage.setItem(LS.CUSTOM_PLANS, JSON.stringify(templates));
+  };
+
+  const handleSaveCustomPlan = (template: ReadingPlanTemplate) => {
+    saveUserReadingTemplates([template, ...userReadingTemplates.filter(item => item.id !== template.id)]);
+  };
+
+  const handleUpdateCustomPlan = (template: ReadingPlanTemplate) => {
+    saveUserReadingTemplates(userReadingTemplates.map(item => item.id === template.id ? template : item));
+    if (readingProgress?.templateId === template.id) {
+      setReadingProgress(startReadingPlan(template));
+    }
+  };
+
+  const handleStartPlan = (templateId: string, providedTemplate?: ReadingPlanTemplate) => {
+    const template = providedTemplate ?? allReadingPlanTemplates.find((t: any) => t.id === templateId);
     if (template) {
       setReadingProgress(startReadingPlan(template));
+    }
+  };
+
+  const handleStartPlanAndRead = (template: ReadingPlanTemplate) => {
+    setReadingProgress(startReadingPlan(template));
+    const firstTask = template.tasks[0];
+    if (firstTask) {
+      setTodayReadingTask(firstTask);
+      setActiveReadingRange(convertTaskToBibleRange(firstTask));
+      setTab('read');
+      window.scrollTo(0, 0);
     }
   };
 
@@ -558,7 +669,7 @@ export default function App() {
     }
   };
 
-  return <div style={{ minHeight: '100vh', background: th.bg, color: th.text, fontFamily: "'S-Core Dream', sans-serif" }}>
+  return <div style={{ minHeight: '100vh', background: `radial-gradient(circle at top left, rgba(255,255,255,0.46), transparent 34%), ${th.bg}`, color: th.text, fontFamily: "'S-Core Dream', sans-serif" }}>
     {isSearchOpen && <BibleSearchSheet onClose={() => setIsSearchOpen(false)} onNavigate={handleSearchNavigate} T={th} fontSize={fsize} />}
     
     <PwaInstallGuideSheet 
@@ -569,10 +680,68 @@ export default function App() {
       title={guideTitle}
     />
     
-    <main style={{ position: 'relative', maxWidth: 1220, margin: '0 auto', padding: '14px 16px 112px', minHeight: '100vh' }}>
-      <header style={{ position: 'sticky', top: 0, zIndex: 20, display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0 12px', background: `linear-gradient(180deg, ${th.bg} 74%, transparent)` }}>
-        <button aria-label="홈으로 이동" onClick={() => { setDetail(null); setTab('home'); setActiveReadingRange(null); }} style={{ ...circle(tab === 'home'), width: 46, height: 46, borderRadius: 18 }}>{pageIcon}</button>
-        <div style={{ minWidth: 0, flex: 1 }}><div className="title-font" style={{ fontSize: 11, color: th.sub, fontWeight: 800 }}>시온성경</div><div className="title-font" style={{ fontWeight: 800, fontSize: '1.15rem', lineHeight: 1.22, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pageTitle}</div></div>
+    <main style={{ position: 'relative', maxWidth: 1120, margin: '0 auto', padding: tab === 'read' ? '6px 10px 92px' : '16px 16px 112px', minHeight: '100vh' }}>
+      <header style={{ position: 'sticky', top: 0, zIndex: 20, display: 'flex', alignItems: 'center', gap: 7, padding: tab === 'read' ? '4px 0 7px' : '8px 0 14px', background: `linear-gradient(180deg, ${th.bg} 80%, transparent)` }}>
+        <button aria-label="홈으로 이동" onClick={() => { setDetail(null); setTab('home'); setActiveReadingRange(null); }} style={{ ...circle(tab === 'home'), width: tab === 'read' ? 36 : 46, height: tab === 'read' ? 36 : 46, borderRadius: tab === 'read' ? 12 : 18 }}>{pageIcon}</button>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          {tab !== 'read' && <div className="title-font" style={{ fontSize: 11, color: th.sub, fontWeight: 800 }}>시온성경</div>}
+          {tab === 'read' ? (
+            <div style={{ display: 'inline-grid', gridTemplateColumns: activeReadingRange ? '1fr' : '30px minmax(0, auto) 30px', alignItems: 'center', gap: 3, maxWidth: '100%' }}>
+              {!activeReadingRange && (
+                <button
+                  aria-label="이전 장"
+                  disabled={!canGoPreviousChapter}
+                  onClick={() => navigateChapterBy(-1)}
+                  style={{ ...circle(false), width: 30, height: 30, borderRadius: 10, opacity: canGoPreviousChapter ? 1 : 0.35 }}
+                >
+                  <ChevronLeft size={17} />
+                </button>
+              )}
+              <button
+                aria-label={activeReadingRange ? `${pageTitle} 본문` : `${selBook.name} 장 선택`}
+                onClick={() => !activeReadingRange && setIsChapterSheetOpen(true)}
+                style={{
+                  minWidth: 0,
+                  height: 32,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  borderRadius: 11,
+                  border: activeReadingRange ? 'none' : `1px solid ${th.line}`,
+                  background: activeReadingRange ? 'transparent' : th.card,
+                  color: th.text,
+                  boxShadow: activeReadingRange ? 'none' : th.soft,
+                  padding: activeReadingRange ? 0 : '0 9px',
+                  cursor: activeReadingRange ? 'default' : 'pointer',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  WebkitTapHighlightColor: 'transparent',
+                }}
+              >
+                <span className="title-font" style={{ fontWeight: 800, fontSize: '1.08rem', lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {pageTitle}
+                </span>
+                {!activeReadingRange && (
+                  <span style={{ color: th.sub, fontSize: 10, fontWeight: 900, lineHeight: 1, paddingTop: 2 }}>
+                    {selChap}/{selBook.chapters}
+                  </span>
+                )}
+              </button>
+              {!activeReadingRange && (
+                <button
+                  aria-label="다음 장"
+                  disabled={!canGoNextChapter}
+                  onClick={() => navigateChapterBy(1)}
+                  style={{ ...circle(false), width: 30, height: 30, borderRadius: 10, opacity: canGoNextChapter ? 1 : 0.35 }}
+                >
+                  <ChevronRight size={17} />
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="title-font" style={{ fontWeight: 800, fontSize: '1.15rem', lineHeight: 1.22, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pageTitle}</div>
+          )}
+        </div>
         
         {tab === 'home' ? (
           <>
@@ -585,31 +754,9 @@ export default function App() {
             <button aria-label="설정" onClick={() => setTab('settings')} style={circle(false)}><KawaiiSettingsIcon size={23} /></button>
           </>
         ) : tab === 'read' ? (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, flex: '0 0 auto' }}>
-            <button 
-              aria-label={`${selBook.name} 장 선택`}
-              onClick={() => !activeReadingRange && setIsChapterSheetOpen(true)}
-              style={{ 
-                height: 38, 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                padding: '0 12px', 
-                borderRadius: 15, 
-                border: activeReadingRange ? 'none' : `1px solid ${th.line}`, 
-                background: activeReadingRange ? 'transparent' : th.solid, 
-                color: th.accent, 
-                boxShadow: activeReadingRange ? 'none' : th.soft, 
-                fontWeight: 900, 
-                fontSize: 12, 
-                whiteSpace: 'nowrap',
-                cursor: activeReadingRange ? 'default' : 'pointer',
-                outline: 'none',
-                WebkitTapHighlightColor: 'transparent'
-              }}
-            >
-              {selChap}/{selBook.chapters}{selBook.name === '시편' ? '편' : '장'}
-            </button>
-            <button aria-label="성경 검색" onClick={() => setIsSearchOpen(true)} style={circle(false)}><Search size={22} /></button>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, flex: '0 0 auto' }}>
+            <button aria-label={isReadSelectMode ? '구절 선택 종료' : '구절 선택'} onClick={toggleReadSelectMode} style={{ ...circle(isReadSelectMode), width: 34, height: 34, borderRadius: 11 }}><CheckSquare size={18} /></button>
+            <button aria-label="성경 검색" onClick={() => setIsSearchOpen(true)} style={{ ...circle(false), width: 34, height: 34, borderRadius: 11 }}><Search size={20} /></button>
           </div>
         ) : (
           <button aria-label="설정" onClick={() => setTab('settings')} style={circle(tab === 'settings')}><KawaiiSettingsIcon size={23} /></button>
@@ -619,23 +766,23 @@ export default function App() {
       {tab === 'home' && <div style={{ display: 'grid', gap: 10 }}>
         <Card title="오늘의 마음 체크인" subtitle={selectedMood ? `${selectedMood}에 맞는 말씀을 보고 있어요` : '선택하지 않으면 모든 말씀이 랜덤으로 나와요'} T={th} compact>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: 6 }} className="mood-chip-grid">
-            {MOODS.map(item => <button key={item.label} onClick={() => chooseMood(item.label)} style={{ border: `1px solid ${selectedMood === item.label ? th.accent : th.line}`, background: selectedMood === item.label ? th.pill : th.solid, color: selectedMood === item.label ? th.accent : th.sub, borderRadius: 999, minHeight: 32, padding: '6px 8px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 900, fontSize: 11, boxShadow: th.soft }}>{item.label}</button>)}
+            {MOODS.map(item => <button key={item.label} onClick={() => chooseMood(item.label)} style={{ border: `1px solid ${selectedMood === item.label ? 'transparent' : th.line}`, background: selectedMood === item.label ? `linear-gradient(145deg, ${th.accent}, ${th.mint})` : th.card, color: selectedMood === item.label ? '#fff' : th.sub, borderRadius: 999, minHeight: 34, padding: '6px 8px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 900, fontSize: 11, boxShadow: selectedMood === item.label ? '0 8px 18px rgba(74,112,86,0.18)' : th.soft }}>{item.label}</button>)}
           </div>
         </Card>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.08fr) minmax(280px, 0.92fr)', gap: 14, alignItems: 'start' }} className="screen-grid">
           <section style={{ display: 'grid', gap: 10 }}>
-            <section style={{ borderRadius: 28, background: th.panel, border: `1px solid ${th.line}`, boxShadow: th.shadow, padding: 14 }}>
+            <section style={{ borderRadius: 22, background: th.panel, border: `1px solid ${th.line}`, boxShadow: th.shadow, padding: 14 }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={iconTile(`linear-gradient(145deg, ${th.peach}, ${th.butter})`)}><KawaiiVerseIcon size={25} /></span><div><div className="title-font" style={{ fontSize: 18, fontWeight: 800 }}>오늘 붙들 말씀</div><div style={{ fontSize: 11, color: th.sub }}>{selectedMood ? `${selectedMood}에 관한 말씀` : '오늘의 말씀'}</div></div></div>
                 <div style={{ display: 'flex', gap: 6, flex: '0 0 auto' }}><button onClick={nextHomeVerse} style={{ ...btn(false), padding: '7px 10px', whiteSpace: 'nowrap' }}>말씀 더보기</button><button onClick={() => toggleSave(`${currentHomeVerse.book} ${currentHomeVerse.chapter}:${currentHomeVerse.verse}`, currentHomeVerse.content, currentHomeVerse.meditation, currentHomeVerse.prayer)} style={{ ...btn(isSaved(`${currentHomeVerse.book} ${currentHomeVerse.chapter}:${currentHomeVerse.verse}`)), padding: '7px 10px', whiteSpace: 'nowrap' }}><KawaiiSavedIcon size={17} /><span>저장</span></button></div>
               </div>
-              <button onClick={nextHomeVerse} style={{ width: '100%', textAlign: 'left', border: `1px solid ${th.line}`, borderRadius: 22, background: th.card, color: th.text, padding: '15px 16px', fontFamily: 'inherit', cursor: 'pointer', boxShadow: th.soft }}>
+              <button onClick={nextHomeVerse} style={{ width: '100%', textAlign: 'left', border: `1px solid ${th.line}`, borderRadius: 18, background: th.card, color: th.text, padding: '15px 16px', fontFamily: 'inherit', cursor: 'pointer', boxShadow: th.soft }}>
                 <p style={{ margin: 0, fontSize: fsize, lineHeight: 1.82, wordBreak: 'keep-all' }}>"{decodeHtml(currentHomeVerse.content)}"</p>
                 <div style={{ marginTop: 9, color: th.accent, fontWeight: 900, fontSize: 12 }}>{currentHomeVerse.book} {currentHomeVerse.chapter}:{currentHomeVerse.verse}</div>
               </button>
               <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
-                <div className="serif-verse" style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 13, position: 'relative', overflow: 'hidden' }}>
+                <div className="serif-verse" style={{ borderRadius: 16, background: th.solid, border: `1px solid ${th.line}`, padding: 13, position: 'relative', overflow: 'hidden' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 12 }}>
                     <KawaiiMeditationIcon size={18} />
                     <span className={homeDevotionLoading ? "animate-pulse" : ""}>
@@ -646,7 +793,7 @@ export default function App() {
                     {decodeHtml(currentHomeDevotion.meditation)}
                   </div>
                 </div>
-                <div className="serif-verse" style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 13, position: 'relative', overflow: 'hidden' }}>
+                <div className="serif-verse" style={{ borderRadius: 16, background: th.solid, border: `1px solid ${th.line}`, padding: 13, position: 'relative', overflow: 'hidden' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 12 }}>
                     <KawaiiPrayerIcon size={18} />
                     <span className={homeDevotionLoading ? "animate-pulse" : ""}>
@@ -663,7 +810,7 @@ export default function App() {
           </section>
 
           <section style={{ display: 'grid', gap: 10 }}>
-            <Card title="이어서 읽기" subtitle={`${selBook.name} ${selChap}장`} T={th} compact><button onClick={() => setTab('read')} style={{ ...btn(false), width: '100%', justifyContent: 'space-between', padding: '10px 12px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><KawaiiBibleIcon size={20} />마지막으로 읽은 곳</span><span>계속 읽기</span></button></Card>
+            <Card title="이어서 읽기" subtitle={`${selBook.name} ${selChap}장`} T={th} compact><button onClick={() => { setActiveReadingRange(null); setTab('read'); }} style={{ ...btn(false), width: '100%', justifyContent: 'space-between', padding: '10px 12px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><KawaiiBibleIcon size={20} />마지막으로 읽은 곳</span><span>계속 읽기</span></button></Card>
             {recentJournals.length > 0 && <Card title="최근 묵상 기록" subtitle="다시 이어서 기도하기" T={th} compact><div style={{ display: 'grid', gap: 7 }}>{recentJournals.map(j => <button key={j.id} onClick={() => setTab('saved')} style={{ textAlign: 'left', border: `1px solid ${th.line}`, background: th.solid, color: th.text, borderRadius: 15, padding: 10, fontFamily: 'inherit' }}><div style={{ fontWeight: 900, fontSize: 12 }}>{j.ref}</div><div style={{ color: th.sub, fontSize: 11, marginTop: 3 }}>{j.date}</div></button>)}</div></Card>}
           </section>
         </div>
@@ -688,11 +835,14 @@ export default function App() {
             readingRange={activeReadingRange}
             onExitRange={handleCompleteReadingFromRange}
             onNavigate={handleBibleNavigate}
+            readSelectionMode={isReadSelectMode}
+            readSelectionResetKey={readSelectionResetKey}
+            onReadSelectionChange={setReadSelectedVerses}
           />
         </div>
       )}
 
-      {tab === 'plan' && <ReadingPlanHome T={th} progress={readingProgress} onToggleDay={handleToggleReadingDay} onStartPlan={handleStartPlan} onNavigateToBible={navigateToBible} onNavigateToRange={handleNavigateToRange} onTodayTaskLoaded={setTodayReadingTask} />}
+      {tab === 'plan' && <ReadingPlanHome T={th} progress={readingProgress} userTemplates={userReadingTemplates} onToggleDay={handleToggleReadingDay} onStartPlan={handleStartPlan} onStartPlanAndRead={handleStartPlanAndRead} onSaveCustomPlan={handleSaveCustomPlan} onUpdateCustomPlan={handleUpdateCustomPlan} onNavigateToBible={navigateToBible} onNavigateToRange={handleNavigateToRange} onTodayTaskLoaded={setTodayReadingTask} />}
 
       {tab === 'memory' && <MemoryHome T={th} savedVerses={saved} />}
 
@@ -753,42 +903,31 @@ export default function App() {
       </div>}
 
 
-      {tab === 'settings' && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 12 }} className="screen-grid"><Card title="테마" subtitle="감성 전환" T={th} compact><div style={{ display: 'grid', gap: 8 }}>{([['a-soft', 'Soft'], ['a-dark', 'Dark']] as const).map(([k, l]) => <button key={k} onClick={() => { setTheme(k); localStorage.setItem(LS.THEME, k); }} style={{ ...btn(theme === k), justifyContent: 'flex-start' }}><KawaiiVerseIcon size={18} />{l}</button>)}</div></Card><Card title="글자 크기" subtitle="본문 크기" T={th} compact><div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 7 }}>{([['sm','작게'],['base','보통'],['lg','크게'],['xl','아주 크게']] as const).map(([k,l]) => <button key={k} onClick={() => { setFontSize(k); localStorage.setItem(LS.SIZE, k); }} style={chip(fontSize === k)}>{l}</button>)}</div></Card><Card title="앱 설치" subtitle="홈 화면에 추가" T={th} compact><button disabled={!installPrompt} onClick={async () => { await installPrompt?.prompt?.(); setInstallPrompt(null); }} style={{ ...btn(Boolean(installPrompt)), opacity: installPrompt ? 1 : 0.55 }}>설치하기</button></Card></div>}
+      {tab === 'settings' && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 12 }} className="screen-grid"><Card title="테마" subtitle="감성 전환" T={th} compact><div style={{ display: 'grid', gap: 8 }}>{([['a-soft', 'Soft'], ['a-dark', 'Dark']] as const).map(([k, l]) => <button key={k} onClick={() => { setTheme(k); localStorage.setItem(LS.THEME, k); }} style={{ ...btn(theme === k), justifyContent: 'flex-start' }}><KawaiiVerseIcon size={18} />{l}</button>)}</div></Card><Card title="글자 크기" subtitle="본문 크기" T={th} compact><div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 7 }}>{([['sm','작게'],['base','보통'],['lg','크게'],['xl','아주 크게']] as const).map(([k,l]) => <button key={k} onClick={() => { setFontSize(k); localStorage.setItem(LS.SIZE, k); }} style={chip(fontSize === k)}>{l}</button>)}</div></Card><Card title="앱 설치" subtitle={isInstalled ? '이미 설치됨' : '홈 화면에 추가'} T={th} compact><button disabled={isInstalled} onClick={installApp} style={{ ...btn(!isInstalled && canInstall), opacity: isInstalled ? 0.55 : 1 }}>{isInstalled ? '설치됨' : buttonLabel}</button></Card></div>}
     </main>
 
-    {tab === 'read' && !activeReadingRange && (
-      <>
-        <button
-          aria-label="이전 장"
-          disabled={!canGoPreviousChapter}
-          onClick={() => navigateChapterBy(-1)}
-          style={chapterSideButton('left', canGoPreviousChapter)}
-        >
-          <ChevronLeft size={30} strokeWidth={2.2} />
-        </button>
-        <button
-          aria-label="다음 장"
-          disabled={!canGoNextChapter}
-          onClick={() => navigateChapterBy(1)}
-          style={chapterSideButton('right', canGoNextChapter)}
-        >
-          <ChevronRight size={30} strokeWidth={2.2} />
-        </button>
-      </>
+    {isReadSelectMode && readSelectedVerses.length > 0 && (
+      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 'calc(62px + env(safe-area-inset-bottom))', zIndex: 110, display: 'flex', justifyContent: 'center', padding: '0 14px', pointerEvents: 'none' }}>
+        <div style={{ width: '100%', maxWidth: 420, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, pointerEvents: 'auto' }}>
+          <button aria-label="선택 구절 복사" onClick={copyReadSelection} style={{ ...btn(true), minHeight: 48, borderRadius: 16, flexDirection: 'column', gap: 2 }}><Copy size={17} /><span>복사</span></button>
+          <button aria-label="선택 구절 저장" onClick={saveReadSelection} style={{ ...btn(false), minHeight: 48, borderRadius: 16, flexDirection: 'column', gap: 2 }}><Bookmark size={17} /><span>저장</span></button>
+          <button aria-label="선택 구절 암송 보내기" onClick={sendReadSelectionToMemory} style={{ ...btn(false), minHeight: 48, borderRadius: 16, flexDirection: 'column', gap: 2 }}><Send size={17} /><span>암송</span></button>
+        </div>
+      </div>
     )}
 
-    <nav style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 90, padding: '8px 8px calc(8px + env(safe-area-inset-bottom))', background: `linear-gradient(180deg, transparent, ${th.bg} 18%, ${th.bg})` }}>
-      <div style={{ maxWidth: 540, margin: '0 auto', display: 'grid', gridTemplateColumns: `repeat(${navItems.length}, 1fr)`, gap: 4, borderRadius: 22, background: th.panel, border: `1px solid ${th.line}`, boxShadow: th.shadow, padding: 6 }}>
+    <nav style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 90, padding: '0 8px calc(5px + env(safe-area-inset-bottom))', background: `linear-gradient(180deg, transparent, ${th.bg} 34%, ${th.bg})`, transform: isNavVisible ? 'translateY(0)' : 'translateY(92px)', opacity: isNavVisible ? 1 : 0, transition: 'transform 260ms ease, opacity 220ms ease' }}>
+      <div style={{ maxWidth: 500, margin: '0 auto', display: 'grid', gridTemplateColumns: `repeat(${navItems.length}, 1fr)`, gap: 2, borderRadius: 18, background: 'rgba(255,252,247,0.88)', boxShadow: '0 10px 28px rgba(52,45,39,0.12)', padding: '3px 5px', backdropFilter: 'blur(12px)' }}>
         {navItems.map(n => (
           <button 
             key={n.id} 
             className={tab === n.id ? 'bottom-nav-item active' : 'bottom-nav-item'} 
             aria-label={`${n.label} 탭`} 
-            onClick={() => setTab(n.id)} 
+            onClick={() => handleNavTab(n.id)} 
             style={{ 
               minWidth: 0, 
-              minHeight: 68, 
-              borderRadius: 18, 
+              minHeight: 52, 
+              borderRadius: 14, 
               border: 'none', 
               background: 'transparent', 
               color: tab === n.id ? th.accent : th.sub, 
@@ -804,20 +943,20 @@ export default function App() {
               outline: 'none', 
               WebkitTapHighlightColor: 'transparent',
               position: 'relative',
-              paddingBottom: 6
+              paddingBottom: 2
             }}
           >
             <AppNavIcon active={tab === n.id} nudgeX={n.nudgeX} nudgeY={n.nudgeY} scale={n.scale * (tab === n.id ? 1.05 : 1)}>
               {n.icon}
             </AppNavIcon>
             <span style={{ 
-              marginTop: -6, 
+              marginTop: -11, 
               opacity: tab === n.id ? 1 : 0.7,
               transform: tab === n.id ? 'scale(1.05)' : 'scale(1)',
               transition: 'all 200ms ease'
             }}>{n.label}</span>
             {tab === n.id && (
-              <div style={{ position: 'absolute', bottom: 4, width: 4, height: 4, borderRadius: '50%', background: th.accent, animation: 'pulse 1.5s infinite' }} />
+              <div style={{ position: 'absolute', bottom: 3, width: 4, height: 4, borderRadius: '50%', background: th.accent, animation: 'pulse 1.5s infinite' }} />
             )}
           </button>
         ))}
@@ -825,7 +964,29 @@ export default function App() {
     </nav>
 
 
-    {detail && <div style={{ position: 'fixed', inset: 0, zIndex: 120, display: 'flex', alignItems: 'flex-end' }}><div onClick={() => setDetail(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.38)', backdropFilter: 'blur(4px)' }} /><div style={{ position: 'relative', width: '100%', maxHeight: '85vh', overflowY: 'auto', background: th.panel, borderTopLeftRadius: 26, borderTopRightRadius: 26, border: `1px solid ${th.line}`, padding: 16 }}><div style={{ width: 38, height: 4, borderRadius: 4, background: th.line, margin: '0 auto 12px' }} /><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}><div style={{ fontWeight: 900, color: th.accent, fontSize: 15 }}>{detail.ref}</div><button onClick={() => setDetail(null)} style={circle(false)}><X size={12} /></button></div><div style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 14, marginBottom: 10 }}><div style={{ fontSize: fsize, lineHeight: 1.9, wordBreak: 'keep-all' }}>"{detail.text}"</div></div><VerseDevotionPanel selectedVerse={detail} onGoToMemory={handleGoToMemory} fontSize={fsize} /></div></div>}
+    {detail && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 120, display: 'flex', alignItems: 'flex-end' }}>
+        <div onClick={() => setDetail(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.38)', backdropFilter: 'blur(4px)' }} />
+        <div style={{ position: 'relative', width: '100%', maxHeight: '85vh', overflowY: 'auto', background: th.panel, borderTopLeftRadius: 26, borderTopRightRadius: 26, border: `1px solid ${th.line}`, padding: 16 }}>
+          <div style={{ width: 38, height: 4, borderRadius: 4, background: th.line, margin: '0 auto 12px' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <div style={{ fontWeight: 900, color: th.accent, fontSize: 15 }}>{detail.ref}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button aria-label="구절 복사" onClick={() => copyVerseBlock(detail.ref, detail.text)} style={circle(false)}><Copy size={14} /></button>
+              <button aria-label="구절 저장" onClick={() => toggleSave(detail.ref, detail.text)} style={circle(isSaved(detail.ref))}>
+                {isSaved(detail.ref) ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
+              </button>
+              <button aria-label="암송 보내기" onClick={() => handleGoToMemory(detail)} style={circle(false)}><Send size={14} /></button>
+              <button aria-label="닫기" onClick={() => setDetail(null)} style={circle(false)}><X size={12} /></button>
+            </div>
+          </div>
+          <div style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 14, marginBottom: 10 }}>
+            <div style={{ fontSize: fsize, lineHeight: 1.9, wordBreak: 'keep-all' }}>"{detail.text}"</div>
+          </div>
+          <VerseDevotionPanel selectedVerse={detail} onGoToMemory={handleGoToMemory} fontSize={fsize} />
+        </div>
+      </div>
+    )}
 
     <ChapterNavigatorSheet 
         open={isChapterSheetOpen}
@@ -854,7 +1015,7 @@ export default function App() {
 
 function Card({ title, subtitle, T, compact = false, headerAction, children }: { title: string; subtitle: string; T: any; compact?: boolean; headerAction?: React.ReactNode; children: React.ReactNode }) {
   const icon = getCardIcon(title);
-  return <section className="surface-card" style={{ borderRadius: 24, background: T.panel, border: `1px solid ${T.line}`, boxShadow: T.shadow, padding: compact ? 13 : 16 }}>
+  return <section className="surface-card" style={{ borderRadius: 20, background: T.panel, border: `1px solid ${T.line}`, boxShadow: T.shadow, padding: compact ? 13 : 16 }}>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 9, marginBottom: compact ? 9 : 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
         {icon && <span style={{ width: 34, height: 34, borderRadius: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: T.solid, border: `1px solid ${T.line}`, color: T.accent }}>{icon}</span>}
@@ -881,10 +1042,3 @@ function getCardIcon(title: string) {
   if (title.includes('글자')) return <KawaiiWisdomIcon size={22} />;
   return null;
 }
-
-
-
-
-
-
-

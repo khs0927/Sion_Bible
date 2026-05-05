@@ -91,18 +91,19 @@ export function ChapterNavigatorSheet({
             )}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                {view === 'books' && <KawaiiBibleIcon size={16} framed={false} />}
+                {view === 'books' && <KawaiiBibleIcon size={16} />}
                 <h2 className="title-font" style={{ fontSize: '1.25rem', fontWeight: 900, color: T.text }}>
                   {view === 'books' ? '성경 선택' : navBook.name}
                 </h2>
               </div>
               <p style={{ fontSize: '0.8rem', color: T.sub, marginTop: 2, fontWeight: 600 }}>
-                {view === 'books' ? '이동할 책을 선택하세요' : `이동할 ${isPsalm ? '편' : '장'}을 선택하세요`}
+                {view === 'books' ? `${currentBookName}에서 이동할 책을 선택하세요` : `이동할 ${isPsalm ? '편' : '장'}을 선택하세요`}
               </p>
             </div>
           </div>
           <button 
             onClick={handleClose} 
+            aria-label="장 선택 닫기"
             style={{ 
               width: 36, height: 36, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: T.solid, border: `1px solid ${T.line}`, color: T.text, cursor: 'pointer'
@@ -227,8 +228,8 @@ const backdropStyle: CSSProperties = {
 const sheetStyle: CSSProperties = {
   position: 'relative',
   width: '100%',
-  borderTopLeftRadius: 28,
-  borderTopRightRadius: 28,
-  boxShadow: '0 -10px 25px rgba(0,0,0,0.1)',
+  borderTopLeftRadius: 22,
+  borderTopRightRadius: 22,
+  boxShadow: '0 -18px 40px rgba(0,0,0,0.14)',
   animation: 'slideUp 0.3s ease-out',
 };

@@ -1,5 +1,3 @@
-
-import React from 'react';
 import { X, Share, PlusSquare, ExternalLink, Download } from 'lucide-react';
 import type { DevicePlatform } from '../../services/pwaInstall';
 

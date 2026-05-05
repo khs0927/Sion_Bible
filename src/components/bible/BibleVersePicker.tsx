@@ -9,6 +9,12 @@ interface Verse {
   text: string;
 }
 
+interface ReadSelectedVerse {
+  ref: string;
+  text: string;
+  verse: number;
+}
+
 interface BibleVersePickerProps {
   mode: 'read' | 'select';
   initialBook: BibleBook;
@@ -27,6 +33,9 @@ interface BibleVersePickerProps {
   readingRange?: import('../../types/bible').BibleReadRange | null;
   onExitRange?: () => void;
   onNavigate?: (book: BibleBook, chapter: number) => void;
+  readSelectionMode?: boolean;
+  readSelectionResetKey?: number;
+  onReadSelectionChange?: (verses: ReadSelectedVerse[]) => void;
 }
 
 export function BibleVersePicker({
@@ -42,6 +51,9 @@ export function BibleVersePicker({
   readingRange,
   onExitRange,
   onNavigate,
+  readSelectionMode = false,
+  readSelectionResetKey = 0,
+  onReadSelectionChange,
 }: BibleVersePickerProps) {
   const [selBook, setSelBook] = useState(initialBook);
   const [selChap, setSelChap] = useState(initialChapter);
@@ -106,6 +118,11 @@ export function BibleVersePicker({
   }, [loadChapter]);
 
   useEffect(() => {
+    setSelectedVerseNumbers([]);
+    onReadSelectionChange?.([]);
+  }, [readSelectionMode, readSelectionResetKey]);
+
+  useEffect(() => {
     if (readingRange) {
       loadRangeChapters(readingRange);
     } else {
@@ -125,6 +142,7 @@ export function BibleVersePicker({
       load();
     }
     setSelectedVerseNumbers([]);
+    onReadSelectionChange?.([]);
   }, [selBook, selChap, readingRange, loadChapter, loadRangeChapters]);
 
   const handleToggleVerse = (vNum: number) => {
@@ -134,7 +152,7 @@ export function BibleVersePicker({
     
     setSelectedVerseNumbers(next);
     
-    if (onSelectVerses) {
+    if (mode === 'select' && onSelectVerses) {
       onSelectVerses({
         bookId: selBook.id,
         bookName: selBook.name,
@@ -143,6 +161,16 @@ export function BibleVersePicker({
           .filter(v => next.includes(v.verse))
           .map(v => ({ verse: v.verse, text: v.text }))
       });
+    } else if (mode === 'read') {
+      onReadSelectionChange?.(
+        verses
+          .filter(v => next.includes(v.verse))
+          .map(v => ({
+            ref: `${selBook.name} ${selChap}:${v.verse}`,
+            text: v.text,
+            verse: v.verse,
+          }))
+      );
     }
   };
 
@@ -213,6 +241,7 @@ export function BibleVersePicker({
               selectedVerses={[]}
               onToggleVerse={() => {}}
               mode="read"
+              selectionMode={readSelectionMode}
               onVerseClick={(v) => onVerseClick?.({ ref: `${chap.bookName} ${chap.chapter}:${v.verse}`, text: v.text })}
               fontSize={fontSize}
               onToggleSave={onToggleSave ? (v) => onToggleSave({ ref: `${chap.bookName} ${chap.chapter}:${v.verse}`, text: v.text }) : undefined}
@@ -228,6 +257,7 @@ export function BibleVersePicker({
             selectedVerses={selectedVerseNumbers}
             onToggleVerse={handleToggleVerse}
             mode={mode}
+            selectionMode={readSelectionMode}
             onVerseClick={handleVerseClick}
             fontSize={fontSize}
             onToggleSave={onToggleSave ? (v) => onToggleSave({ ref: `${selBook.name} ${selChap}:${v.verse}`, text: v.text }) : undefined}
