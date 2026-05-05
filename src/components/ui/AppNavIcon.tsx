@@ -21,25 +21,26 @@ export function AppNavIcon({
     <div 
       className={`app-nav-icon ${className}`}
       style={{
-        width: 56,
-        height: 42,
+        width: 48,
+        height: 34,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         position: 'relative',
         transition: 'all 0.2s ease',
+        flexShrink: 0,
       }}
     >
       <div
         style={{
-          width: 36,
-          height: 36,
-          borderRadius: 13,
+          width: 32,
+          height: 32,
+          borderRadius: 12,
           background: active ? 'rgba(255,255,255,0.56)' : 'transparent',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: active ? '0 8px 18px rgba(52,45,39,0.08)' : 'none',
+          boxShadow: active ? '0 6px 14px rgba(52,45,39,0.08)' : 'none',
           transform: `translate(${nudgeX}px, ${nudgeY}px) scale(${scale})`,
           transition: 'transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease',
         }}

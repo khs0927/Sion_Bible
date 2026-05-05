@@ -327,18 +327,18 @@ export default function App() {
 
   const NAV_ICON_TUNING = {
     home: { scale: 1.0, nudgeX: 0, nudgeY: 0 },
-    read: { scale: 0.96, nudgeX: 0, nudgeY: 1 },
+    read: { scale: 0.96, nudgeX: 0, nudgeY: 0 },
     plan: { scale: 0.98, nudgeX: 0, nudgeY: 0 },
-    memory: { scale: 0.95, nudgeX: 0, nudgeY: 1 },
+    memory: { scale: 0.95, nudgeX: 0, nudgeY: 0 },
     saved: { scale: 0.98, nudgeX: 0, nudgeY: 0 },
   } as const;
 
   const navItems = [
-    { id: 'home', label: '홈', icon: <KawaiiHomeIcon size={24} />, ...NAV_ICON_TUNING.home },
-    { id: 'read', label: '성경', icon: <KawaiiBibleIcon size={24} />, ...NAV_ICON_TUNING.read },
-    { id: 'plan', label: '통독', icon: <KawaiiApplicationIcon size={24} />, ...NAV_ICON_TUNING.plan },
-    { id: 'memory', label: '암송', icon: <KawaiiWisdomIcon size={24} />, ...NAV_ICON_TUNING.memory },
-    { id: 'saved', label: '저장', icon: <KawaiiSavedIcon size={24} />, ...NAV_ICON_TUNING.saved },
+    { id: 'home', label: '홈', icon: <KawaiiHomeIcon size={22} />, ...NAV_ICON_TUNING.home },
+    { id: 'read', label: '성경', icon: <KawaiiBibleIcon size={22} />, ...NAV_ICON_TUNING.read },
+    { id: 'plan', label: '통독', icon: <KawaiiApplicationIcon size={22} />, ...NAV_ICON_TUNING.plan },
+    { id: 'memory', label: '암송', icon: <KawaiiWisdomIcon size={22} />, ...NAV_ICON_TUNING.memory },
+    { id: 'saved', label: '저장', icon: <KawaiiSavedIcon size={22} />, ...NAV_ICON_TUNING.saved },
   ] as const;
 
   const pageTitle = { home: '은혜의 말씀', random: '오늘의 말씀', read: activeReadingRange?.label ?? `${selBook.name} ${selChap}장`, plan: '통독', memory: '암송', saved: '저장한 말씀', settings: '설정' }[tab];
@@ -788,29 +788,33 @@ export default function App() {
               </div>
               <button onClick={nextHomeVerse} style={{ width: '100%', textAlign: 'left', border: `1px solid ${th.line}`, borderRadius: 18, background: th.card, color: th.text, padding: '15px 16px', fontFamily: 'inherit', cursor: 'pointer', boxShadow: th.soft }}>
                 <p className="serif-verse" style={{ margin: 0, fontSize: fsize, lineHeight: 1.82, wordBreak: 'keep-all' }}>"{decodeHtml(currentHomeVerse.content)}"</p>
-                <div style={{ marginTop: 9, color: th.accent, fontWeight: 900, fontSize: 12 }}>{currentHomeVerse.book} {currentHomeVerse.chapter}:{currentHomeVerse.verse}</div>
+                <div className="title-font" style={{ marginTop: 9, color: th.accent, fontWeight: 800, fontSize: 13 }}>{currentHomeVerse.book} {currentHomeVerse.chapter}:{currentHomeVerse.verse}</div>
               </button>
               <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
                 <div className="serif-verse" style={{ borderRadius: 16, background: th.solid, border: `1px solid ${th.line}`, padding: 13, position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 13 }}>
                     <KawaiiMeditationIcon size={18} />
                     <span className={homeDevotionLoading ? "animate-pulse" : ""}>
                       {homeDevotionLoading ? '묵상할 바를 생각중입니다...' : (currentHomeDevotion.title || '묵상')}
                     </span>
                   </div>
                   <div style={{ fontSize: fsize, lineHeight: 1.8 }}>
-                    {decodeHtml(currentHomeDevotion.meditation)}
+                    {homeDevotionLoading
+                      ? '하나님의 말씀 앞에 잠시 머물며, 오늘 내 마음에 닿는 한 구절을 조용히 되새겨 봅니다. 주님께서 이 말씀을 통해 어떤 은혜를 보여주실지 기대하며 기다립니다.'
+                      : decodeHtml(currentHomeDevotion.meditation)}
                   </div>
                 </div>
                 <div className="serif-verse" style={{ borderRadius: 16, background: th.solid, border: `1px solid ${th.line}`, padding: 13, position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 13 }}>
                     <KawaiiPrayerIcon size={18} />
                     <span className={homeDevotionLoading ? "animate-pulse" : ""}>
                       {homeDevotionLoading ? '기도할 바를 생각중입니다...' : '기도문'}
                     </span>
                   </div>
                   <div style={{ fontSize: fsize, lineHeight: 1.8 }}>
-                    {decodeHtml(currentHomeDevotion.prayer)}
+                    {homeDevotionLoading
+                      ? '사랑의 하나님, 오늘도 주님의 말씀 앞에 나아갑니다. 제 마음을 열어주시고, 이 말씀 속에 담긴 주님의 뜻을 깨닫게 하셔서 하루를 감사와 평안 가운데 살아가게 하옵소서. 아멘.'
+                      : decodeHtml(currentHomeDevotion.prayer)}
                   </div>
                 </div>
               </div>
@@ -926,7 +930,7 @@ export default function App() {
     )}
 
     <nav style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 90, padding: '0 8px calc(5px + env(safe-area-inset-bottom))', background: `linear-gradient(180deg, transparent, ${th.bg} 34%, ${th.bg})`, transform: isNavVisible ? 'translateY(0)' : 'translateY(92px)', opacity: isNavVisible ? 1 : 0, transition: 'transform 260ms ease, opacity 220ms ease' }}>
-      <div style={{ maxWidth: 500, margin: '0 auto', display: 'grid', gridTemplateColumns: `repeat(${navItems.length}, 1fr)`, gap: 2, borderRadius: 18, background: 'rgba(255,252,247,0.88)', boxShadow: '0 10px 28px rgba(52,45,39,0.12)', padding: '3px 5px', backdropFilter: 'blur(12px)' }}>
+      <div style={{ maxWidth: 500, margin: '0 auto', display: 'grid', gridTemplateColumns: `repeat(${navItems.length}, 1fr)`, gap: 2, borderRadius: 18, background: 'rgba(255,252,247,0.92)', boxShadow: '0 10px 28px rgba(52,45,39,0.12)', padding: '6px 5px 8px', backdropFilter: 'blur(12px)' }}>
         {navItems.map(n => (
           <button 
             key={n.id} 
@@ -935,15 +939,16 @@ export default function App() {
             onClick={() => handleNavTab(n.id)} 
             style={{ 
               minWidth: 0, 
-              minHeight: 52, 
+              minHeight: 54, 
               borderRadius: 14, 
               border: 'none', 
               background: 'transparent', 
-              color: tab === n.id ? th.accent : th.sub, 
+              color: tab === n.id ? th.accent : th.text, 
               display: 'flex', 
               flexDirection: 'column', 
               alignItems: 'center', 
               justifyContent: 'center', 
+              gap: 3, 
               cursor: 'pointer', 
               fontFamily: 'inherit', 
               fontWeight: tab === n.id ? 900 : 700, 
@@ -952,20 +957,23 @@ export default function App() {
               outline: 'none', 
               WebkitTapHighlightColor: 'transparent',
               position: 'relative',
-              paddingBottom: 2
+              padding: '2px 0 6px'
             }}
           >
             <AppNavIcon active={tab === n.id} nudgeX={n.nudgeX} nudgeY={n.nudgeY} scale={n.scale * (tab === n.id ? 1.05 : 1)}>
               {n.icon}
             </AppNavIcon>
             <span style={{ 
-              marginTop: -11, 
-              opacity: tab === n.id ? 1 : 0.7,
+              marginTop: 0, 
+              opacity: tab === n.id ? 1 : 0.6,
               transform: tab === n.id ? 'scale(1.05)' : 'scale(1)',
-              transition: 'all 200ms ease'
+              transition: 'all 200ms ease',
+              letterSpacing: '0.02em',
+              lineHeight: 1,
+              fontSize: 10
             }}>{n.label}</span>
             {tab === n.id && (
-              <div style={{ position: 'absolute', bottom: 3, width: 4, height: 4, borderRadius: '50%', background: th.accent, animation: 'pulse 1.5s infinite' }} />
+              <div style={{ position: 'absolute', bottom: 2, width: 4, height: 4, borderRadius: '50%', background: th.accent, animation: 'pulse 1.5s infinite' }} />
             )}
           </button>
         ))}
