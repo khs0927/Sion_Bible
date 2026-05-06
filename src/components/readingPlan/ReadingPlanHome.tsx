@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { Check, ChevronDown, ChevronUp, SlidersHorizontal, X } from 'lucide-react';
+import { Calendar, Check, ChevronDown, ChevronUp, SlidersHorizontal, X } from 'lucide-react';
 import { createCustomReadingPlanTemplate, READING_PLAN_BOOK_OPTIONS, READING_PLAN_TEMPLATES } from '../../data/readingPlans';
 import { getTodayReadingDay, isDayCompleted } from '../../services/readingPlanStats';
 import type { ReadingPlanProgress, ReadingDayTask, ReadingPlanTemplate } from '../../types/readingPlan';
@@ -32,6 +32,33 @@ const BOOK_GROUPS: Array<{ title: string; ids: string[] }> = [
   { title: '공동서신', ids: ['heb', 'jas', '1pe', '2pe', '1jn', '2jn', '3jn', 'jud'] },
   { title: '예언서(신약)', ids: ['rev'] },
 ];
+
+const GOSPEL_BOOK_IDS = ['mat', 'mrk', 'luk', 'jhn'];
+const OLD_TESTAMENT_BOOK_IDS = READING_PLAN_BOOK_OPTIONS.slice(0, 39).map((book) => book.id);
+const NEW_TESTAMENT_BOOK_IDS = READING_PLAN_BOOK_OPTIONS.slice(39).map((book) => book.id);
+const ALL_BOOK_IDS = READING_PLAN_BOOK_OPTIONS.map((book) => book.id);
+
+function sameIds(left: string[], right: string[]) {
+  if (left.length !== right.length) return false;
+  const rightSet = new Set(right);
+  return left.every((id) => rightSet.has(id));
+}
+
+function dateValueFromDays(days: number) {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + Math.max(1, days) - 1);
+  return date.toISOString().slice(0, 10);
+}
+
+function daysFromDateValue(value: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(target.getTime())) return null;
+  const diff = Math.round((target.getTime() - today.getTime()) / 86400000) + 1;
+  return Math.min(365, Math.max(1, diff));
+}
 
 export function ReadingPlanHome({ 
   T, 
@@ -71,6 +98,9 @@ export function ReadingPlanHome({
   const [pendingTemplate, setPendingTemplate] = useState<ReadingPlanTemplate | null>(null);
   const [editDays, setEditDays] = useState<Record<string, number>>({});
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [isCustomBuilderOpen, setIsCustomBuilderOpen] = useState(false);
+  const [showManualCalendar, setShowManualCalendar] = useState(false);
+  const [manualEndDate, setManualEndDate] = useState(() => dateValueFromDays(14));
 
   const allTemplates = useMemo(() => [...READING_PLAN_TEMPLATES, ...userTemplates], [userTemplates]);
   const activeTemplate = useMemo(
@@ -83,6 +113,8 @@ export function ReadingPlanHome({
   const selectedDays = durationPreset === 0 ? manualDays : durationPreset;
   const selectedBooks = READING_PLAN_BOOK_OPTIONS.filter((book) => selectedBookIds.includes(book.id));
   const isAllSelected = selectedBookIds.length === READING_PLAN_BOOK_OPTIONS.length;
+  const isOldSelected = sameIds(selectedBookIds, OLD_TESTAMENT_BOOK_IDS);
+  const isNewSelected = sameIds(selectedBookIds, NEW_TESTAMENT_BOOK_IDS);
 
   useEffect(() => {
     onTodayTaskLoaded?.(todayTask);
@@ -116,25 +148,38 @@ export function ReadingPlanHome({
 
   const toggleBook = (bookId: string) => {
     setSelectedBookIds((current) => {
-      if (current.includes(bookId)) return current.length === 1 ? current : current.filter((id) => id !== bookId);
+      if (current.includes(bookId)) return current.filter((id) => id !== bookId);
       return [...current, bookId];
     });
   };
 
   const selectBookGroup = (group: 'gospels' | 'new' | 'old' | 'all') => {
-    if (group === 'gospels') setSelectedBookIds(['mat', 'mrk', 'luk', 'jhn']);
-    if (group === 'new') setSelectedBookIds(READING_PLAN_BOOK_OPTIONS.slice(39).map((book) => book.id));
-    if (group === 'old') setSelectedBookIds(READING_PLAN_BOOK_OPTIONS.slice(0, 39).map((book) => book.id));
-    if (group === 'all') {
-      if (isAllSelected) {
-        setSelectedBookIds([]);
-      } else {
-        setSelectedBookIds(READING_PLAN_BOOK_OPTIONS.map((book) => book.id));
-      }
+    const ids =
+      group === 'gospels'
+        ? GOSPEL_BOOK_IDS
+        : group === 'new'
+          ? NEW_TESTAMENT_BOOK_IDS
+          : group === 'old'
+            ? OLD_TESTAMENT_BOOK_IDS
+            : ALL_BOOK_IDS;
+    setSelectedBookIds((current) => sameIds(current, ids) ? [] : ids);
+  };
+
+  const selectDurationPreset = (value: number) => {
+    setDurationPreset(value);
+    if (value === 0 && !manualEndDate) {
+      setManualEndDate(dateValueFromDays(manualDays));
     }
   };
 
+  const selectManualDate = (value: string) => {
+    setManualEndDate(value);
+    const days = daysFromDateValue(value);
+    if (days !== null) setManualDays(days);
+  };
+
   const createPlan = () => {
+    if (selectedBookIds.length === 0) return;
     const fallbackTitle = selectedBooks.length === 1 ? `${selectedBooks[0].name} ${selectedDays}일` : `나만의 ${selectedDays}일 코스`;
     const template = createCustomReadingPlanTemplate({
       id: `user-${Date.now()}`,
@@ -146,6 +191,7 @@ export function ReadingPlanHome({
     setPendingTemplate(template);
     setCourseTitle('');
     setEditingTemplateId(null);
+    setIsCustomBuilderOpen(false);
   };
 
   const updateCustomDays = (template: ReadingPlanTemplate) => {
@@ -197,18 +243,8 @@ export function ReadingPlanHome({
         </>
       )}
 
-      {!activeTemplate && (
-        <section style={{ borderRadius: 28, background: T.panel, border: `1px solid ${T.line}`, boxShadow: T.shadow, padding: 16 }}>
-          <div style={{ color: T.accent, fontWeight: 900, fontSize: 12, marginBottom: 7 }}>통독 시작하기</div>
-          <h2 className="title-font" style={{ margin: 0, fontSize: 25, lineHeight: 1.12, fontWeight: 800 }}>오늘부터 말씀의 큰 흐름을 따라가요</h2>
-          <p style={{ margin: '8px 0 0', color: T.sub, fontSize: 13, lineHeight: 1.65 }}>
-            추천 코스를 고르거나, 원하는 성경과 기간을 직접 골라 나만의 코스를 만들 수 있습니다.
-          </p>
-        </section>
-      )}
-
       <section style={{ display: 'grid', gap: 9 }}>
-        <div style={{ display: 'flex', alignItems: 'end', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ position: 'sticky', top: 62, zIndex: 30, display: 'flex', alignItems: 'end', justifyContent: 'space-between', gap: 10, padding: '7px 0 8px', background: `linear-gradient(180deg, ${T.bg} 74%, transparent)`, backdropFilter: 'blur(6px)' }}>
           <div>
             <div className="title-font" style={{ fontWeight: 800, fontSize: 21, lineHeight: 1.15 }}>{courseTab === 'recommended' ? '추천 코스' : '나만의 코스'}</div>
             <div style={{ color: T.sub, fontSize: 11, marginTop: 3 }}>{courseTab === 'recommended' ? '바로 시작하기 좋은 통독 루틴' : '성경과 기간을 직접 선택해요'}</div>
@@ -240,23 +276,44 @@ export function ReadingPlanHome({
           </div>
         ) : (
           <div style={{ display: 'grid', gap: 10 }}>
+            <button
+              onClick={() => setIsCustomBuilderOpen((open) => !open)}
+              style={{ ...secondaryButton(T), justifyContent: 'space-between', borderRadius: 20, minHeight: 52, padding: '12px 14px' }}
+            >
+              <span className="title-font" style={{ fontSize: 18, fontWeight: 800 }}>나만의 코스 만들기</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: T.accent }}>
+                <SlidersHorizontal size={16} />
+                {isCustomBuilderOpen ? '닫기' : '열기'}
+              </span>
+            </button>
+
+            {isCustomBuilderOpen && (
             <section style={{ borderRadius: 22, background: T.panel, border: `1px solid ${T.line}`, boxShadow: T.soft, padding: 13, display: 'grid', gap: 10 }}>
-              <input
-                value={courseTitle}
-                onChange={(event) => setCourseTitle(event.target.value)}
-                placeholder="코스 이름을 입력하세요"
-                style={{ width: '100%', borderRadius: 14, border: `1px solid ${T.line}`, background: T.solid, color: T.text, padding: '11px 12px', fontFamily: 'inherit', fontWeight: 800, outline: 'none' }}
-              />
+              <div style={{ position: 'sticky', top: 116, zIndex: 25, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 8, padding: '0 0 8px', background: T.panel }}>
+                <input
+                  value={courseTitle}
+                  onChange={(event) => setCourseTitle(event.target.value)}
+                  placeholder="코스 이름을 입력하세요"
+                  style={{ width: '100%', borderRadius: 14, border: `1px solid ${T.line}`, background: T.solid, color: T.text, padding: '11px 12px', fontFamily: 'inherit', fontWeight: 800, outline: 'none' }}
+                />
+                <button
+                  onClick={createPlan}
+                  disabled={selectedBookIds.length === 0}
+                  style={{ ...primaryButton(T), minHeight: 42, opacity: selectedBookIds.length === 0 ? 0.42 : 1, cursor: selectedBookIds.length === 0 ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}
+                >
+                  만들기
+                </button>
+              </div>
               <div>
                 <div className="title-font" style={{ fontWeight: 900, fontSize: 16, marginBottom: 7 }}>통독기간</div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {DURATION_PRESETS.map((preset) => (
-                  <button key={preset.label} onClick={() => setDurationPreset(preset.value)} style={chip(T, durationPreset === preset.value)}>
+                  <button key={preset.label} onClick={() => selectDurationPreset(preset.value)} style={chip(T, durationPreset === preset.value)}>
                     {preset.label}
                   </button>
                 ))}
                 {durationPreset === 0 && (
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, borderRadius: 999, border: `1px solid ${T.line}`, background: T.card, minHeight: 32, padding: '4px 8px' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, borderRadius: 999, border: `1px solid ${T.line}`, background: T.card, minHeight: 32, padding: '4px 8px', flexWrap: 'wrap' }}>
                     <button
                       onClick={() => setManualDays((days) => Math.max(1, days - 1))}
                       style={{ ...primaryIconButton(T), width: 24, height: 24, borderRadius: 10 }}
@@ -272,6 +329,22 @@ export function ReadingPlanHome({
                     >
                       <ChevronUp size={14} />
                     </button>
+                    <button
+                      onClick={() => setShowManualCalendar((open) => !open)}
+                      style={{ ...primaryIconButton(T), width: 26, height: 26, borderRadius: 10 }}
+                      aria-label="달력으로 기간 선택"
+                    >
+                      <Calendar size={14} />
+                    </button>
+                    {showManualCalendar && (
+                      <input
+                        type="date"
+                        value={manualEndDate}
+                        min={new Date().toISOString().slice(0, 10)}
+                        onChange={(event) => selectManualDate(event.target.value)}
+                        style={{ border: `1px solid ${T.line}`, background: T.solid, color: T.text, borderRadius: 11, minHeight: 28, padding: '3px 7px', fontFamily: 'inherit', fontWeight: 800, fontSize: 11, outline: 'none' }}
+                      />
+                    )}
                   </div>
                 )}
               </div>
@@ -280,8 +353,8 @@ export function ReadingPlanHome({
                 <div className="title-font" style={{ fontWeight: 900, fontSize: 16, marginBottom: 7 }}>통독구간</div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 <button onClick={() => selectBookGroup('all')} style={chip(T, isAllSelected)}>성경 전체</button>
-                <button onClick={() => selectBookGroup('old')} style={chip(T, selectedBookIds.length === 39)}>구약 전체</button>
-                <button onClick={() => selectBookGroup('new')} style={chip(T, selectedBookIds.length === 27)}>신약 전체</button>
+                <button onClick={() => selectBookGroup('old')} style={chip(T, isOldSelected)}>구약 전체</button>
+                <button onClick={() => selectBookGroup('new')} style={chip(T, isNewSelected)}>신약 전체</button>
               </div>
               </div>
               <div style={{ maxHeight: 320, overflowY: 'auto', display: 'grid', gap: 10, paddingRight: 2 }}>
@@ -302,14 +375,16 @@ export function ReadingPlanHome({
                   </section>
                 ))}
               </div>
-              <button onClick={createPlan} style={primaryButton(T)}>
-                <span>나만의 코스 만들기</span>
-              </button>
             </section>
+            )}
 
-            {userTemplates.length > 0 && (
-              <section style={{ display: 'grid', gap: 9 }}>
+            <section style={{ display: 'grid', gap: 9 }}>
                 <div style={{ fontWeight: 900, fontSize: 13, color: T.sub }}>내가 만든 코스</div>
+                {userTemplates.length === 0 && (
+                  <div style={{ borderRadius: 18, border: `1px dashed ${T.line}`, background: T.solid, color: T.sub, padding: 14, fontSize: 13, lineHeight: 1.6 }}>
+                    아직 만든 코스가 없습니다. 위의 만들기 창을 열어 원하는 성경과 기간을 골라보세요.
+                  </div>
+                )}
                 {userTemplates.map((template) => (
                   <article key={template.id} style={{ borderRadius: 20, background: T.panel, border: `1px solid ${template.id === progress?.templateId ? T.accent : T.line}`, padding: 12, boxShadow: T.soft, display: 'grid', gap: 10 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
@@ -356,7 +431,6 @@ export function ReadingPlanHome({
                   </article>
                 ))}
               </section>
-            )}
           </div>
         )}
       </section>
