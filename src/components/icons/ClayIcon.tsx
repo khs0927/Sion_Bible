@@ -10,44 +10,6 @@ interface ClayIconProps {
   framed?: boolean;
 }
 
-const iconBorderMap: Partial<Record<ClayIconName, string>> = {
-  home: '#e8aa78',
-  read: '#d7b990',
-  verse: '#edb37f',
-  journal: '#ec9f83',
-  saved: '#b6bd8f',
-  prayer: '#eaa56f',
-  audio: '#d9ad7c',
-  share: '#e6a993',
-  random: '#efbd67',
-  settings: '#e1ad63',
-  meditation: '#dfb684',
-  prayer_note: '#e3a17d',
-  application: '#d7bf91',
-  calendar: '#e3a970',
-  delete: '#e99478',
-  comfort: '#e2bb94',
-  hope: '#e7bd6b',
-  gratitude: '#e6a665',
-  love: '#eb9279',
-  wisdom: '#d9a86f',
-  peace: '#bac19a',
-  blessing: '#bdc292',
-  strength: '#d59e5f',
-  bookmark: '#aab48b',
-  bookmarked: '#e78e6c',
-  search: '#ea9b73',
-  books: '#d5a375',
-  old: '#d2b486',
-  new: '#df9d76',
-  prev: '#d1ae7b',
-  next: '#d1ae7b',
-  font: '#d5bb8e',
-  light: '#edbf66',
-  dark: '#d2bb8f',
-  refresh: '#b2bb91',
-};
-
 export function ClayIcon({
   name,
   size = 40,
@@ -56,8 +18,6 @@ export function ClayIcon({
   style,
   framed = true,
 }: ClayIconProps) {
-  const borderColor = iconBorderMap[name] ?? '#e3c7aa';
-
   if (framed) {
     return (
       <span
@@ -70,14 +30,9 @@ export function ClayIcon({
           alignItems: 'center',
           justifyContent: 'center',
           flex: '0 0 auto',
-          overflow: 'hidden',
-          borderRadius: Math.max(12, Math.round(size * 0.28)),
-          background: 'linear-gradient(145deg, #ffffff 0%, #fdf6f0 100%)',
-          boxShadow: `
-            0 ${Math.round(size * 0.15)}px ${Math.round(size * 0.3)}px rgba(125, 86, 58, 0.14),
-            inset 0 1px 0 rgba(255,255,255,0.95),
-            inset 0 -2px 4px rgba(160, 103, 64, 0.05)
-          `,
+          overflow: 'visible',
+          background: 'transparent',
+          boxShadow: 'none',
           position: 'relative',
           boxSizing: 'border-box',
           ...style,
@@ -86,23 +41,21 @@ export function ClayIcon({
         <img
           src={clayIconMap[name]}
           alt={alt}
-          width={Math.round(size * 0.95)}
-          height={Math.round(size * 0.95)}
+          width={Math.round(size * 1.18)}
+          height={Math.round(size * 1.18)}
           loading="lazy"
           draggable={false}
           style={{
-            width: '95%',
-            height: '95%',
+            width: '118%',
+            height: '118%',
             objectFit: 'contain',
             userSelect: 'none',
             pointerEvents: 'none',
-            transform: 'translateY(-2%) scale(1.22)',
-            filter: 'contrast(1.2) saturate(1.3) brightness(0.96) drop-shadow(0 4px 6px rgba(94, 62, 43, 0.25))',
+            transform: 'translateY(-2%)',
+            filter: 'contrast(1.14) saturate(1.16) brightness(0.98) drop-shadow(0 4px 6px rgba(94, 62, 43, 0.2))',
             zIndex: 2,
           }}
         />
-        {/* Subtle inner highlight */}
-        <span style={{ position: 'absolute', inset: 0, borderRadius: 'inherit', border: `1px solid ${borderColor}33`, pointerEvents: 'none' }} />
       </span>
     );
   }

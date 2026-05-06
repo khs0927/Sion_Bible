@@ -7,6 +7,7 @@ import {
   getReadingPassageTitle,
   type ReadingMeditationResult,
 } from '../../services/readingMeditationApi';
+import { ensureAmen } from '../../utils/prayer';
 
 type ThemeTokens = Record<string, string>;
 
@@ -61,7 +62,7 @@ export function ReadingMeditationPage({
       result.sermon.body,
       '',
       result.applications.length > 0 ? `오늘의 적용: ${result.applications.join(' / ')}` : '',
-      result.prayer ? `기도: ${result.prayer}` : '',
+      result.prayer ? `기도: ${ensureAmen(result.prayer)}` : '',
     ].filter(Boolean).join('\n');
     onSaveJournal?.(passageTitle, note);
   };
@@ -141,7 +142,7 @@ export function ReadingMeditationPage({
               ))}
             </div>
           </section>
-          <ResultCard T={T} icon={<PenLine size={18} />} title="기도문" body={result.prayer} />
+          <ResultCard T={T} icon={<PenLine size={18} />} title="기도문" body={ensureAmen(result.prayer)} />
         </>
       )}
     </div>

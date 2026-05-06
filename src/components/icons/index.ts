@@ -18,3 +18,5 @@ export {
   KawaiiVerseIcon,
   KawaiiWisdomIcon,
 } from './KawaiiIcons';
+export { MoodIcon } from './MoodIcon';
+export type { MoodIconLabel } from './MoodIcon';

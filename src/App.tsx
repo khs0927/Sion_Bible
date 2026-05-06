@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Bookmark, BookmarkCheck, CheckSquare, ChevronLeft, ChevronRight, Copy, Download, GripVertical, Loader2, Send, X, Search } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { decodeHtml } from './utils/textUtils';
+import { ensureAmen } from './utils/prayer';
 import { BIBLE_BOOKS } from './data/bibleBooks';
 import { BIBLE_VERSES, type BibleVerse } from './data/verses';
-import { KawaiiApplicationIcon, KawaiiAudioIcon, KawaiiBibleIcon, KawaiiCalendarIcon, KawaiiComfortIcon, KawaiiHomeIcon, KawaiiJournalIcon, KawaiiMeditationIcon, KawaiiPrayerIcon, KawaiiRandomIcon, KawaiiSavedIcon, KawaiiSettingsIcon, KawaiiShareIcon, KawaiiVerseIcon, KawaiiWisdomIcon } from './components/icons';
+import { KawaiiApplicationIcon, KawaiiAudioIcon, KawaiiBibleIcon, KawaiiCalendarIcon, KawaiiComfortIcon, KawaiiHomeIcon, KawaiiJournalIcon, KawaiiMeditationIcon, KawaiiPrayerIcon, KawaiiRandomIcon, KawaiiSavedIcon, KawaiiSettingsIcon, KawaiiShareIcon, KawaiiVerseIcon, KawaiiWisdomIcon, MoodIcon } from './components/icons';
 import { ReadingPlanHome } from './components/readingPlan/ReadingPlanHome';
 import { MemoryHome } from './components/memory/MemoryHome';
 import { getDailyDevotion } from './services/dailyDevotions';
@@ -12,6 +13,7 @@ import { readCachedVerseDevotion } from './services/verseDevotionApi';
 import { VerseDevotionPanel } from './components/bible/VerseDevotionPanel';
 import { ChapterNavigatorSheet } from './components/bible/ChapterNavigatorSheet';
 import { AppNavIcon } from './components/ui/AppNavIcon';
+import { appBookBackground, continueCardBackground, designDecorations, moodCardBackground, verseBackgrounds } from './assets/design';
 import { addMemoryVerse, isVerseMemorized } from './services/memoryStorage';
 import { BibleVersePicker } from './components/bible/BibleVersePicker';
 import { convertTaskToBibleRange } from './services/readingPlanToBibleRange';
@@ -253,6 +255,11 @@ export default function App() {
   const fsize = FS[fontSize];
   const currentHomeVerse = homeHistory[homeIndex] ?? BIBLE_VERSES[getDailyIdx()];
   const currentHomeDevotion = homeDevotion ?? getDailyDevotion(currentHomeVerse);
+  const currentVerseBackground = verseBackgrounds[
+    `${currentHomeVerse.book}-${currentHomeVerse.chapter}-${currentHomeVerse.verse}`
+      .split('')
+      .reduce((sum, char) => sum + char.charCodeAt(0), 0) % verseBackgrounds.length
+  ];
   const recentJournals = journals.slice(0, 2);
 
   // Sync AI devotion for currentHomeVerse
@@ -334,11 +341,11 @@ export default function App() {
   } as const;
 
   const navItems = [
-    { id: 'home', label: '홈', icon: <KawaiiHomeIcon size={22} />, ...NAV_ICON_TUNING.home },
-    { id: 'read', label: '성경', icon: <KawaiiBibleIcon size={22} />, ...NAV_ICON_TUNING.read },
-    { id: 'plan', label: '통독', icon: <KawaiiApplicationIcon size={22} />, ...NAV_ICON_TUNING.plan },
-    { id: 'memory', label: '암송', icon: <KawaiiWisdomIcon size={22} />, ...NAV_ICON_TUNING.memory },
-    { id: 'saved', label: '저장', icon: <KawaiiSavedIcon size={22} />, ...NAV_ICON_TUNING.saved },
+    { id: 'home', label: '홈', icon: <KawaiiHomeIcon size={32} />, ...NAV_ICON_TUNING.home },
+    { id: 'read', label: '성경', icon: <KawaiiBibleIcon size={32} />, ...NAV_ICON_TUNING.read },
+    { id: 'plan', label: '통독', icon: <KawaiiApplicationIcon size={32} />, ...NAV_ICON_TUNING.plan },
+    { id: 'memory', label: '암송', icon: <KawaiiWisdomIcon size={32} />, ...NAV_ICON_TUNING.memory },
+    { id: 'saved', label: '저장', icon: <KawaiiSavedIcon size={32} />, ...NAV_ICON_TUNING.saved },
   ] as const;
 
   const pageTitle = { home: '은혜의 말씀', random: '오늘의 말씀', read: activeReadingRange?.label ?? `${selBook.name} ${selChap}장`, plan: '통독', memory: '암송', saved: '저장한 말씀', settings: '설정' }[tab];
@@ -426,7 +433,10 @@ export default function App() {
   const circle = (active: boolean): CSSProperties => ({ width: 38, height: 38, borderRadius: 13, border: `1px solid ${active ? 'rgba(255,255,255,0.7)' : th.line}`, background: active ? `linear-gradient(145deg, ${th.butter}, ${th.peach})` : th.card, color: th.text, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: active ? '0 8px 16px rgba(126, 89, 55, 0.16)' : th.soft, flex: '0 0 auto', outline: 'none', WebkitTapHighlightColor: 'transparent' });
   const installBtn = (active: boolean): CSSProperties => ({ minWidth: 78, height: 38, borderRadius: 12, border: active ? 'none' : `1px solid ${th.line}`, background: active ? `linear-gradient(145deg, ${th.accent}, ${th.mint})` : th.card, color: active ? '#fff' : th.text, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, boxShadow: active ? '0 10px 20px rgba(74, 112, 86, 0.2)' : th.soft, flex: '0 0 auto', fontFamily: 'inherit', fontWeight: 900, fontSize: 11, outline: 'none', WebkitTapHighlightColor: 'transparent' });
   const chip = (active: boolean): CSSProperties => ({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '7px 10px', minHeight: 32, borderRadius: 999, border: active ? 'none' : `1px solid ${th.line}`, background: active ? `linear-gradient(145deg, ${th.accent}, ${th.mint})` : th.card, color: active ? '#fff' : th.sub, cursor: 'pointer', fontWeight: active ? 900 : 700, fontSize: 11, fontFamily: 'inherit', outline: 'none', WebkitTapHighlightColor: 'transparent' });
-  const iconTile = (_tone: string): CSSProperties => ({ width: 42, height: 42, borderRadius: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: '0', color: '#fff', boxShadow: 'none', outline: 'none', WebkitTapHighlightColor: 'transparent' });
+  const iconTile = (_tone: string): CSSProperties => ({ width: 54, height: 54, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: '0', color: '#fff', boxShadow: 'none', outline: 'none', WebkitTapHighlightColor: 'transparent', overflow: 'visible', flex: '0 0 auto' });
+  const assetIcon = (src: string, size: number, style?: CSSProperties) => (
+    <img src={src} alt="" aria-hidden="true" style={{ width: size, height: size, objectFit: 'contain', display: 'block', pointerEvents: 'none', ...style }} />
+  );
   const saveSaved = (next: SavedVerse[]) => { setSaved(next); localStorage.setItem(LS.SAVED, JSON.stringify(next)); };
   const isSaved = (ref: string) => saved.some(s => s.ref === ref);
   const toggleSave = (ref: string, text: string, meditation?: string, prayer?: string) => {
@@ -552,7 +562,7 @@ export default function App() {
     return <div style={{ display: 'grid', gap: 8 }}>
       {meditation && <div className="serif-verse" style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 13 }}><div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 12 }}><KawaiiVerseIcon size={18} /><span>{title || '묵상'}</span></div><div style={{ fontSize: '0.94rem', lineHeight: 1.85, color: th.text }}>{meditation}</div></div>}
       {application && <div className="serif-verse" style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 13 }}><div style={{ color: th.accent, fontWeight: 900, fontSize: 12, marginBottom: 7 }}>오늘 적용</div><div style={{ fontSize: '0.92rem', lineHeight: 1.75, color: th.text }}>{application}</div></div>}
-      {prayer && <div className="serif-verse" style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 13 }}><div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 12 }}><KawaiiPrayerIcon size={18} /><span>기도문</span></div><div style={{ fontSize: '0.94rem', lineHeight: 1.85, color: th.text, fontStyle: 'normal' }}>{prayer}</div></div>}
+      {prayer && <div className="serif-verse" style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 13 }}><div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 12 }}><KawaiiPrayerIcon size={22} /><span>기도문</span></div><div style={{ fontSize: '0.94rem', lineHeight: 1.85, color: th.text, fontStyle: 'normal' }}>{ensureAmen(prayer)}</div></div>}
     </div>;
   }
 
@@ -678,7 +688,7 @@ export default function App() {
     }
   };
 
-  return <div style={{ minHeight: '100vh', background: `radial-gradient(circle at top left, rgba(255,255,255,0.46), transparent 34%), ${th.bg}`, color: th.text, fontFamily: "'S-Core Dream', sans-serif" }}>
+  return <div style={{ minHeight: '100vh', backgroundColor: th.bg, backgroundImage: theme === 'a-soft' ? `linear-gradient(180deg, rgba(241,238,231,0.90), rgba(241,238,231,0.78) 42%, rgba(241,238,231,0.96)), url(${appBookBackground})` : `radial-gradient(circle at top left, rgba(255,255,255,0.16), transparent 34%)`, backgroundSize: theme === 'a-soft' ? 'cover' : 'auto', backgroundPosition: 'center top', backgroundAttachment: theme === 'a-soft' ? 'fixed' : 'scroll', color: th.text, fontFamily: "'S-Core Dream', sans-serif" }}>
     {isSearchOpen && <BibleSearchSheet onClose={() => setIsSearchOpen(false)} onNavigate={handleSearchNavigate} T={th} fontSize={fsize} />}
     
     <PwaInstallGuideSheet 
@@ -774,26 +784,64 @@ export default function App() {
 
       {tab === 'home' && <div style={{ display: 'grid', gap: 10 }}>
         <Card title="오늘의 마음 체크인" subtitle={selectedMood ? `${selectedMood}에 맞는 말씀을 보고 있어요` : '선택하지 않으면 모든 말씀이 랜덤으로 나와요'} T={th} compact>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: 6 }} className="mood-chip-grid">
-            {MOODS.map(item => <button key={item.label} onClick={() => chooseMood(item.label)} style={{ border: `1px solid ${selectedMood === item.label ? 'transparent' : th.line}`, background: selectedMood === item.label ? `linear-gradient(145deg, ${th.accent}, ${th.mint})` : th.card, color: selectedMood === item.label ? '#fff' : th.sub, borderRadius: 999, minHeight: 34, padding: '6px 8px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 900, fontSize: 11, boxShadow: selectedMood === item.label ? '0 8px 18px rgba(74,112,86,0.18)' : th.soft }}>{item.label}</button>)}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: 8 }} className="mood-chip-grid">
+            {MOODS.map(item => {
+              const active = selectedMood === item.label;
+              return (
+                <button
+                  key={item.label}
+                  onClick={() => chooseMood(item.label)}
+                  style={{
+                    border: active ? 'none' : `1px solid ${th.line}`,
+                    background: active ? `linear-gradient(145deg, ${th.accent}, ${th.mint})` : th.card,
+                    color: active ? '#fff' : th.text,
+                    borderRadius: 16,
+                    minHeight: 78,
+                    padding: '8px 6px 7px',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    fontWeight: 900,
+                    fontSize: 11,
+                    boxShadow: active ? '0 10px 22px rgba(74,112,86,0.2)' : th.soft,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 4,
+                    outline: 'none',
+                    WebkitTapHighlightColor: 'transparent',
+                  }}
+                >
+                  <MoodIcon label={item.label} size={42} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
           </div>
         </Card>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.08fr) minmax(280px, 0.92fr)', gap: 14, alignItems: 'start' }} className="screen-grid">
           <section style={{ display: 'grid', gap: 10 }}>
             <section style={{ borderRadius: 22, background: th.panel, border: `1px solid ${th.line}`, boxShadow: th.shadow, padding: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={iconTile(`linear-gradient(145deg, ${th.peach}, ${th.butter})`)}><KawaiiVerseIcon size={25} /></span><div><div className="title-font" style={{ fontSize: 18, fontWeight: 800 }}>오늘 붙들 말씀</div><div style={{ fontSize: 11, color: th.sub }}>{selectedMood ? `${selectedMood}에 관한 말씀` : '오늘의 말씀'}</div></div></div>
-                <div style={{ display: 'flex', gap: 6, flex: '0 0 auto' }}><button onClick={nextHomeVerse} style={{ ...btn(false), padding: '7px 10px', whiteSpace: 'nowrap' }}>말씀 더보기</button><button onClick={() => toggleSave(`${currentHomeVerse.book} ${currentHomeVerse.chapter}:${currentHomeVerse.verse}`, currentHomeVerse.content, currentHomeVerse.meditation, currentHomeVerse.prayer)} style={{ ...btn(isSaved(`${currentHomeVerse.book} ${currentHomeVerse.chapter}:${currentHomeVerse.verse}`)), padding: '7px 10px', whiteSpace: 'nowrap' }}><KawaiiSavedIcon size={17} /><span>저장</span></button></div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
+                  <span style={{ ...iconTile(`linear-gradient(145deg, ${th.peach}, ${th.butter})`), width: 58, height: 50 }}>{assetIcon(designDecorations.openBibleFlowers, 58)}</span>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="title-font" style={{ fontSize: 18, fontWeight: 800, whiteSpace: 'nowrap' }}>오늘 붙들 말씀</div>
+                    <div style={{ fontSize: 11, color: th.sub, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedMood ? `${selectedMood}에 관한 말씀` : '오늘의 말씀'}</div>
+                  </div>
+                  <button onClick={nextHomeVerse} style={{ ...btn(false), padding: '7px 10px', whiteSpace: 'nowrap', flex: '0 0 auto' }}>말씀 더보기</button>
+                </div>
+                <button aria-label="저장" onClick={() => toggleSave(`${currentHomeVerse.book} ${currentHomeVerse.chapter}:${currentHomeVerse.verse}`, currentHomeVerse.content, currentHomeVerse.meditation, currentHomeVerse.prayer)} style={{ border: '0', background: 'transparent', boxShadow: 'none', padding: 0, width: 48, height: 42, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: isSaved(`${currentHomeVerse.book} ${currentHomeVerse.chapter}:${currentHomeVerse.verse}`) ? th.accent : th.text, flex: '0 0 auto' }}>{assetIcon(designDecorations.bookmarks, 40, { transform: isSaved(`${currentHomeVerse.book} ${currentHomeVerse.chapter}:${currentHomeVerse.verse}`) ? 'scale(1.08)' : 'scale(1)' })}</button>
               </div>
-              <button onClick={nextHomeVerse} style={{ width: '100%', textAlign: 'left', border: `1px solid ${th.line}`, borderRadius: 18, background: th.card, color: th.text, padding: '15px 16px', fontFamily: 'inherit', cursor: 'pointer', boxShadow: th.soft }}>
+              <button onClick={nextHomeVerse} style={{ width: '100%', minHeight: 152, textAlign: 'left', border: `1px solid rgba(225, 202, 166, 0.82)`, borderRadius: 18, backgroundImage: `linear-gradient(180deg, rgba(255,252,247,0.72), rgba(255,252,247,0.90)), url(${currentVerseBackground})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', color: th.text, padding: '22px 18px 18px', fontFamily: 'inherit', cursor: 'pointer', boxShadow: '0 12px 24px rgba(112, 87, 57, 0.10)', overflow: 'hidden' }}>
                 <p className="serif-verse" style={{ margin: 0, fontSize: fsize, lineHeight: 1.82, wordBreak: 'keep-all' }}>"{decodeHtml(currentHomeVerse.content)}"</p>
                 <div className="title-font" style={{ marginTop: 9, color: th.accent, fontWeight: 800, fontSize: 13 }}>{currentHomeVerse.book} {currentHomeVerse.chapter}:{currentHomeVerse.verse}</div>
               </button>
               <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
                 <div className="serif-verse" style={{ borderRadius: 16, background: th.solid, border: `1px solid ${th.line}`, padding: 13, position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 13 }}>
-                    <KawaiiMeditationIcon size={18} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 13 }}>
+                    {assetIcon(designDecorations.pottedSprout, 25)}
                     <span className={homeDevotionLoading ? "animate-pulse" : ""}>
                       {homeDevotionLoading ? '묵상할 바를 생각중입니다...' : (currentHomeDevotion.title || '묵상')}
                     </span>
@@ -805,8 +853,8 @@ export default function App() {
                   </div>
                 </div>
                 <div className="serif-verse" style={{ borderRadius: 16, background: th.solid, border: `1px solid ${th.line}`, padding: 13, position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 13 }}>
-                    <KawaiiPrayerIcon size={18} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 13 }}>
+                    {assetIcon(designDecorations.crossClouds, 27)}
                     <span className={homeDevotionLoading ? "animate-pulse" : ""}>
                       {homeDevotionLoading ? '기도할 바를 생각중입니다...' : '기도문'}
                     </span>
@@ -814,7 +862,7 @@ export default function App() {
                   <div style={{ fontSize: fsize, lineHeight: 1.8 }}>
                     {homeDevotionLoading
                       ? '사랑의 하나님, 오늘도 주님의 말씀 앞에 나아갑니다. 제 마음을 열어주시고, 이 말씀 속에 담긴 주님의 뜻을 깨닫게 하셔서 하루를 감사와 평안 가운데 살아가게 하옵소서. 아멘.'
-                      : decodeHtml(currentHomeDevotion.prayer)}
+                      : ensureAmen(decodeHtml(currentHomeDevotion.prayer))}
                   </div>
                 </div>
               </div>
@@ -823,7 +871,7 @@ export default function App() {
           </section>
 
           <section style={{ display: 'grid', gap: 10 }}>
-            <Card title="이어서 읽기" subtitle={`${selBook.name} ${selChap}장`} T={th} compact><button onClick={() => { setActiveReadingRange(null); setTab('read'); }} style={{ ...btn(false), width: '100%', justifyContent: 'space-between', padding: '10px 12px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><KawaiiBibleIcon size={20} />마지막으로 읽은 곳</span><span>계속 읽기</span></button></Card>
+            <Card title="이어서 읽기" subtitle={`${selBook.name} ${selChap}장`} T={th} compact><button onClick={() => { setActiveReadingRange(null); setTab('read'); }} style={{ ...btn(false), width: '100%', justifyContent: 'space-between', padding: '7px 12px 7px 6px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 46, height: 34, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>{assetIcon(designDecorations.openBibleLarge, 50)}</span>마지막으로 읽은 곳</span><span>계속 읽기</span></button></Card>
             {recentJournals.length > 0 && <Card title="최근 묵상 기록" subtitle="다시 이어서 기도하기" T={th} compact><div style={{ display: 'grid', gap: 7 }}>{recentJournals.map(j => <button key={j.id} onClick={() => setTab('saved')} style={{ textAlign: 'left', border: `1px solid ${th.line}`, background: th.solid, color: th.text, borderRadius: 15, padding: 10, fontFamily: 'inherit' }}><div style={{ fontWeight: 900, fontSize: 12 }}>{j.ref}</div><div style={{ color: th.sub, fontSize: 11, marginTop: 3 }}>{j.date}</div></button>)}</div></Card>}
           </section>
         </div>
@@ -920,7 +968,7 @@ export default function App() {
     </main>
 
     {isReadSelectMode && readSelectedVerses.length > 0 && (
-      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 'calc(62px + env(safe-area-inset-bottom))', zIndex: 110, display: 'flex', justifyContent: 'center', padding: '0 14px', pointerEvents: 'none' }}>
+      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 'calc(50px + env(safe-area-inset-bottom))', zIndex: 110, display: 'flex', justifyContent: 'center', padding: '0 14px', pointerEvents: 'none' }}>
         <div style={{ width: '100%', maxWidth: 420, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, pointerEvents: 'auto' }}>
           <button aria-label="선택 구절 복사" onClick={copyReadSelection} style={{ ...btn(true), minHeight: 48, borderRadius: 16, flexDirection: 'column', gap: 2 }}><Copy size={17} /><span>복사</span></button>
           <button aria-label="선택 구절 저장" onClick={saveReadSelection} style={{ ...btn(false), minHeight: 48, borderRadius: 16, flexDirection: 'column', gap: 2 }}><Bookmark size={17} /><span>저장</span></button>
@@ -929,8 +977,8 @@ export default function App() {
       </div>
     )}
 
-    <nav style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 90, padding: '0 8px calc(5px + env(safe-area-inset-bottom))', background: `linear-gradient(180deg, transparent, ${th.bg} 34%, ${th.bg})`, transform: isNavVisible ? 'translateY(0)' : 'translateY(92px)', opacity: isNavVisible ? 1 : 0, transition: 'transform 260ms ease, opacity 220ms ease' }}>
-      <div style={{ maxWidth: 500, margin: '0 auto', display: 'grid', gridTemplateColumns: `repeat(${navItems.length}, 1fr)`, gap: 2, borderRadius: 18, background: 'rgba(255,252,247,0.92)', boxShadow: '0 10px 28px rgba(52,45,39,0.12)', padding: '6px 5px 8px', backdropFilter: 'blur(12px)' }}>
+    <nav style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 90, padding: '0 12px calc(4px + env(safe-area-inset-bottom))', background: `linear-gradient(180deg, transparent, ${th.bg} 50%, ${th.bg})`, transform: isNavVisible ? 'translateY(0)' : 'translateY(72px)', opacity: isNavVisible ? 1 : 0, transition: 'transform 260ms ease, opacity 220ms ease' }}>
+      <div style={{ maxWidth: 500, margin: '0 auto', display: 'grid', gridTemplateColumns: `repeat(${navItems.length}, 1fr)`, gap: 2, background: 'transparent', boxShadow: 'none', padding: 0 }}>
         {navItems.map(n => (
           <button 
             key={n.id} 
@@ -940,41 +988,33 @@ export default function App() {
             style={{ 
               minWidth: 0, 
               minHeight: 54, 
-              borderRadius: 14, 
               border: 'none', 
               background: 'transparent', 
-              color: tab === n.id ? th.accent : th.text, 
+              color: th.text, 
               display: 'flex', 
               flexDirection: 'column', 
               alignItems: 'center', 
               justifyContent: 'center', 
-              gap: 3, 
+              gap: 0, 
               cursor: 'pointer', 
               fontFamily: 'inherit', 
-              fontWeight: tab === n.id ? 900 : 700, 
-              fontSize: 10, 
-              transition: 'all 200ms ease', 
+              transition: 'transform 180ms ease', 
               outline: 'none', 
               WebkitTapHighlightColor: 'transparent',
               position: 'relative',
-              padding: '2px 0 6px'
+              padding: 0
             }}
           >
-            <AppNavIcon active={tab === n.id} nudgeX={n.nudgeX} nudgeY={n.nudgeY} scale={n.scale * (tab === n.id ? 1.05 : 1)}>
+            <AppNavIcon active={tab === n.id} nudgeX={n.nudgeX} nudgeY={n.nudgeY} scale={n.scale}>
               {n.icon}
             </AppNavIcon>
-            <span style={{ 
-              marginTop: 0, 
-              opacity: tab === n.id ? 1 : 0.6,
-              transform: tab === n.id ? 'scale(1.05)' : 'scale(1)',
-              transition: 'all 200ms ease',
-              letterSpacing: '0.02em',
+            <span style={{
+              color: th.text,
+              fontSize: 10,
+              fontWeight: 800,
               lineHeight: 1,
-              fontSize: 10
+              marginTop: -5,
             }}>{n.label}</span>
-            {tab === n.id && (
-              <div style={{ position: 'absolute', bottom: 2, width: 4, height: 4, borderRadius: '50%', background: th.accent, animation: 'pulse 1.5s infinite' }} />
-            )}
           </button>
         ))}
       </div>
@@ -1025,17 +1065,24 @@ export default function App() {
       .animate-pulse { animation: pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
       @media (max-width: 900px) { .screen-grid { grid-template-columns: 1fr !important; } .compact-menu-grid { grid-template-columns: repeat(2, minmax(0,1fr)) !important; } }
       @media (max-width: 680px) { .mood-chip-grid { grid-template-columns: repeat(4, minmax(0,1fr)) !important; } }
-      @media (max-width: 520px) { .book-grid { grid-template-columns: repeat(3,1fr) !important; } .detail-actions { grid-template-columns: repeat(2,1fr) !important; } .mood-chip-grid { grid-template-columns: repeat(3, minmax(0,1fr)) !important; } }
+      @media (max-width: 520px) { .book-grid { grid-template-columns: repeat(3,1fr) !important; } .detail-actions { grid-template-columns: repeat(2,1fr) !important; } .mood-chip-grid { grid-template-columns: repeat(4, minmax(0,1fr)) !important; } }
     `}</style>
   </div>;
 }
 
 function Card({ title, subtitle, T, compact = false, headerAction, children }: { title: string; subtitle: string; T: any; compact?: boolean; headerAction?: React.ReactNode; children: React.ReactNode }) {
   const icon = getCardIcon(title);
-  return <section className="surface-card" style={{ borderRadius: 20, background: T.panel, border: `1px solid ${T.line}`, boxShadow: T.shadow, padding: compact ? 13 : 16 }}>
+  const isMoodCard = title.includes('마음 체크인');
+  const isContinueCard = title.includes('이어서 읽기');
+  const backgroundImage = isMoodCard
+    ? `linear-gradient(180deg, rgba(255,252,247,0.74), rgba(255,252,247,0.95)), url(${moodCardBackground})`
+    : isContinueCard
+      ? `linear-gradient(180deg, rgba(255,252,247,0.78), rgba(255,252,247,0.96)), url(${continueCardBackground})`
+      : undefined;
+  return <section className="surface-card" style={{ borderRadius: 20, background: backgroundImage ? undefined : T.panel, backgroundImage, backgroundSize: 'cover', backgroundPosition: 'center', border: `1px solid ${T.line}`, boxShadow: T.shadow, padding: compact ? 13 : 16, overflow: 'hidden' }}>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 9, marginBottom: compact ? 9 : 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-        {icon && <span style={{ width: 34, height: 34, borderRadius: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: T.solid, border: `1px solid ${T.line}`, color: T.accent }}>{icon}</span>}
+        {icon && <span style={{ width: 54, height: 54, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: '0', color: T.accent, flex: '0 0 auto', overflow: 'visible' }}>{icon}</span>}
         <div>
           <div className="title-font" style={{ fontWeight: 800, fontSize: compact ? 18 : 22, lineHeight: 1.16 }}>{title}</div>
           <div style={{ color: T.sub, fontSize: 11, marginTop: 3 }}>{subtitle}</div>
@@ -1048,14 +1095,14 @@ function Card({ title, subtitle, T, compact = false, headerAction, children }: {
 }
 
 function getCardIcon(title: string) {
-  if (title.includes('마음')) return <KawaiiComfortIcon size={22} />;
-  if (title.includes('이어서')) return <KawaiiBibleIcon size={22} />;
-  if (title.includes('순종')) return <KawaiiApplicationIcon size={22} />;
-  if (title.includes('묵상')) return <KawaiiMeditationIcon size={22} />;
-  if (title.includes('은혜')) return <KawaiiJournalIcon size={22} />;
-  if (title.includes('다시')) return <KawaiiSavedIcon size={22} />;
-  if (title.includes('절')) return <KawaiiBibleIcon size={22} />;
-  if (title.includes('테마')) return <KawaiiSettingsIcon size={22} />;
-  if (title.includes('글자')) return <KawaiiWisdomIcon size={22} />;
+  if (title.includes('마음')) return <KawaiiComfortIcon size={31} />;
+  if (title.includes('이어서')) return <KawaiiBibleIcon size={31} />;
+  if (title.includes('순종')) return <KawaiiApplicationIcon size={31} />;
+  if (title.includes('묵상')) return <KawaiiMeditationIcon size={31} />;
+  if (title.includes('은혜')) return <KawaiiJournalIcon size={31} />;
+  if (title.includes('다시')) return <KawaiiSavedIcon size={31} />;
+  if (title.includes('절')) return <KawaiiBibleIcon size={31} />;
+  if (title.includes('테마')) return <KawaiiSettingsIcon size={31} />;
+  if (title.includes('글자')) return <KawaiiWisdomIcon size={31} />;
   return null;
 }
