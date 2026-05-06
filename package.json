@@ -9,7 +9,10 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "generate:devotions": "node scripts/generate-daily-devotions-parallel.mjs",
-    "icons:slice": "node scripts/slice-clay-icons.mjs"
+    "icons:slice": "node scripts/slice-clay-icons.mjs",
+    "icons:sam2": "python scripts/slice-icons-with-sam2.py",
+    "icons:moods": "python scripts/slice-mood-icons-with-sam2.py",
+    "assets:design": "python scripts/slice-design-assets.py"
   },
   "dependencies": {
     "@types/canvas-confetti": "^1.9.0",

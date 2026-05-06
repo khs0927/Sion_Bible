@@ -3,6 +3,7 @@ import { getOrGenerateVerseDevotion, readCachedVerseDevotion, type VerseDevotion
 import { speakText } from '../../services/speech';
 import { VerseQuestionPanel } from './VerseQuestionPanel';
 import { KawaiiMeditationIcon, KawaiiPrayerIcon } from '../icons';
+import { ensureAmen } from '../../utils/prayer';
 
 interface SelectedVerse {
   ref: string;
@@ -91,7 +92,7 @@ export function VerseDevotionPanel({
         stripMarkdown(devotion.meditation),
         '',
         '기도문',
-        stripMarkdown(devotion.prayer),
+        ensureAmen(stripMarkdown(devotion.prayer)),
       ].join('\n'),
       { lang: 'ko-KR', rate: 0.85 },
     );
@@ -104,8 +105,8 @@ export function VerseDevotionPanel({
       {devotion && (
         <>
           <article className="rounded-[22px] bg-white/70 p-5 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <div className="flex items-center gap-2 mb-2 text-[#A17C5B]">
-              <KawaiiMeditationIcon size={18} />
+            <div className="flex items-center gap-1 mb-2 text-[#A17C5B]">
+              <KawaiiMeditationIcon size={22} />
               <p className={`text-xs font-bold ${loading ? 'animate-pulse' : ''}`}>
                 {loading ? '묵상할 바를 생각중입니다...' : '묵상'}
               </p>
@@ -125,14 +126,14 @@ export function VerseDevotionPanel({
           </article>
 
           <article className="rounded-[22px] bg-white/70 p-5 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-75">
-            <div className="flex items-center gap-2 mb-2 text-[#A17C5B]">
-              <KawaiiPrayerIcon size={18} />
+            <div className="flex items-center gap-1 mb-2 text-[#A17C5B]">
+              <KawaiiPrayerIcon size={22} />
               <p className={`text-xs font-bold ${loading ? 'animate-pulse' : ''}`}>
                 {loading ? '기도할 바를 생각중입니다...' : '기도문'}
               </p>
             </div>
             <p className="whitespace-pre-line text-[#5C4D42] leading-relaxed serif-verse" style={{ fontSize }}>
-              {stripMarkdown(devotion.prayer)}
+              {ensureAmen(stripMarkdown(devotion.prayer))}
             </p>
           </article>
 

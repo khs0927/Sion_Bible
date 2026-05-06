@@ -5,6 +5,7 @@ export interface VerseDevotionResult {
   prayer: string;
   application: string;
   reflectionQuestion?: string;
+  model?: string;
   fallback?: boolean;
   errorCode?: string;
   savedAt?: number;

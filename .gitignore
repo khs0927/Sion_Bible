@@ -22,6 +22,8 @@ vercel-dev.*.log
 
 # Data
 ko_ko_raw.json
+scratch/sam2/
+scratch/*.png
 
 # OS / editor
 .DS_Store
