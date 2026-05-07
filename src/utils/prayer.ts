@@ -10,5 +10,5 @@ export function ensureAmen(text: string) {
     .trim();
   if (!trimmed) return trimmed;
 
-  return `${trimmed.replace(/[.!?。．…]+$/, '')}.\n\n우리 주 예수 그리스도의 이름으로 기도드립니다.\n\n아멘.`;
+  return `${trimmed.replace(/[.!?。．…]+$/, '')}.\n우리 주 예수 그리스도의 이름으로 기도드립니다. 아멘.`;
 }

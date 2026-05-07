@@ -162,7 +162,8 @@ export function VerseDevotionPanel({
         application: selectedVerse.application,
         fallback: false,
       });
-      setDevotion(localDevotion);
+      const hasLocalContent = Boolean(selectedVerse.meditation || selectedVerse.prayer || selectedVerse.application);
+      setDevotion(hasLocalContent ? localDevotion : null);
       setErrorMessage('');
       setLoading(true);
 
@@ -187,13 +188,10 @@ export function VerseDevotionPanel({
         return;
       }
 
-      const response = await Promise.race([
-        getOrGenerateVerseDevotion({
-          ref: selectedVerse.ref,
-          verseText: selectedVerse.text,
-        }),
-        new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 4500)),
-      ]);
+      const response = await getOrGenerateVerseDevotion({
+        ref: selectedVerse.ref,
+        verseText: selectedVerse.text,
+      });
 
       if (!cancelled) {
         if (response?.result) {

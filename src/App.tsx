@@ -400,12 +400,10 @@ export default function App() {
       const ref = currentHomeRef;
       const text = currentHomeVerse.content;
       
-      // 1. Check curated/hardcoded devotions first (preferred)
+      // 1. Show curated/local devotion immediately while the API prepares a deeper response.
       const curated = getDailyDevotion(currentHomeVerse);
       if (!curated.fallback && (curated.meditation || curated.prayer)) {
         setHomeDevotion(curated);
-        setHomeDevotionLoading(false);
-        return;
       }
 
       // 2. Check cache for AI generated devotions
@@ -420,10 +418,7 @@ export default function App() {
       setHomeDevotionLoading(true);
       try {
         const { getOrGenerateVerseDevotion } = await import('./services/verseDevotionApi');
-        const response = await Promise.race([
-          getOrGenerateVerseDevotion({ ref, verseText: text }),
-          new Promise<null>(resolve => window.setTimeout(() => resolve(null), 4500)),
-        ]);
+        const response = await getOrGenerateVerseDevotion({ ref, verseText: text });
 
         if (active) {
           if (response?.result) {
