@@ -162,6 +162,16 @@ function getSavedContent(item: SavedVerse, mode: SavedContentMode) {
   }
   return String(item[mode] || '').trim();
 }
+function devotionApplicationList(value: VerseDevotionResult['application']) {
+  if (Array.isArray(value)) return value.filter(Boolean).map(String);
+  return String(value || '')
+    .split(/\n+/)
+    .map(item => item.replace(/^\s*\d+[.)]\s*/, '').trim())
+    .filter(Boolean);
+}
+function devotionQuestionText(devotion: VerseDevotionResult) {
+  return String(devotion.question || devotion.reflectionQuestion || '').trim();
+}
 function todayText(date = new Date()) { return date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }); }
 function getDailyIdx() {
   const today = new Date().toDateString();
@@ -343,7 +353,7 @@ export default function App() {
   const fsize = FS[fontSize];
   const currentHomeVerse = homeHistory[homeIndex] ?? BIBLE_VERSES[getDailyIdx()];
   const currentHomeRef = `${currentHomeVerse.book} ${currentHomeVerse.chapter}:${currentHomeVerse.verse}`;
-  const currentHomeDevotion = homeDevotion && !homeDevotion.fallback ? homeDevotion : getDailyDevotion(currentHomeVerse);
+  const currentHomeDevotion = homeDevotion ?? getDailyDevotion(currentHomeVerse);
   const currentHomeExplanation = currentHomeDevotion.explanation || currentHomeDevotion.meditation;
   const currentVerseBackground = verseBackgrounds[
     `${currentHomeVerse.book}-${currentHomeVerse.chapter}-${currentHomeVerse.verse}`
@@ -416,8 +426,7 @@ export default function App() {
         ]);
 
         if (active) {
-          // Only set if it's not a generic fallback
-          if (response?.result && !response.result.fallback) {
+          if (response?.result) {
             setHomeDevotion(response.result);
           }
           setHomeDevotionLoading(false);
@@ -1287,6 +1296,43 @@ export default function App() {
                   {decodeHtml(currentHomeExplanation)}
                 </div>
               )}
+            </article>
+          )}
+          {devotionApplicationList(currentHomeDevotion.application).length > 0 && (
+            <article className="serif-verse" style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 13, marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8, color: th.accent, fontWeight: 900, fontSize: 13 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <KawaiiApplicationIcon size={18} />
+                  <span>오늘의 적용</span>
+                </span>
+                <button
+                  type="button"
+                  aria-label="오늘의 적용 저장"
+                  onClick={() => saveDevotionSection('application', { ref: currentHomeRef, text: currentHomeVerse.content }, currentHomeDevotion)}
+                  style={{ ...circle(false), width: 30, height: 30, borderRadius: 10 }}
+                >
+                  <Bookmark size={14} />
+                </button>
+              </div>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {devotionApplicationList(currentHomeDevotion.application).map((item, index) => (
+                  <div key={`${item}-${index}`} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', color: th.text, fontSize: fsize, lineHeight: 1.65 }}>
+                    <span style={{ color: th.accent, fontWeight: 900 }}>{index + 1}</span>
+                    <span>{decodeHtml(item)}</span>
+                  </div>
+                ))}
+              </div>
+            </article>
+          )}
+          {devotionQuestionText(currentHomeDevotion) && (
+            <article className="serif-verse" style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 13, marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, color: th.accent, fontWeight: 900, fontSize: 13 }}>
+                <KawaiiMeditationIcon size={18} />
+                <span>오늘 붙들 질문</span>
+              </div>
+              <div style={{ fontWeight: 900, color: th.text, fontSize: fsize, lineHeight: 1.75 }}>
+                {decodeHtml(devotionQuestionText(currentHomeDevotion))}
+              </div>
             </article>
           )}
           <VerseQuestionPanel

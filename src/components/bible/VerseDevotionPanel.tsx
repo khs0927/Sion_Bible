@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { getOrGenerateVerseDevotion, readCachedVerseDevotion, type VerseDevotionResult } from '../../services/verseDevotionApi';
+import { buildLocalDevotionFromVerse, getOrGenerateVerseDevotion, readCachedVerseDevotion, type VerseDevotionResult } from '../../services/verseDevotionApi';
 import { VerseQuestionPanel } from './VerseQuestionPanel';
 import { Bookmark, Check } from 'lucide-react';
 import { KawaiiVerseIcon } from '../icons';
@@ -79,6 +79,10 @@ function asApplicationList(value: VerseDevotionResult['application']) {
     .filter(Boolean);
 }
 
+function devotionQuestion(devotion: VerseDevotionResult) {
+  return String(devotion.question || devotion.reflectionQuestion || '').trim();
+}
+
 function SectionCard({
   title,
   children,
@@ -140,38 +144,48 @@ export function VerseDevotionPanel({
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    if (!selectedVerse) return;
+    if (!selectedVerse) {
+      setDevotion(null);
+      setErrorMessage('');
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
 
     async function run() {
       if (!selectedVerse) return;
 
-      if (selectedVerse.meditation || selectedVerse.prayer) {
-        setDevotion({
-          title: selectedVerse.title || '말씀 묵상',
-          keyPhrase: '',
-          meditation: selectedVerse.meditation || '',
-          prayer: selectedVerse.prayer || '',
-          application: selectedVerse.application || '',
-          reflectionQuestion: '',
-          fallback: false,
-        });
-        setErrorMessage('');
+      const localDevotion = buildLocalDevotionFromVerse(selectedVerse.ref, selectedVerse.text, {
+        title: selectedVerse.title,
+        meditation: selectedVerse.meditation,
+        prayer: selectedVerse.prayer,
+        application: selectedVerse.application,
+        fallback: false,
+      });
+      setDevotion(localDevotion);
+      setErrorMessage('');
+      setLoading(true);
+
+      if (
+        localDevotion.explanation &&
+        localDevotion.application &&
+        (Array.isArray(localDevotion.application) ? localDevotion.application.length > 0 : String(localDevotion.application).trim()) &&
+        (localDevotion.question || localDevotion.reflectionQuestion) &&
+        selectedVerse.meditation &&
+        selectedVerse.prayer
+      ) {
         setLoading(false);
-        return;
       }
 
       const cached = readCachedVerseDevotion(selectedVerse.ref, selectedVerse.text);
       if (cached) {
-        setDevotion(cached);
-        setErrorMessage('');
-        setLoading(false);
+        if (!cancelled) {
+          setDevotion(cached);
+          setErrorMessage('');
+          setLoading(false);
+        }
         return;
       }
-
-      setLoading(true);
-      setDevotion(null);
-      setErrorMessage('');
 
       const response = await Promise.race([
         getOrGenerateVerseDevotion({
@@ -182,13 +196,10 @@ export function VerseDevotionPanel({
       ]);
 
       if (!cancelled) {
-        if (response?.result && !response.result.fallback) {
+        if (response?.result) {
           setDevotion(response.result);
-          setErrorMessage('');
-        } else {
-          setDevotion(null);
-          setErrorMessage('묵상문을 지금 준비하지 못했습니다. 본문을 다시 선택하거나 잠시 뒤에 시도해주세요.');
         }
+        setErrorMessage('');
         setLoading(false);
       }
     }
@@ -262,6 +273,12 @@ export function VerseDevotionPanel({
                   </div>
                 ))}
               </div>
+            </SectionCard>
+          )}
+
+          {devotionQuestion(devotion) && (
+            <SectionCard title="오늘 붙들 질문" delay="delay-250" tone="question" titleSize="body" titleFontSize={fontSize}>
+              <DevotionParagraph fontSize={fontSize} strong>{devotionQuestion(devotion)}</DevotionParagraph>
             </SectionCard>
           )}
 
