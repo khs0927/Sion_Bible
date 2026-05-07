@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { getOrGenerateVerseDevotion, readCachedVerseDevotion, type VerseDevotionResult } from '../../services/verseDevotionApi';
-import { speakText } from '../../services/speech';
 import { VerseQuestionPanel } from './VerseQuestionPanel';
 import { KawaiiMeditationIcon, KawaiiPrayerIcon } from '../icons';
 import { ensureAmen } from '../../utils/prayer';
@@ -16,7 +15,7 @@ interface SelectedVerse {
 
 interface VerseDevotionPanelProps {
   selectedVerse: SelectedVerse | null;
-  onGoToMemory: (verse: SelectedVerse) => void;
+  onGoToMemory?: (verse: SelectedVerse) => void;
   fontSize?: string;
 }
 
@@ -26,7 +25,6 @@ function stripMarkdown(text: string) {
 
 export function VerseDevotionPanel({
   selectedVerse,
-  onGoToMemory,
   fontSize = '1rem',
 }: VerseDevotionPanelProps) {
   const [loading, setLoading] = useState(false);
@@ -79,24 +77,6 @@ export function VerseDevotionPanel({
       cancelled = true;
     };
   }, [selectedVerse?.ref, selectedVerse?.text, selectedVerse?.meditation, selectedVerse?.prayer]);
-
-  function speakVerseDevotion() {
-    if (!selectedVerse || !devotion) return;
-
-    speakText(
-      [
-        selectedVerse.ref,
-        selectedVerse.text,
-        '',
-        '묵상',
-        stripMarkdown(devotion.meditation),
-        '',
-        '기도문',
-        ensureAmen(stripMarkdown(devotion.prayer)),
-      ].join('\n'),
-      { lang: 'ko-KR', rate: 0.85 },
-    );
-  }
 
   if (!selectedVerse) return null;
 
@@ -154,24 +134,6 @@ export function VerseDevotionPanel({
               </p>
             </article>
           )}
-
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={speakVerseDevotion}
-              className="rounded-full bg-white px-4 py-3 font-black text-[#3D3129] shadow-sm hover:bg-[#FDF2E7] transition-colors border border-white/50 text-sm"
-            >
-              듣기
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onGoToMemory(selectedVerse)}
-              className="rounded-full bg-[#F5C292] px-4 py-3 font-black text-[#3D3129] shadow-sm hover:bg-[#F3B070] transition-colors text-sm"
-            >
-              암송하러 가기
-            </button>
-          </div>
 
           <VerseQuestionPanel verse={selectedVerse} devotion={devotion} />
         </>
