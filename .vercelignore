@@ -1,0 +1,12 @@
+node_modules
+dist
+scratch
+.git
+*.log
+*.err.log
+local-api-dev.err.log
+local-api-dev.log
+vercel-dev.err.log
+vercel-dev.log
+vite-dev.err.log
+vite-dev.log
