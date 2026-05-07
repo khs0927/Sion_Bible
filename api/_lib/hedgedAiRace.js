@@ -1,97 +1,124 @@
 import { callNvidiaChat, parseJsonLoose } from './nvidia.js';
 
-/**
- * Hedged Request (Hedged AI Race) Utility
- * 
- * 1. Calls the first model immediately.
- * 2. If no valid response within firstDelayMs, calls the second model.
- * 3. Uses the first one that returns valid JSON (validated by the validate function).
- * 4. Aborts others upon success.
- * 5. Times out after timeoutMs.
- */
+function delay(ms, signal) {
+  if (!ms) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(resolve, ms);
+    if (signal) {
+      signal.addEventListener('abort', () => {
+        clearTimeout(timeout);
+        reject(signal.reason || new DOMException('Aborted', 'AbortError'));
+      }, { once: true });
+    }
+  });
+}
+
+function serializeError(error) {
+  return {
+    name: error?.name,
+    message: error?.message || String(error),
+    statusCode: error?.statusCode,
+    detail: error?.detail,
+    model: error?.model,
+  };
+}
+
 export async function hedgedNvidiaRace({
   models,
+  delaysMs = [0, 700, 1800],
   messages,
   apiKey,
-  firstDelayMs = 1200,
-  timeoutMs = 10000,
-  temperature = 0.5,
-  maxTokens = 1024,
-  responseFormat = null,
+  timeoutMs = 14000,
+  temperature = 0.25,
+  topP,
+  seed,
+  maxTokens = 1800,
+  responseFormat = { type: 'json_object' },
   validate,
 }) {
-  const uniqueModels = [...new Set(models.filter(Boolean))].slice(0, 2);
+  const uniqueModels = [...new Set((models || []).filter(Boolean))];
   if (uniqueModels.length === 0) throw new Error('At least one model is required');
 
+  const attempts = [];
   const controllers = uniqueModels.map(() => new AbortController());
-  
-  // Overall timeout
-  const timeoutPromise = new Promise((_, reject) => {
-    setTimeout(() => {
-      controllers.forEach(c => c.abort());
-      const err = new Error('AI Generation Timeout');
-      err.statusCode = 504;
-      reject(err);
-    }, timeoutMs);
-  });
+  const overallController = new AbortController();
+  let settled = false;
+  let pending = uniqueModels.length;
+  let timeoutId;
 
-  const runModel = async (model, index) => {
-    try {
-      const response = await callNvidiaChat({
-        apiKey,
-        model,
-        messages,
-        temperature,
-        maxTokens,
-        responseFormat,
-        signal: controllers[index].signal,
-      });
-
-      const parsed = parseJsonLoose(response.content);
-      const result = validate(parsed);
-      
-      if (!result) {
-        throw new Error(`Model ${model} returned invalid data format`);
-      }
-
-      // Success! Abort others
-      controllers.forEach((c, i) => {
-        if (i !== index) c.abort();
-      });
-
-      return { result, model };
-    } catch (error) {
-      if (error.name === 'AbortError') {
-        throw error;
-      }
-      console.warn(`Model ${model} attempt failed:`, error.message);
-      throw error;
-    }
+  const abortOthers = (winnerIndex) => {
+    settled = true;
+    controllers.forEach((controller, index) => {
+      if (index !== winnerIndex && !controller.signal.aborted) controller.abort(new Error('Hedged race resolved'));
+    });
+    if (!overallController.signal.aborted) overallController.abort(new Error('Hedged race resolved'));
+    if (timeoutId) clearTimeout(timeoutId);
   };
 
-  const tasks = [];
-  
-  // First attempt
-  tasks.push(runModel(uniqueModels[0], 0));
+  return new Promise((resolve, reject) => {
+    timeoutId = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      controllers.forEach((controller) => {
+        if (!controller.signal.aborted) controller.abort(new Error('AI Generation Timeout'));
+      });
+      const error = new Error('AI Generation Timeout');
+      error.statusCode = 504;
+      error.attempts = attempts;
+      reject(error);
+    }, timeoutMs);
 
-  // Second attempt after delay
-  if (uniqueModels.length > 1) {
-    const delayedAttempt = new Promise((resolve, reject) => {
-      setTimeout(async () => {
+    const maybeReject = () => {
+      if (settled || pending > 0) return;
+      const error = new Error('All NVIDIA model attempts failed');
+      error.statusCode = 502;
+      error.attempts = attempts;
+      reject(error);
+    };
+
+    uniqueModels.forEach((model, index) => {
+      (async () => {
+        const startedAt = Date.now();
         try {
-          const res = await runModel(uniqueModels[1], 1);
-          resolve(res);
-        } catch (e) {
-          reject(e);
-        }
-      }, firstDelayMs);
-    });
-    tasks.push(delayedAttempt);
-  }
+          await delay(delaysMs[index] ?? delaysMs[delaysMs.length - 1] ?? 0, overallController.signal);
+          if (settled) throw new DOMException('Aborted after successful hedge', 'AbortError');
 
-  // Race between attempts and timeout
-  return Promise.race([
-    Promise.any(tasks),
-    timeoutPromise
-  ]);
+          const response = await callNvidiaChat({
+            apiKey,
+            model,
+            messages,
+            temperature,
+            topP,
+            seed,
+            maxTokens,
+            responseFormat,
+            signal: controllers[index].signal,
+          });
+
+          const parsed = parseJsonLoose(response.content);
+          const result = validate ? validate(parsed) : parsed;
+          if (!result) {
+            const error = new Error(`Model ${model} returned invalid JSON payload`);
+            error.model = model;
+            throw error;
+          }
+
+          const latencyMs = Date.now() - startedAt;
+          attempts.push({ model, ok: true, latencyMs });
+          if (!settled) {
+            abortOthers(index);
+            resolve({ result, model, latencyMs, attempts: [...attempts] });
+          }
+        } catch (error) {
+          const latencyMs = Date.now() - startedAt;
+          if (!(settled && error?.name === 'AbortError')) {
+            attempts.push({ model, ok: false, latencyMs, error: serializeError(error) });
+          }
+        } finally {
+          pending -= 1;
+          maybeReject();
+        }
+      })();
+    });
+  });
 }

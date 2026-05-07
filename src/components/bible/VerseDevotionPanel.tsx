@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { buildLocalDevotionFromVerse, getOrGenerateVerseDevotion, readCachedVerseDevotion, type VerseDevotionResult } from '../../services/verseDevotionApi';
+import { buildLocalDevotionFromVerse, createContextualFallback, getOrGenerateVerseDevotion, readCachedVerseDevotion, type VerseDevotionResult } from '../../services/verseDevotionApi';
 import { VerseQuestionPanel } from './VerseQuestionPanel';
 import { Bookmark, Check } from 'lucide-react';
 import { KawaiiVerseIcon } from '../icons';
@@ -151,9 +151,11 @@ export function VerseDevotionPanel({
       return;
     }
     let cancelled = false;
+    const requestKey = `${selectedVerse.ref}:${selectedVerse.text}`;
 
     async function run() {
       if (!selectedVerse) return;
+      const isCurrentRequest = () => !cancelled && requestKey === `${selectedVerse.ref}:${selectedVerse.text}`;
 
       const localDevotion = buildLocalDevotionFromVerse(selectedVerse.ref, selectedVerse.text, {
         title: selectedVerse.title,
@@ -163,7 +165,7 @@ export function VerseDevotionPanel({
         fallback: false,
       });
       const hasLocalContent = Boolean(selectedVerse.meditation || selectedVerse.prayer || selectedVerse.application);
-      setDevotion(hasLocalContent ? localDevotion : null);
+      setDevotion(hasLocalContent ? localDevotion : createContextualFallback(selectedVerse.ref, selectedVerse.text, 'LOCAL_INITIAL'));
       setErrorMessage('');
       setLoading(true);
 
@@ -180,7 +182,7 @@ export function VerseDevotionPanel({
 
       const cached = readCachedVerseDevotion(selectedVerse.ref, selectedVerse.text);
       if (cached) {
-        if (!cancelled) {
+        if (isCurrentRequest()) {
           setDevotion(cached);
           setErrorMessage('');
           setLoading(false);
@@ -188,17 +190,24 @@ export function VerseDevotionPanel({
         return;
       }
 
-      const response = await getOrGenerateVerseDevotion({
-        ref: selectedVerse.ref,
-        verseText: selectedVerse.text,
-      });
+      try {
+        const response = await getOrGenerateVerseDevotion({
+          ref: selectedVerse.ref,
+          verseText: selectedVerse.text,
+        });
 
-      if (!cancelled) {
-        if (response?.result) {
-          setDevotion(response.result);
+        if (isCurrentRequest()) {
+          if (response?.result) {
+            setDevotion(response.result);
+          }
+          setErrorMessage('');
+          setLoading(false);
         }
-        setErrorMessage('');
-        setLoading(false);
+      } catch {
+        if (isCurrentRequest()) {
+          setErrorMessage('');
+          setLoading(false);
+        }
       }
     }
 

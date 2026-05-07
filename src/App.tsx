@@ -9,7 +9,7 @@ import { KawaiiApplicationIcon, KawaiiAudioIcon, KawaiiBibleIcon, KawaiiCalendar
 import { ReadingPlanHome } from './components/readingPlan/ReadingPlanHome';
 import { MemoryHome } from './components/memory/MemoryHome';
 import { getDailyDevotion } from './services/dailyDevotions';
-import { readCachedVerseDevotion, type VerseDevotionResult } from './services/verseDevotionApi';
+import { createContextualFallback, readCachedVerseDevotion, type VerseDevotionResult } from './services/verseDevotionApi';
 import { VerseDevotionPanel } from './components/bible/VerseDevotionPanel';
 import { VerseQuestionPanel } from './components/bible/VerseQuestionPanel';
 import { ChapterNavigatorSheet } from './components/bible/ChapterNavigatorSheet';
@@ -391,26 +391,29 @@ export default function App() {
   // Sync AI devotion for currentHomeVerse
   useEffect(() => {
     let active = true;
+    const requestKey = `${currentHomeRef}:${currentHomeVerse.content}`;
     setIsHomeQuestionOpen(false);
 
-    // Reset devotion state when verse changes
-    setHomeDevotion(null);
-    setHomeDevotionLoading(false);
+    setHomeDevotion(createContextualFallback(currentHomeRef, currentHomeVerse.content, 'LOCAL_INITIAL'));
+    setHomeDevotionLoading(true);
     const fetchDevotion = async () => {
       const ref = currentHomeRef;
       const text = currentHomeVerse.content;
+      const isCurrentRequest = () => active && requestKey === `${currentHomeRef}:${currentHomeVerse.content}`;
       
       // 1. Show curated/local devotion immediately while the API prepares a deeper response.
       const curated = getDailyDevotion(currentHomeVerse);
-      if (!curated.fallback && (curated.meditation || curated.prayer)) {
+      if (isCurrentRequest() && !curated.fallback && (curated.meditation || curated.prayer)) {
         setHomeDevotion(curated);
       }
 
       // 2. Check cache for AI generated devotions
       const cached = readCachedVerseDevotion(ref, text);
       if (cached) {
-        setHomeDevotion(cached);
-        setHomeDevotionLoading(false);
+        if (isCurrentRequest()) {
+          setHomeDevotion(cached);
+          setHomeDevotionLoading(false);
+        }
         return;
       }
 
@@ -420,7 +423,7 @@ export default function App() {
         const { getOrGenerateVerseDevotion } = await import('./services/verseDevotionApi');
         const response = await getOrGenerateVerseDevotion({ ref, verseText: text });
 
-        if (active) {
+        if (isCurrentRequest()) {
           if (response?.result) {
             setHomeDevotion(response.result);
           }
@@ -428,7 +431,7 @@ export default function App() {
         }
       } catch (e) {
         console.error('Failed to fetch devotion', e);
-        if (active) setHomeDevotionLoading(false);
+        if (isCurrentRequest()) setHomeDevotionLoading(false);
       }
     };
 
