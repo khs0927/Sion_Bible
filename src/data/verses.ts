@@ -230,5 +230,49 @@ export const BIBLE_VERSES: BibleVerse[] = [
     category: '소망',
     meditation: '기도의 응답이 더디고 선한 행동에 대한 열매가 당장 보이지 않더라도 절대 낙심해서는 안 됩니다. 하나님의 정하신 완벽한 타이밍에 가장 아름다운 열매를 수확하게 될 것입니다.',
     prayer: '인내하게 하시는 주님, 계속되는 수고와 눈물 속에서도 낙담하지 않고 기도의 씨앗을 뿌리게 하소서. 포기하고 싶을 때마다 성령님의 위로와 능력을 부어주셔서 마침내 풍성히 거두는 승리를 보게 하옵소서. 아멘.'
+  },
+  {
+    id: 21,
+    book: '요한일서',
+    chapter: '1',
+    verse: '9',
+    content: '만일 우리가 우리 죄를 자백하면 그는 미쁘시고 의로우사 우리 죄를 사하시며 우리를 모든 불의에서 깨끗하게 하실 것이요',
+    contentEn: 'If we confess our sins, he is faithful and just and will forgive us our sins and purify us from all unrighteousness.',
+    category: '사랑',
+    meditation: '회개는 정죄 앞에 주저앉는 일이 아니라, 신실하신 하나님께 돌아가는 길입니다. 주님은 숨기지 않고 자백하는 마음을 외면하지 않으시며, 용서와 정결함으로 다시 서게 하십니다.',
+    prayer: '미쁘시고 의로우신 주님, 제 안에 숨겨둔 죄와 완고함을 주님 앞에 내려놓습니다. 십자가의 은혜로 저를 깨끗하게 하시고, 돌이킨 마음으로 다시 주님을 따르게 하옵소서. 아멘.'
+  },
+  {
+    id: 22,
+    book: '시편',
+    chapter: '51',
+    verse: '10',
+    content: '하나님이여 내 속에 정한 마음을 창조하시고 내 안에 정직한 영을 새롭게 하소서',
+    contentEn: 'Create in me a pure heart, O God, and renew a steadfast spirit within me.',
+    category: '지혜',
+    meditation: '참된 회개는 겉모습을 고치는 데서 멈추지 않고 마음의 중심이 새로워지기를 구합니다. 하나님께서 새 마음을 창조하실 때, 다시 정직하고 흔들리지 않는 영으로 살아갈 수 있습니다.',
+    prayer: '새롭게 하시는 하나님, 제 마음을 정결하게 빚어 주옵소서. 오래된 습관과 변명을 내려놓고, 주님 앞에서 정직한 영으로 오늘을 다시 시작하게 하옵소서. 아멘.'
+  },
+  {
+    id: 23,
+    book: '에베소서',
+    chapter: '4',
+    verse: '32',
+    content: '서로 친절하게 하며 불쌍히 여기며 서로 용서하기를 하나님이 그리스도 안에서 너희를 용서하심과 같이 하라',
+    contentEn: 'Be kind and compassionate to one another, forgiving each other, just as in Christ God forgave you.',
+    category: '사랑',
+    meditation: '용서는 감정을 억지로 지우는 일이 아니라, 내가 먼저 받은 그리스도의 용서를 기억하며 은혜의 방향으로 한 걸음 내딛는 일입니다. 주님의 긍휼이 관계의 닫힌 문을 열게 합니다.',
+    prayer: '그리스도 안에서 저를 용서하신 하나님, 제 마음의 굳은 매듭을 주님께 맡깁니다. 받은 은혜를 기억하며 친절과 긍휼로 사람을 대하게 하옵소서. 아멘.'
+  },
+  {
+    id: 24,
+    book: '마태복음',
+    chapter: '6',
+    verse: '14',
+    content: '너희가 사람의 잘못을 용서하면 너희 하늘 아버지께서도 너희 잘못을 용서하시려니와',
+    contentEn: 'For if you forgive other people when they sin against you, your heavenly Father will also forgive you.',
+    category: '사랑',
+    meditation: '용서는 하나님께 받은 은혜가 내 안에서 멈추지 않고 흘러가게 하는 통로입니다. 상처를 가볍게 여기라는 뜻이 아니라, 하늘 아버지의 자비 안에서 묶인 마음이 풀려나는 초대입니다.',
+    prayer: '하늘 아버지, 용서하기 어려운 마음까지도 주님께 솔직히 올려드립니다. 제 안에 주님의 자비를 부어 주셔서 미움보다 은혜가 더 크게 흐르게 하옵소서. 아멘.'
   }
 ];
