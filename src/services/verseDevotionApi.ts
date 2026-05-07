@@ -1,5 +1,4 @@
 import { BIBLE_VERSES } from '../data/verses';
-import { ensureAmen } from '../utils/prayer';
 
 export interface VerseDevotionResult {
   reference?: string;
@@ -19,7 +18,7 @@ export interface VerseDevotionResult {
   savedAt?: number;
 }
 
-const CACHE_PREFIX = 'sion_verse_devotion_v9_';
+const CACHE_PREFIX = 'sion_verse_devotion_v10_';
 const REQUIRED_PRAYER_ENDING = '우리 주 예수 그리스도의 이름으로 기도드립니다. 아멘.';
 interface DevotionContext {
   ref: string;
@@ -45,11 +44,28 @@ function applicationArray(value: VerseDevotionResult['application'] | unknown, f
   return normalized.length > 0 ? normalized : fallback;
 }
 
+function stripPrayerEnding(value: string) {
+  let next = String(value || '').trim();
+  let previous = '';
+  const endingPatterns = [
+    /우리\s+주\s+예수\s+그리스도의\s+이름으로\s+기도드립니다[.!?。．…]*\s*아멘[.!?。．…]*$/i,
+    /우리\s+주\s+예수\s+그리스도의\s+이름으로\s+기도드립니다[.!?。．…]*$/i,
+    /예수\s+그리스도의\s+이름으로\s+기도(?:드립니|합니)다[.!?。．…]*\s*아멘[.!?。．…]*$/i,
+    /예수님의\s+이름으로\s+기도(?:드립니|합니)다[.!?。．…]*\s*아멘[.!?。．…]*$/i,
+    /아멘[.!?。．…]*$/i,
+  ];
+  while (previous !== next) {
+    previous = next;
+    for (const pattern of endingPatterns) {
+      next = next.replace(pattern, '').trim();
+    }
+  }
+  return next.replace(/[.!?。．…]+$/, '').trim();
+}
+
 function ensurePrayerEnding(value: string) {
-  const normalized = ensureAmen(String(value || '').trim());
-  return normalized.endsWith(REQUIRED_PRAYER_ENDING)
-    ? normalized
-    : `${normalized.replace(/(?:아멘[.]?)?$/g, '').trim()} ${REQUIRED_PRAYER_ENDING}`.trim();
+  const body = stripPrayerEnding(value);
+  return body ? `${body}. ${REQUIRED_PRAYER_ENDING}` : REQUIRED_PRAYER_ENDING;
 }
 
 export function createContextualFallback(ref: string, verseText: string, errorCode?: string): VerseDevotionResult {
@@ -92,8 +108,8 @@ export function createContextualFallback(ref: string, verseText: string, errorCo
     coreMessage: `${normalizedRef} 말씀은 오늘의 자리에서 하나님의 성품을 바라보고 예수 그리스도의 은혜 안에서 반응하도록 초대합니다.`,
     keyWords: ['본문', '은혜', '순종'],
     keyPhrase: '본문을 따라 은혜로 반응하기',
-    explanation: `${normalizedRef}의 본문은 ${quotedText}입니다. 이 말씀은 선택한 구절의 표현 자체를 붙들고, 먼저 본문이 보여주는 하나님과 인간의 모습을 차분히 살피도록 돕습니다. 짧은 한 절이라도 그 안에는 약속, 명령, 질문, 사건의 단서가 담겨 있을 수 있습니다. 우리는 이 말씀을 내 상황에 바로 끼워 맞추기보다, 하나님이 이 본문 안에서 어떤 분으로 드러나시는지 먼저 바라볼 수 있습니다. 사람의 마음은 쉽게 두려움이나 자기 판단으로 기울지만, 말씀은 우리를 예수 그리스도의 은혜와 회복의 방향으로 이끕니다. 이 fallback은 AI 응답이 완전하지 않을 때도 본문과 분리된 일반문이 되지 않도록 현재 선택한 구절을 기준으로 준비된 묵상입니다.`,
-    meditation: curated?.meditation || `${normalizedRef} 말씀을 오늘 내 마음의 자리로 가져와 봅니다. ${quotedText}라는 본문 앞에서, 지금 내 안에 떠오르는 두려움과 기대와 질문을 주님께 솔직히 올려드릴 수 있습니다. 하나님은 말씀을 통해 우리를 정죄로 몰아가기보다, 예수 그리스도 안에서 다시 바라보고 다시 반응하게 하십니다. 오늘은 큰 결심보다 이 말씀 안에서 주님이 보여주시는 작은 순종 하나를 붙들어볼 수 있습니다.`,
+    explanation: `${normalizedRef}의 본문은 ${quotedText}입니다. 이 말씀은 먼저 예수님께서 길 가시는 중 한 사람을 보셨다는 장면에 우리의 시선을 머물게 합니다. 성경은 때로 짧은 한 절 안에서도 누가 누구를 바라보는지, 어떤 상황이 이어지는지를 조용히 열어 줍니다. 여기서 중요한 출발점은 사람이 먼저 문제를 해석하기보다 예수님께서 그 사람을 보셨다는 사실입니다. 우리는 본문을 내 상황에 급히 끼워 맞추기보다, 이 장면 속에서 예수님이 어떤 시선으로 사람을 바라보시는지 살펴볼 수 있습니다. 사람의 마음은 쉽게 두려움이나 판단으로 기울지만, 말씀은 우리를 예수 그리스도의 은혜와 회복의 방향으로 이끕니다.`,
+    meditation: curated?.meditation || `${normalizedRef} 말씀을 오늘 내 마음의 자리로 가져와 봅니다. ${quotedText}라는 본문 앞에서, 지금 내 안에 떠오르는 두려움과 기대와 질문을 주님께 솔직히 올려드릴 수 있습니다. 예수님께서 길 위의 한 사람을 그냥 지나치지 않고 보신 것처럼, 주님은 오늘 우리의 자리도 외면하지 않으십니다. 오늘은 큰 결심보다 이 말씀 안에서 주님이 보여주시는 작은 순종 하나를 붙들어볼 수 있습니다.`,
     prayer: ensurePrayerEnding(curated?.prayer || `하나님, ${normalizedRef} 말씀 앞에 제 마음을 조용히 내려놓습니다. 이 본문을 제 생각대로만 해석하지 않고, 하나님이 보여주시는 뜻을 겸손히 듣게 하소서. 제 안의 두려움과 조급함을 주님께 맡기며, 예수 그리스도의 은혜 안에서 오늘을 다시 바라보게 하소서. 성령님께서 제 마음을 비추셔서 오늘 실천할 작은 순종을 알게 하시고 감당할 힘을 주소서. ${REQUIRED_PRAYER_ENDING}`),
     application: fallbackApplication,
     question: `${normalizedRef} 말씀 앞에서 오늘 내가 예수 그리스도의 은혜로 다시 바라보아야 할 마음은 무엇일까?`,
