@@ -90,12 +90,12 @@ export function validateVerseDevotion(parsed, options = {}) {
     '그 표현 앞에서 지금 내 마음을 짧게 기도하기',
     '오늘 할 수 있는 작은 순종 한 가지를 정하고 실천하기',
   ];
-  const fallbackQuestion = `${ref || '이 말씀'} 앞에서 오늘 예수님은 무엇을 먼저 보게 하실까?`;
-  const fallbackExplanation = `${ref || '선택한 본문'}의 말씀은 ${verseText ? `“${verseText}”입니다. ` : ''}본문의 표현을 붙들고 예수님께서 사람을 어떻게 바라보시는지 살피도록 초대합니다. 짧은 한 절이라도 그 안에는 이어질 사건의 방향과 하나님의 마음을 보여주는 단서가 담겨 있을 수 있습니다. 이 구절을 내 상황에 급히 끼워 맞추기보다, 먼저 말씀의 흐름 안에서 하나님이 어떤 분으로 드러나시는지 차분히 바라볼 수 있습니다. 예수 그리스도의 은혜는 우리를 정죄에 머물게 하지 않고 회복과 순종의 자리로 이끕니다.`;
-  const fallbackMeditation = `${ref || '이 말씀'}을 오늘 내 마음의 자리로 가져와 봅니다. 말씀 앞에서 떠오르는 두려움과 질문을 주님께 솔직히 올려드릴 수 있습니다. 예수님께서 길 위의 사람을 그냥 지나치지 않고 보신 것처럼, 주님은 오늘 우리의 자리도 외면하지 않으십니다. 오늘은 큰 결심보다 말씀 안에서 주님이 보여주시는 작은 순종 하나로 반응할 수 있습니다.`;
-  const fallbackPrayer = `하나님, ${ref || '이 말씀'} 앞에 제 마음을 조용히 내려놓습니다. 본문을 제 생각대로만 해석하지 않고 주님이 보여주시는 뜻을 겸손히 듣게 하소서. 예수 그리스도의 은혜와 성령님의 도우심으로 오늘 작은 순종을 걷게 하소서. 우리 주 예수 그리스도의 이름으로 기도드립니다. 아멘.`;
+  const fallbackQuestion = '오늘 이 말씀 앞에서 주님께 맡겨야 할 마음은 무엇일까?';
+  const fallbackExplanation = '이 말씀을 잠시 멈추어 다시 읽어보세요. 본문 안에서 마음에 남는 단어와 표현이 무엇인지 천천히 살펴보면 좋겠습니다. 하나님은 짧은 말씀 속에서도 우리의 마음을 비추시고, 예수 그리스도의 은혜 안에서 오늘 걸어갈 방향을 보여주십니다.';
+  const fallbackMeditation = '말씀 앞에 조용히 머물며 지금 내 마음을 주님께 올려드릴 수 있습니다. 답을 급히 찾기보다, 하나님이 이 말씀을 통해 내게 보여주시는 작은 빛을 기다려보세요. 오늘은 큰 결심보다 마음에 남은 한 문장을 붙들고 주님과 동행해볼 수 있습니다.';
+  const fallbackPrayer = '하나님, 이 말씀 앞에 제 마음을 조용히 내려놓습니다. 제 생각과 감정보다 주님의 뜻을 먼저 듣게 하시고, 예수 그리스도의 은혜 안에서 오늘 작은 순종을 걷게 하소서. 성령님께서 제 마음을 비추시고 주님을 신뢰할 힘을 주소서. 우리 주 예수 그리스도의 이름으로 기도드립니다. 아멘.';
   const reference = ref;
-  const title = String(parsed?.title || `${ref || '선택한 말씀'} 말씀 묵상`).trim();
+  const title = String(parsed?.title || '말씀 앞에 잠시 머무르기').trim();
   const coreMessage = String(parsed?.coreMessage || `${ref || '이 말씀'}은 하나님의 성품을 바라보고 오늘 믿음으로 반응하도록 초대합니다.`).trim();
   const keyWords = Array.isArray(parsed?.keyWords)
     ? parsed.keyWords.map((item) => String(item).trim()).filter(Boolean).slice(0, 3)

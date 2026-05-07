@@ -18,7 +18,7 @@ export interface VerseDevotionResult {
   savedAt?: number;
 }
 
-const CACHE_PREFIX = 'sion_verse_devotion_v10_';
+const CACHE_PREFIX = 'sion_verse_devotion_v11_';
 const REQUIRED_PRAYER_ENDING = '우리 주 예수 그리스도의 이름으로 기도드립니다. 아멘.';
 interface DevotionContext {
   ref: string;
@@ -68,11 +68,9 @@ function ensurePrayerEnding(value: string) {
   return body ? `${body}. ${REQUIRED_PRAYER_ENDING}` : REQUIRED_PRAYER_ENDING;
 }
 
-export function createContextualFallback(ref: string, verseText: string, errorCode?: string): VerseDevotionResult {
+export function createContextualFallback(ref: string, _verseText: string, errorCode?: string): VerseDevotionResult {
   const normalizedRef = String(ref || '').trim() || '선택한 말씀';
-  const normalizedText = String(verseText || '').trim();
   const curated = findCuratedVerse(normalizedRef);
-  const quotedText = normalizedText ? `“${normalizedText}”` : '선택한 본문';
 
   if (/요한복음\s*9\s*:\s*3/.test(normalizedRef)) {
     return {
@@ -104,16 +102,16 @@ export function createContextualFallback(ref: string, verseText: string, errorCo
 
   return {
     reference: normalizedRef,
-    title: `${normalizedRef} 말씀 묵상`,
-    coreMessage: `${normalizedRef} 말씀은 오늘의 자리에서 하나님의 성품을 바라보고 예수 그리스도의 은혜 안에서 반응하도록 초대합니다.`,
-    keyWords: ['본문', '은혜', '순종'],
-    keyPhrase: '본문을 따라 은혜로 반응하기',
-    explanation: `${normalizedRef}의 본문은 ${quotedText}입니다. 이 말씀은 먼저 예수님께서 길 가시는 중 한 사람을 보셨다는 장면에 우리의 시선을 머물게 합니다. 성경은 때로 짧은 한 절 안에서도 누가 누구를 바라보는지, 어떤 상황이 이어지는지를 조용히 열어 줍니다. 여기서 중요한 출발점은 사람이 먼저 문제를 해석하기보다 예수님께서 그 사람을 보셨다는 사실입니다. 우리는 본문을 내 상황에 급히 끼워 맞추기보다, 이 장면 속에서 예수님이 어떤 시선으로 사람을 바라보시는지 살펴볼 수 있습니다. 사람의 마음은 쉽게 두려움이나 판단으로 기울지만, 말씀은 우리를 예수 그리스도의 은혜와 회복의 방향으로 이끕니다.`,
-    meditation: curated?.meditation || `${normalizedRef} 말씀을 오늘 내 마음의 자리로 가져와 봅니다. ${quotedText}라는 본문 앞에서, 지금 내 안에 떠오르는 두려움과 기대와 질문을 주님께 솔직히 올려드릴 수 있습니다. 예수님께서 길 위의 한 사람을 그냥 지나치지 않고 보신 것처럼, 주님은 오늘 우리의 자리도 외면하지 않으십니다. 오늘은 큰 결심보다 이 말씀 안에서 주님이 보여주시는 작은 순종 하나를 붙들어볼 수 있습니다.`,
-    prayer: ensurePrayerEnding(curated?.prayer || `하나님, ${normalizedRef} 말씀 앞에 제 마음을 조용히 내려놓습니다. 이 본문을 제 생각대로만 해석하지 않고, 하나님이 보여주시는 뜻을 겸손히 듣게 하소서. 제 안의 두려움과 조급함을 주님께 맡기며, 예수 그리스도의 은혜 안에서 오늘을 다시 바라보게 하소서. 성령님께서 제 마음을 비추셔서 오늘 실천할 작은 순종을 알게 하시고 감당할 힘을 주소서. ${REQUIRED_PRAYER_ENDING}`),
+    title: '말씀 앞에 잠시 머무르기',
+    coreMessage: '하나님은 말씀 안에서 오늘 붙들 은혜와 순종의 길을 조용히 보여주십니다.',
+    keyWords: ['말씀', '은혜', '기도'],
+    keyPhrase: '말씀 앞에 머무르기',
+    explanation: '이 말씀을 잠시 멈추어 다시 읽어보세요. 본문 안에서 마음에 남는 단어와 표현이 무엇인지 천천히 살펴보면 좋겠습니다. 하나님은 짧은 말씀 속에서도 우리의 마음을 비추시고, 예수 그리스도의 은혜 안에서 오늘 걸어갈 방향을 보여주십니다.',
+    meditation: curated?.meditation || '말씀 앞에 조용히 머물며 지금 내 마음을 주님께 올려드릴 수 있습니다. 답을 급히 찾기보다, 하나님이 이 말씀을 통해 내게 보여주시는 작은 빛을 기다려보세요. 오늘은 큰 결심보다 마음에 남은 한 문장을 붙들고 주님과 동행해볼 수 있습니다.',
+    prayer: ensurePrayerEnding(curated?.prayer || `하나님, 이 말씀 앞에 제 마음을 조용히 내려놓습니다. 제 생각과 감정보다 주님의 뜻을 먼저 듣게 하시고, 예수 그리스도의 은혜 안에서 오늘 작은 순종을 걷게 하소서. 성령님께서 제 마음을 비추시고 주님을 신뢰할 힘을 주소서.`),
     application: fallbackApplication,
-    question: `${normalizedRef} 말씀 앞에서 오늘 내가 예수 그리스도의 은혜로 다시 바라보아야 할 마음은 무엇일까?`,
-    reflectionQuestion: `${normalizedRef} 말씀 앞에서 오늘 내가 예수 그리스도의 은혜로 다시 바라보아야 할 마음은 무엇일까?`,
+    question: '오늘 이 말씀 앞에서 주님께 맡겨야 할 마음은 무엇일까?',
+    reflectionQuestion: '오늘 이 말씀 앞에서 주님께 맡겨야 할 마음은 무엇일까?',
     fallback: true,
     errorCode,
   };
