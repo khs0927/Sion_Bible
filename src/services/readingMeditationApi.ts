@@ -59,6 +59,22 @@ export async function buildReadingChaptersText(task: ReadingDayTask) {
   return chaptersText;
 }
 
+const CLIENT_FALLBACK: ReadingMeditationResult = {
+  title: '통독 말씀과 함께하는 묵상',
+  overview: '오늘 읽은 성경 본문은 하나님의 주권과 우리를 향한 계획을 보여줍니다. 말씀을 차근차근 읽으며 그 속에 담긴 영적 교훈을 발견해 보시기 바랍니다.',
+  chapters: [],
+  sermon: {
+    title: '생명의 양식인 하나님의 말씀',
+    body: '성경 통독은 단순히 글자를 읽는 행위를 넘어, 하나님의 마음을 알아가는 귀한 시간입니다. 오늘 우리가 마주한 말씀들이 우리 삶의 등불이 되고 발의 빛이 되기를 소망합니다. 본문을 다시 한번 조용히 묵상하며, 주님께서 오늘 나에게 개인적으로 주시는 세미한 음성에 귀를 기울여 보십시오.',
+  },
+  applications: [
+    '오늘 읽은 본문 중 가장 마음에 와닿는 구절 하나를 선택해 암송해 보기',
+    '말씀을 통해 깨달은 하나님의 성품 한 가지를 묵상하고 감사 기도하기',
+    '깨달은 말씀을 오늘 하루의 삶 속에서 어떻게 실천할지 구체적으로 적어보기',
+  ],
+  prayer: '사랑의 하나님, 오늘도 귀한 생명의 말씀을 허락해 주심에 감사합니다. 읽은 말씀이 제 머리에만 머물지 않고 가슴으로 내려와 삶의 변화를 일으키게 하옵소서. 말씀이 가르치는 대로 순종하며 살아갈 힘을 주시고, 매일의 통독을 통해 주님과 더 깊이 교제하게 하옵소서. 우리 주 예수 그리스도의 이름으로 기도드립니다. 아멘.',
+};
+
 export async function generateReadingMeditation({
   passageTitle,
   chaptersText,
@@ -79,20 +95,25 @@ export async function generateReadingMeditation({
     if (cached) return { result: cached, cacheKey, fromCache: true };
   }
 
-  const response = await fetch('/api/reading-meditation', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ passageTitle, chaptersText }),
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const detail = data?.detail ? `\n${data.detail}` : '';
-    throw new Error(`${data?.error ?? '통독 묵상 생성에 실패했습니다.'}${detail}`);
+  try {
+    const response = await fetch('/api/reading-meditation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ passageTitle, chaptersText }),
+    });
+    
+    if (!response.ok) {
+      return { result: CLIENT_FALLBACK, cacheKey, fromCache: false, isFallback: true };
+    }
+    
+    const data = await response.json();
+    const result = data as ReadingMeditationResult;
+    saveCachedReadingMeditation(cacheKey, result);
+    return { result, cacheKey, fromCache: false };
+  } catch (err) {
+    console.error('Failed to generate reading meditation:', err);
+    return { result: CLIENT_FALLBACK, cacheKey, fromCache: false, isFallback: true };
   }
-
-  const result = data as ReadingMeditationResult;
-  saveCachedReadingMeditation(cacheKey, result);
-  return { result, cacheKey, fromCache: false };
 }
 
 async function fetchReferenceText(reference: ReadingReference) {

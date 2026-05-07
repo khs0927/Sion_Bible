@@ -342,11 +342,24 @@ export default function App() {
   useEffect(() => {
     let active = true;
     setIsHomeQuestionOpen(false);
+    
+    // Reset devotion state when verse changes
+    setHomeDevotion(null);
+    setHomeDevotionLoading(false);
+
     const fetchDevotion = async () => {
       const ref = currentHomeRef;
       const text = currentHomeVerse.content;
       
-      // First check curated/cache
+      // 1. Check curated/hardcoded devotions first (preferred)
+      const curated = getDailyDevotion(currentHomeVerse);
+      if (!curated.fallback && (curated.meditation || curated.prayer)) {
+        setHomeDevotion(curated);
+        setHomeDevotionLoading(false);
+        return;
+      }
+
+      // 2. Check cache for AI generated devotions
       const cached = readCachedVerseDevotion(ref, text);
       if (cached) {
         setHomeDevotion(cached);
@@ -354,13 +367,22 @@ export default function App() {
         return;
       }
 
+      // 3. Generate new AI devotion
       setHomeDevotionLoading(true);
-      const { getOrGenerateVerseDevotion } = await import('./services/verseDevotionApi');
-      const { result } = await getOrGenerateVerseDevotion({ ref, verseText: text });
-      
-      if (active) {
-        setHomeDevotion(result);
-        setHomeDevotionLoading(false);
+      try {
+        const { getOrGenerateVerseDevotion } = await import('./services/verseDevotionApi');
+        const { result } = await getOrGenerateVerseDevotion({ ref, verseText: text });
+        
+        if (active) {
+          // Only set if it's not a generic fallback
+          if (!result.fallback) {
+            setHomeDevotion(result);
+          }
+          setHomeDevotionLoading(false);
+        }
+      } catch (e) {
+        console.error('Failed to fetch devotion', e);
+        if (active) setHomeDevotionLoading(false);
       }
     };
 
