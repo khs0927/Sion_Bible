@@ -98,6 +98,20 @@ const MOOD_KEYWORDS: Record<Mood, string[]> = {
   '능력': ['능력', '권능', '힘', '능치', '강한', '역사'],
   '축복': ['복', '축복', '형통', '은택', '넘치', '복이'],
 };
+const MOOD_VERSE_REFS: Record<Mood, string[]> = {
+  '평안': ['요한복음 14:27', '빌립보서 4:6-7', '시편 46:1', '마태복음 11:28'],
+  '감사': ['데살로니가전서 5:16-18', '시편 103:2', '시편 16:11'],
+  '불안': ['빌립보서 4:6-7', '베드로전서 5:7', '이사야 41:10', '요한복음 14:27'],
+  '소망': ['로마서 8:28', '예레미야 29:11', '갈라디아서 6:9'],
+  '회개': ['요한일서 1:9', '시편 51:10'],
+  '위로': ['이사야 41:10', '베드로전서 5:7', '마태복음 11:28', '시편 46:1'],
+  '사랑': ['고린도전서 13:13', '요한일서 4:18', '에베소서 4:32'],
+  '용서': ['에베소서 4:32', '요한일서 1:9', '마태복음 6:14'],
+  '두려움': ['이사야 41:10', '여호수아 1:9', '요한일서 4:18', '시편 46:1'],
+  '지혜': ['잠언 3:5-6', '시편 119:105', '야고보서 1:5'],
+  '능력': ['빌립보서 4:13', '여호수아 1:9', '이사야 41:10'],
+  '축복': ['시편 23:1', '시편 16:11', '예레미야 29:11'],
+};
 const SAVED_CONTENT_LABELS: Record<SavedContentMode, { menu: string; title: string; empty: string }> = {
   verse: { menu: '말씀', title: '다시 읽는 말씀', empty: '저장된 말씀이 없습니다.' },
   explanation: { menu: '해설', title: '다시 읽는 해설', empty: '저장된 해설이 없습니다. 해설 카드의 책갈피를 눌러 저장해보세요.' },
@@ -163,6 +177,31 @@ function getDailyIdx() {
 function findCurated(ref: string) {
   const normalized = compactRef(ref).replace(/\s/g, '');
   return BIBLE_VERSES.find(v => `${v.book}${v.chapter}:${v.verse}` === normalized);
+}
+function verseRefKey(v: BibleVerse) {
+  return `${v.book} ${v.chapter}:${v.verse}`;
+}
+function getMoodVersePool(mood: Mood | null) {
+  if (!mood) return BIBLE_VERSES;
+  const refSet = new Set(MOOD_VERSE_REFS[mood].map(ref => compactRef(ref).replace(/\s/g, '')));
+  const curatedPool = BIBLE_VERSES.filter(v => refSet.has(compactRef(verseRefKey(v)).replace(/\s/g, '')));
+  if (curatedPool.length > 0) return curatedPool;
+
+  const keywords = MOOD_KEYWORDS[mood] ?? [];
+  const keywordPool = BIBLE_VERSES.filter(v =>
+    keywords.some(keyword => `${v.content} ${v.meditation} ${v.prayer}`.includes(keyword)),
+  );
+  if (keywordPool.length > 0) return keywordPool;
+
+  const category = MOODS.find(item => item.label === mood)?.category;
+  return category ? BIBLE_VERSES.filter(v => v.category === category) : BIBLE_VERSES;
+}
+function pickFromPool(pool: BibleVerse[], recent: BibleVerse[] = []) {
+  if (pool.length <= 1) return pool[0] ?? BIBLE_VERSES[getDailyIdx()];
+  const recentKeys = new Set(recent.slice(-3).map(verseRefKey));
+  const freshPool = pool.filter(v => !recentKeys.has(verseRefKey(v)));
+  const candidates = freshPool.length > 0 ? freshPool : pool;
+  return candidates[Math.floor(Math.random() * candidates.length)];
 }
 function topicForSavedVerse(item: SavedVerse) {
   const curated = findCurated(item.ref);
@@ -304,7 +343,8 @@ export default function App() {
   const fsize = FS[fontSize];
   const currentHomeVerse = homeHistory[homeIndex] ?? BIBLE_VERSES[getDailyIdx()];
   const currentHomeRef = `${currentHomeVerse.book} ${currentHomeVerse.chapter}:${currentHomeVerse.verse}`;
-  const currentHomeDevotion = homeDevotion ?? getDailyDevotion(currentHomeVerse);
+  const currentHomeDevotion = homeDevotion && !homeDevotion.fallback ? homeDevotion : getDailyDevotion(currentHomeVerse);
+  const currentHomeExplanation = currentHomeDevotion.explanation || currentHomeDevotion.meditation;
   const currentVerseBackground = verseBackgrounds[
     `${currentHomeVerse.book}-${currentHomeVerse.chapter}-${currentHomeVerse.verse}`
       .split('')
@@ -342,11 +382,10 @@ export default function App() {
   useEffect(() => {
     let active = true;
     setIsHomeQuestionOpen(false);
-    
+
     // Reset devotion state when verse changes
     setHomeDevotion(null);
     setHomeDevotionLoading(false);
-
     const fetchDevotion = async () => {
       const ref = currentHomeRef;
       const text = currentHomeVerse.content;
@@ -371,12 +410,15 @@ export default function App() {
       setHomeDevotionLoading(true);
       try {
         const { getOrGenerateVerseDevotion } = await import('./services/verseDevotionApi');
-        const { result } = await getOrGenerateVerseDevotion({ ref, verseText: text });
-        
+        const response = await Promise.race([
+          getOrGenerateVerseDevotion({ ref, verseText: text }),
+          new Promise<null>(resolve => window.setTimeout(() => resolve(null), 4500)),
+        ]);
+
         if (active) {
           // Only set if it's not a generic fallback
-          if (!result.fallback) {
-            setHomeDevotion(result);
+          if (response?.result && !response.result.fallback) {
+            setHomeDevotion(response.result);
           }
           setHomeDevotionLoading(false);
         }
@@ -625,36 +667,8 @@ export default function App() {
     await navigator.clipboard.writeText(msg); alert('복사되었습니다!');
   };
   const pickHomeVerse = async (mood = selectedMood): Promise<BibleVerse> => {
-    const keywords = mood ? MOOD_KEYWORDS[mood] : CATEGORIES.filter(c => c !== '전체').flatMap(c => MOOD_KEYWORDS[c as Mood] || []);
-    const randomKeyword = keywords[Math.floor(Math.random() * keywords.length)];
-    
-    try {
-      const { searchBibleVerses } = await import('./services/bibleSearch');
-      const { items } = await searchBibleVerses(randomKeyword, { limit: 50 });
-      
-      if (items.length > 0) {
-        const item = items[Math.floor(Math.random() * items.length)];
-        const category = (mood && MOODS.find(m => m.label === mood)?.category) || '평안';
-        return {
-          id: Date.now(),
-          book: item.bookName,
-          chapter: String(item.chapter),
-          verse: String(item.verse),
-          content: item.text,
-          contentEn: '',
-          category: category as BibleVerse['category'],
-          meditation: '',
-          prayer: ''
-        };
-      }
-    } catch (e) {
-      console.error('Failed to pick home verse from full index', e);
-    }
-    
-    // Fallback to curated verses
-    const category = mood ? MOODS.find(item => item.label === mood)?.category : null;
-    const pool = category ? BIBLE_VERSES.filter(v => v.category === category) : BIBLE_VERSES;
-    return pool[Math.floor(Math.random() * pool.length)];
+    const moodPool = getMoodVersePool(mood);
+    return pickFromPool(moodPool, homeHistory);
   };
   function pickRandom(category = selCat) {
     setRndLoading(true);
@@ -1023,29 +1037,45 @@ export default function App() {
               </div>
               <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
                 <div className="serif-verse" style={{ borderRadius: 16, background: th.solid, border: `1px solid ${th.line}`, padding: 13, position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 13 }}>
-                    {assetIcon(designDecorations.pottedSprout, 25)}
-                    <span className={homeDevotionLoading ? "animate-pulse" : ""}>
-                      {homeDevotionLoading ? '해설과 묵상을 불러오고 있습니다...' : (currentHomeDevotion.title || '묵상')}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 13 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      {assetIcon(designDecorations.pottedSprout, 25)}
+                      <span className={homeDevotionLoading ? "animate-pulse" : ""}>
+                        {homeDevotionLoading ? '묵상문을 준비하고 있습니다.' : '묵상문'}
+                      </span>
                     </span>
+                    <button
+                      type="button"
+                      aria-label="묵상문 저장"
+                      onClick={() => saveDevotionSection('meditation', { ref: currentHomeRef, text: currentHomeVerse.content }, currentHomeDevotion)}
+                      style={{ ...circle(false), width: 30, height: 30, borderRadius: 10 }}
+                    >
+                      <Bookmark size={14} />
+                    </button>
                   </div>
                   <div style={{ fontSize: fsize, lineHeight: 1.8 }}>
-                    {homeDevotionLoading
-                      ? '본문의 의미를 살피고, 오늘의 삶에 적용할 내용을 준비하고 있습니다.'
-                      : decodeHtml(currentHomeDevotion.meditation)}
+                    {decodeHtml(currentHomeDevotion.meditation)}
                   </div>
                 </div>
                 <div className="serif-verse" style={{ borderRadius: 16, background: th.solid, border: `1px solid ${th.line}`, padding: 13, position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 13 }}>
-                    {assetIcon(designDecorations.crossClouds, 27)}
-                    <span className={homeDevotionLoading ? "animate-pulse" : ""}>
-                      {homeDevotionLoading ? '기도문을 준비하고 있습니다.' : '기도문'}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 13 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      {assetIcon(designDecorations.crossClouds, 27)}
+                      <span className={homeDevotionLoading ? "animate-pulse" : ""}>
+                        {homeDevotionLoading ? '기도문을 준비하고 있습니다.' : '기도문'}
+                      </span>
                     </span>
+                    <button
+                      type="button"
+                      aria-label="기도문 저장"
+                      onClick={() => saveDevotionSection('prayer', { ref: currentHomeRef, text: currentHomeVerse.content }, currentHomeDevotion)}
+                      style={{ ...circle(false), width: 30, height: 30, borderRadius: 10 }}
+                    >
+                      <Bookmark size={14} />
+                    </button>
                   </div>
                   <div style={{ fontSize: fsize, lineHeight: 1.8 }}>
-                    {homeDevotionLoading
-                      ? '사랑의 하나님, 오늘도 주님의 말씀 앞에 나아갑니다. 제 마음을 열어주시고, 이 말씀 속에 담긴 주님의 뜻을 깨닫게 하셔서 하루를 감사와 평안 가운데 살아가게 하옵소서. 아멘.'
-                      : ensureAmen(decodeHtml(currentHomeDevotion.prayer))}
+                    {ensureAmen(decodeHtml(currentHomeDevotion.prayer))}
                   </div>
                 </div>
               </div>
@@ -1231,6 +1261,34 @@ export default function App() {
             </div>
             <button aria-label="묵상 질문 닫기" onClick={() => setIsHomeQuestionOpen(false)} style={{ ...circle(false), width: 34, height: 34, borderRadius: 12 }}><X size={14} /></button>
           </div>
+          {currentHomeExplanation && (
+            <article className="serif-verse" style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 13, marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8, color: th.accent, fontWeight: 900, fontSize: 13 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <KawaiiVerseIcon size={18} />
+                  <span>해설</span>
+                </span>
+                <button
+                  type="button"
+                  aria-label="해설 저장"
+                  onClick={() => saveDevotionSection('explanation', { ref: currentHomeRef, text: currentHomeVerse.content }, { ...currentHomeDevotion, explanation: currentHomeExplanation })}
+                  style={{ ...circle(false), width: 30, height: 30, borderRadius: 10 }}
+                >
+                  <Bookmark size={14} />
+                </button>
+              </div>
+              {currentHomeDevotion.coreMessage && (
+                <div style={{ fontWeight: 900, color: th.text, fontSize: '0.95rem', lineHeight: 1.65, marginBottom: currentHomeExplanation ? 8 : 0 }}>
+                  {decodeHtml(currentHomeDevotion.coreMessage)}
+                </div>
+              )}
+              {currentHomeExplanation && (
+                <div style={{ fontSize: fsize, lineHeight: 1.85, color: th.text }}>
+                  {decodeHtml(currentHomeExplanation)}
+                </div>
+              )}
+            </article>
+          )}
           <VerseQuestionPanel
             verse={{ ref: currentHomeRef, text: sanitizeScriptureText(currentHomeVerse.content) }}
             devotion={currentHomeDevotion}

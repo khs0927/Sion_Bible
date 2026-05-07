@@ -137,6 +137,7 @@ export function VerseDevotionPanel({
 }: VerseDevotionPanelProps) {
   const [loading, setLoading] = useState(false);
   const [devotion, setDevotion] = useState<VerseDevotionResult | null>(null);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     if (!selectedVerse) return;
@@ -155,6 +156,7 @@ export function VerseDevotionPanel({
           reflectionQuestion: '',
           fallback: false,
         });
+        setErrorMessage('');
         setLoading(false);
         return;
       }
@@ -162,20 +164,31 @@ export function VerseDevotionPanel({
       const cached = readCachedVerseDevotion(selectedVerse.ref, selectedVerse.text);
       if (cached) {
         setDevotion(cached);
+        setErrorMessage('');
         setLoading(false);
         return;
       }
 
       setLoading(true);
       setDevotion(null);
+      setErrorMessage('');
 
-      const { result } = await getOrGenerateVerseDevotion({
-        ref: selectedVerse.ref,
-        verseText: selectedVerse.text,
-      });
+      const response = await Promise.race([
+        getOrGenerateVerseDevotion({
+          ref: selectedVerse.ref,
+          verseText: selectedVerse.text,
+        }),
+        new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 4500)),
+      ]);
 
       if (!cancelled) {
-        setDevotion(result);
+        if (response?.result && !response.result.fallback) {
+          setDevotion(response.result);
+          setErrorMessage('');
+        } else {
+          setDevotion(null);
+          setErrorMessage('묵상문을 지금 준비하지 못했습니다. 본문을 다시 선택하거나 잠시 뒤에 시도해주세요.');
+        }
         setLoading(false);
       }
     }
@@ -196,7 +209,7 @@ export function VerseDevotionPanel({
             <div className="flex items-center gap-1 mb-2 text-[#A17C5B]">
               <KawaiiVerseIcon size={22} />
               <p className={`text-xs font-bold ${loading ? 'animate-pulse' : ''}`}>
-                {loading ? '해설과 묵상을 불러오고 있습니다...' : '말씀 해설'}
+                {loading ? '묵상문을 준비하고 있습니다.' : '말씀 해설'}
               </p>
             </div>
             <h3 className="text-lg font-black text-[#3D3129] mb-3 leading-tight title-font">
@@ -265,6 +278,12 @@ export function VerseDevotionPanel({
           </div>
         </>
       )}
+
+      {!loading && !devotion && errorMessage && (
+        <div className="rounded-[24px] bg-white/70 p-5 text-center border border-white/80 text-[#7B6A5D] serif-verse leading-relaxed">
+          {errorMessage}
+        </div>
+      )}
     </div>
   );
 }
@@ -277,10 +296,10 @@ function DevotionLoadingMessage() {
       </div>
 
       <p className="text-lg font-black text-[#3D3129] mb-2">
-        해설과 묵상을 불러오고 있습니다...
+        묵상문을 준비하고 있습니다.
       </p>
       <p className="text-xs leading-5 text-[#7B6A5D] font-medium serif-verse">
-        본문의 의미를 살피고, 오늘의 삶에 적용할 내용을 준비하고 있습니다.
+        본문을 따라 오늘의 기도와 묵상을 준비하고 있습니다.
       </p>
     </div>
   );
