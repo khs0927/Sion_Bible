@@ -83,23 +83,35 @@ export function parseJsonLoose(value) {
 }
 
 export function validateVerseDevotion(parsed, options = {}) {
-  const reference = String(parsed?.reference ?? '').trim();
-  const title = String(parsed?.title ?? '').trim();
-  const coreMessage = String(parsed?.coreMessage ?? '').trim();
+  const ref = String(options.ref || parsed?.reference || '').trim();
+  const verseText = String(options.verseText || '').trim();
+  const fallbackApplication = [
+    `${ref || '선택한 말씀'}을 한 번 더 천천히 읽고 마음에 남는 표현 하나 적어보기`,
+    '그 표현 앞에서 지금 내 마음을 짧게 기도하기',
+    '오늘 할 수 있는 작은 순종 한 가지를 정하고 실천하기',
+  ];
+  const fallbackQuestion = `${ref || '이 말씀'} 앞에서 오늘 내가 예수 그리스도의 은혜로 다시 바라보아야 할 마음은 무엇일까?`;
+  const fallbackExplanation = `${ref || '선택한 본문'}의 말씀은 ${verseText ? `“${verseText}”입니다. ` : ''}본문의 표현을 붙들고 하나님이 어떤 분으로 드러나시는지 살피도록 초대합니다. 이 구절을 내 상황에 바로 끼워 맞추기보다, 먼저 말씀의 흐름 안에서 하나님의 성품과 인간의 모습을 차분히 바라볼 수 있습니다. 예수 그리스도의 은혜는 우리를 정죄에 머물게 하지 않고 회복과 순종의 자리로 이끕니다.`;
+  const fallbackMeditation = `${ref || '이 말씀'}을 오늘 내 마음의 자리로 가져와 봅니다. 말씀 앞에서 떠오르는 두려움과 질문을 주님께 솔직히 올려드릴 수 있습니다. 하나님은 이 자리에서도 은혜로 우리를 부르시며, 예수 그리스도 안에서 작은 순종으로 반응하게 하십니다.`;
+  const fallbackPrayer = `하나님, ${ref || '이 말씀'} 앞에 제 마음을 조용히 내려놓습니다. 본문을 제 생각대로만 해석하지 않고 주님이 보여주시는 뜻을 겸손히 듣게 하소서. 예수 그리스도의 은혜와 성령님의 도우심으로 오늘 작은 순종을 걷게 하소서. 우리 주 예수 그리스도의 이름으로 기도드립니다. 아멘.`;
+  const reference = ref;
+  const title = String(parsed?.title || `${ref || '선택한 말씀'} 말씀 묵상`).trim();
+  const coreMessage = String(parsed?.coreMessage || `${ref || '이 말씀'}은 하나님의 성품을 바라보고 오늘 믿음으로 반응하도록 초대합니다.`).trim();
   const keyWords = Array.isArray(parsed?.keyWords)
-    ? parsed.keyWords.map((item) => String(item).trim()).filter(Boolean).slice(0, 5)
-    : [];
+    ? parsed.keyWords.map((item) => String(item).trim()).filter(Boolean).slice(0, 3)
+    : ['본문', '은혜', '순종'];
   const keyPhrase = String(parsed?.keyPhrase ?? keyWords.join(', ')).trim();
-  const explanation = String(parsed?.explanation ?? '').trim();
-  const meditation = String(parsed?.meditation ?? '').trim();
-  const prayer = String(parsed?.prayer ?? '').trim();
+  const explanation = String(parsed?.explanation || fallbackExplanation).trim();
+  const meditation = String(parsed?.meditation || fallbackMeditation).trim();
+  const prayer = ensurePrayerEnding(String(parsed?.prayer || fallbackPrayer).trim());
   const application = Array.isArray(parsed?.application)
-    ? parsed.application.map((item) => String(item).trim()).filter(Boolean).slice(0, 5)
-    : String(parsed?.application ?? '').split(/\n+/).map((item) => item.replace(/^\s*\d+[.)]\s*/, '').trim()).filter(Boolean).slice(0, 5);
-  const question = String(parsed?.question ?? parsed?.reflectionQuestion ?? '').trim();
+    ? parsed.application.map((item) => String(item).trim()).filter(Boolean).slice(0, 3)
+    : String(parsed?.application ?? '').split(/\n+/).map((item) => item.replace(/^\s*\d+[.)]\s*/, '').trim()).filter(Boolean).slice(0, 3);
+  const normalizedApplication = application.length > 0 ? application : fallbackApplication;
+  const question = String(parsed?.question ?? parsed?.reflectionQuestion ?? fallbackQuestion).trim();
 
-  if (!title || !coreMessage || !explanation || !meditation || !prayer || application.length < 1 || !question) return null;
-  const combined = `${title}\n${coreMessage}\n${keyWords.join('\n')}\n${explanation}\n${meditation}\n${prayer}\n${application.join('\n')}\n${question}`;
+  if (!title || !coreMessage || !explanation || !meditation || !prayer || normalizedApplication.length < 1 || !question) return null;
+  const combined = `${title}\n${coreMessage}\n${keyWords.join('\n')}\n${explanation}\n${meditation}\n${prayer}\n${normalizedApplication.join('\n')}\n${question}`;
   if (!/[가-힣]/.test(combined)) return null;
   if (/\b(minutes?|hours?|meditation|prayer|application|explanation|coreMessage)\b/i.test(combined)) return null;
   if (explanation.length < 260 || meditation.length < 90 || prayer.length < 90) return null;
@@ -114,10 +126,17 @@ export function validateVerseDevotion(parsed, options = {}) {
     explanation,
     meditation,
     prayer,
-    application,
+    application: normalizedApplication,
     question,
     reflectionQuestion: question,
   };
+}
+
+function ensurePrayerEnding(value) {
+  const ending = '우리 주 예수 그리스도의 이름으로 기도드립니다. 아멘.';
+  const text = String(value || '').trim();
+  if (text.endsWith(ending)) return text;
+  return `${text.replace(/(?:아멘[.]?)?$/g, '').trim()} ${ending}`.trim();
 }
 
 function hasExcessiveRepeats(value) {
