@@ -3,6 +3,7 @@ import { BibleBookChapterSelector } from './BibleBookChapterSelector';
 import { BibleVerseSelectableList } from './BibleVerseSelectableList';
 import { type BibleBook } from '../../data/bibleBooks';
 import { Loader2 } from 'lucide-react';
+import { sanitizeScriptureText } from '../../utils/textUtils';
 
 interface Verse {
   verse: number;
@@ -81,7 +82,7 @@ export function BibleVersePicker({
     if (!Array.isArray(data?.verses)) throw new Error('no verses');
     return data.verses.map((v: any) => ({
       verse: Number(v.verse),
-      text: (v.text ?? '').replace(/\s+/g, ' ').replace(/\[[^\]]*\]/g, '').trim()
+      text: sanitizeScriptureText((v.text ?? '').replace(/\[[^\]]*\]/g, ''))
     }));
   }, []);
 

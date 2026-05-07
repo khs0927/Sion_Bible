@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Search, Info, X, Loader2 } from 'lucide-react';
 import { searchBibleVerses, highlightKeyword } from '../../services/bibleSearch';
 import { BibleSearchResult } from '../../types/bible';
+import { sanitizeScriptureText } from '../../utils/textUtils';
 
 interface BibleKeywordSearchProps {
   onSelectVerses: (verses: { ref: string; text: string }[]) => void;
@@ -36,7 +37,7 @@ export function BibleKeywordSearch({
 
   const mapResult = (v: Awaited<ReturnType<typeof searchBibleVerses>>['items'][number]): BibleSearchResult => ({
     ref: `${v.bookName} ${v.chapter}:${v.verse}`,
-    text: v.text,
+    text: sanitizeScriptureText(v.text),
     bookId: v.bookId,
     bookName: v.bookName,
     chapter: v.chapter,
@@ -136,7 +137,7 @@ export function BibleKeywordSearch({
                   </div>
                   <p 
                     className="text-sm leading-relaxed text-[#3D3129] serif-verse"
-                    dangerouslySetInnerHTML={{ __html: highlightKeyword(res.text, query) }}
+                    dangerouslySetInnerHTML={{ __html: highlightKeyword(sanitizeScriptureText(res.text), query) }}
                   />
                 </button>
               );

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type UIEvent as ReactUIEvent } from 'react';
 import { Bookmark, BookmarkCheck, CheckSquare, ChevronLeft, ChevronRight, Copy, Download, GripVertical, Loader2, Send, X, Search } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { decodeHtml } from './utils/textUtils';
+import { decodeHtml, sanitizeScriptureText } from './utils/textUtils';
 import { ensureAmen } from './utils/prayer';
 import { BIBLE_BOOKS } from './data/bibleBooks';
 import { BIBLE_VERSES, type BibleVerse } from './data/verses';
@@ -9,7 +9,7 @@ import { KawaiiApplicationIcon, KawaiiAudioIcon, KawaiiBibleIcon, KawaiiCalendar
 import { ReadingPlanHome } from './components/readingPlan/ReadingPlanHome';
 import { MemoryHome } from './components/memory/MemoryHome';
 import { getDailyDevotion } from './services/dailyDevotions';
-import { readCachedVerseDevotion } from './services/verseDevotionApi';
+import { readCachedVerseDevotion, type VerseDevotionResult } from './services/verseDevotionApi';
 import { VerseDevotionPanel } from './components/bible/VerseDevotionPanel';
 import { VerseQuestionPanel } from './components/bible/VerseQuestionPanel';
 import { ChapterNavigatorSheet } from './components/bible/ChapterNavigatorSheet';
@@ -31,8 +31,23 @@ import { BibleSearchSheet } from './components/bible/BibleSearchSheet';
 import { usePwaInstall } from './hooks/usePwaInstall';
 import { PwaInstallGuideSheet } from './components/pwa/PwaInstallGuideSheet';
 
-interface SavedVerse { ref: string; text: string; date?: string; meditation?: string; prayer?: string; }
-interface VerseDetail { ref: string; text: string; title?: string; meditation?: string; prayer?: string; application?: string; model?: string; fromCache?: boolean; }
+interface SavedVerse { ref: string; text: string; date?: string; title?: string; explanation?: string; meditation?: string; prayer?: string; application?: string | string[]; }
+interface VerseDetail {
+  ref: string;
+  text: string;
+  title?: string;
+  coreMessage?: string;
+  keyWords?: string[];
+  keyPhrase?: string;
+  explanation?: string;
+  meditation?: string;
+  prayer?: string;
+  application?: string | string[];
+  question?: string;
+  reflectionQuestion?: string;
+  model?: string;
+  fromCache?: boolean;
+}
 interface JournalEntry { id: string; ref: string; date: string; [key: string]: unknown; }
 interface ReadSelectedVerse { ref: string; text: string; verse: number; }
 
@@ -40,6 +55,7 @@ type Tab = 'home' | 'random' | 'read' | 'plan' | 'memory' | 'saved' | 'settings'
 type FontSize = 'sm' | 'base' | 'lg' | 'xl';
 type Theme = 'a-soft' | 'a-dark';
 type SavedGroupMode = 'date' | 'week' | 'month' | 'topic' | 'book';
+type SavedContentMode = 'verse' | 'explanation' | 'meditation' | 'prayer' | 'application';
 type Category = '전체' | BibleVerse['category'];
 type Mood = '평안' | '감사' | '불안' | '소망' | '회개' | '위로' | '사랑' | '용서' | '두려움' | '지혜' | '능력' | '축복';
 
@@ -82,6 +98,13 @@ const MOOD_KEYWORDS: Record<Mood, string[]> = {
   '능력': ['능력', '권능', '힘', '능치', '강한', '역사'],
   '축복': ['복', '축복', '형통', '은택', '넘치', '복이'],
 };
+const SAVED_CONTENT_LABELS: Record<SavedContentMode, { menu: string; title: string; empty: string }> = {
+  verse: { menu: '말씀', title: '다시 읽는 말씀', empty: '저장된 말씀이 없습니다.' },
+  explanation: { menu: '해설', title: '다시 읽는 해설', empty: '저장된 해설이 없습니다. 해설 카드의 책갈피를 눌러 저장해보세요.' },
+  meditation: { menu: '묵상', title: '다시 읽는 묵상', empty: '저장된 묵상이 없습니다. 묵상 카드의 책갈피를 눌러 저장해보세요.' },
+  prayer: { menu: '기도문', title: '다시 읽는 기도문', empty: '저장된 기도문이 없습니다. 기도문 카드의 책갈피를 눌러 저장해보세요.' },
+  application: { menu: '적용', title: '다시 읽는 적용', empty: '저장된 적용이 없습니다. 적용 카드의 책갈피를 눌러 저장해보세요.' },
+};
 const FS: Record<FontSize, string> = { sm: '0.9rem', base: '1rem', lg: '1.13rem', xl: '1.25rem' };
 const LS = { SAVED: 'gb_saved', JOURNAL: 'gb_journal', THEME: 'gb_theme', SIZE: 'gb_size', LAST_BOOK: 'gb_last_book', LAST_CHAP: 'gb_last_chap', DAILY_DATE: 'gb_daily_date', DAILY_IDX: 'gb_daily_idx', CUSTOM_PLANS: 'gb_custom_reading_plans' };
 
@@ -109,6 +132,22 @@ function TH(theme: Theme) {
 }
 
 function compactRef(ref: string) { return ref.replace(/\s+(?=\d)/g, ''); }
+function parseBibleRefOrder(ref: string) {
+  const match = ref.match(/^(.+?)\s+(\d+):(\d+)/);
+  if (!match) return Number.MAX_SAFE_INTEGER;
+  const bookIndex = BIBLE_BOOKS.findIndex(book => book.name === match[1]);
+  const chapter = Number(match[2]) || 0;
+  const verse = Number(match[3]) || 0;
+  return (bookIndex < 0 ? 999 : bookIndex) * 1_000_000 + chapter * 1_000 + verse;
+}
+function getSavedContent(item: SavedVerse, mode: SavedContentMode) {
+  if (mode === 'verse') return sanitizeScriptureText(item.text);
+  if (mode === 'application') {
+    const value = item.application;
+    return Array.isArray(value) ? value.filter(Boolean).join('\n') : String(value || '').trim();
+  }
+  return String(item[mode] || '').trim();
+}
 function todayText(date = new Date()) { return date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }); }
 function getDailyIdx() {
   const today = new Date().toDateString();
@@ -173,6 +212,7 @@ export default function App() {
   const [saved, setSaved] = useState<SavedVerse[]>([]);
   const [journals, setJournals] = useState<JournalEntry[]>([]);
   const [savedMode, setSavedMode] = useState<SavedGroupMode>('date');
+  const [savedContentMode, setSavedContentMode] = useState<SavedContentMode>('verse');
   const [isReorderingSaved, setIsReorderingSaved] = useState(false);
   const [draggedSavedRef, setDraggedSavedRef] = useState<string | null>(null);
   const [detail, setDetail] = useState<VerseDetail | null>(null);
@@ -355,7 +395,8 @@ export default function App() {
 
   const savedGroups = useMemo(() => {
     const groups = new Map<string, SavedVerse[]>();
-    saved.forEach(item => {
+    const visibleSaved = saved.filter(item => getSavedContent(item, savedContentMode));
+    visibleSaved.forEach(item => {
       let key = '';
       if (savedMode === 'topic') {
         key = topicForSavedVerse(item);
@@ -366,8 +407,13 @@ export default function App() {
       }
       groups.set(key, [...(groups.get(key) ?? []), item]);
     });
-    return Array.from(groups.entries());
-  }, [saved, savedMode]);
+    return Array.from(groups.entries()).map(([label, items]) => [
+      label,
+      savedMode === 'topic' || savedMode === 'book'
+        ? [...items].sort((a, b) => parseBibleRefOrder(a.ref) - parseBibleRefOrder(b.ref))
+        : items,
+    ] as [string, SavedVerse[]]);
+  }, [saved, savedMode, savedContentMode]);
 
   const NAV_ICON_TUNING = {
     home: { scale: 1.0, nudgeX: 0, nudgeY: 0 },
@@ -435,7 +481,7 @@ export default function App() {
   const copyReadSelection = async () => {
     if (readSelectedVerses.length === 0) return;
     const text = readSelectedVerses
-      .map(item => `${decodeHtml(item.text)}\n${item.ref}`)
+      .map(item => `${sanitizeScriptureText(item.text)}\n${item.ref}`)
       .join('\n\n');
     await navigator.clipboard.writeText(text);
     alert('선택한 말씀이 복사되었습니다.');
@@ -478,11 +524,38 @@ export default function App() {
   );
   const saveSaved = (next: SavedVerse[]) => { setSaved(next); localStorage.setItem(LS.SAVED, JSON.stringify(next)); };
   const isSaved = (ref: string) => saved.some(s => s.ref === ref);
+  const upsertSavedVerse = (entry: SavedVerse) => {
+    const existing = saved.find(item => item.ref === entry.ref);
+    const next = existing
+      ? saved.map(item => item.ref === entry.ref ? { ...item, ...entry, date: item.date || entry.date || new Date().toISOString() } : item)
+      : [{ ...entry, date: entry.date || new Date().toISOString() }, ...saved];
+    saveSaved(next);
+    if (!existing) confetti({ particleCount: 38, spread: 38, origin: { y: 0.72 } });
+  };
   const toggleSave = (ref: string, text: string, meditation?: string, prayer?: string) => {
     const exists = isSaved(ref);
     const next = exists ? saved.filter(s => s.ref !== ref) : [{ ref, text, meditation, prayer, date: new Date().toISOString() }, ...saved];
     saveSaved(next);
     if (!exists) confetti({ particleCount: 38, spread: 38, origin: { y: 0.72 } });
+  };
+  const saveDevotionSection = (
+    section: 'explanation' | 'meditation' | 'prayer' | 'application',
+    verse: { ref: string; text: string },
+    devotion: VerseDevotionResult
+  ) => {
+    upsertSavedVerse({
+      ref: verse.ref,
+      text: verse.text,
+      title: devotion.title,
+      explanation: devotion.explanation,
+      meditation: devotion.meditation,
+      prayer: devotion.prayer,
+      application: devotion.application,
+      date: new Date().toISOString(),
+    });
+    setSavedContentMode(section);
+    setDetail(null);
+    setTab('saved');
   };
   const moveSavedVerse = (fromRef: string, toRef: string) => {
     if (fromRef === toRef) return;
@@ -513,9 +586,9 @@ export default function App() {
       document.body.removeChild(textarea);
     }
   };
-  const copyText = async (ref: string, text: string) => { await writeClipboard(`${compactRef(ref)} ${decodeHtml(text)}`); alert('복사되었습니다!'); };
+  const copyText = async (ref: string, text: string) => { await writeClipboard(`${compactRef(ref)} ${sanitizeScriptureText(text)}`); alert('복사되었습니다!'); };
   const copyVerseBlock = async (ref: string, text: string) => {
-    await writeClipboard(`${decodeHtml(text)}\n${ref}`);
+    await writeClipboard(`${sanitizeScriptureText(text)}\n${ref}`);
     alert('복사되었습니다!');
   };
   const speak = (text: string) => {
@@ -615,16 +688,20 @@ export default function App() {
     setTab('memory');
   };
 
-  function InsightBlocks({ title, meditation, prayer, application }: { title?: string; meditation?: string; prayer?: string; application?: string }) {
+  function InsightBlocks({ title, meditation, prayer, application, explanation, question, reflectionQuestion }: { title?: string; meditation?: string; prayer?: string; application?: string | string[]; explanation?: string; question?: string; reflectionQuestion?: string }) {
     const hasInsight = Boolean(meditation || prayer);
+    const applicationItems = Array.isArray(application)
+      ? application
+      : String(application || '').split(/\n+/).map(item => item.replace(/^\s*\d+[.)]\s*/, '').trim()).filter(Boolean);
     if (!hasInsight) {
       return <div className="serif-verse" style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 13, color: th.sub, fontSize: '0.9rem', lineHeight: 1.75 }}>
         이 구절의 묵상과 기도문은 아직 생성되지 않았습니다. 아래 버튼을 누르면 이 본문에 맞춰 빠르게 생성합니다.
       </div>;
     }
     return <div style={{ display: 'grid', gap: 8 }}>
-      {meditation && <div className="serif-verse" style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 13 }}><div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 12 }}><KawaiiVerseIcon size={18} /><span>{title || '묵상'}</span></div><div style={{ fontSize: '0.94rem', lineHeight: 1.85, color: th.text }}>{meditation}</div></div>}
-      {application && <div className="serif-verse" style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 13 }}><div style={{ color: th.accent, fontWeight: 900, fontSize: 12, marginBottom: 7 }}>오늘 적용</div><div style={{ fontSize: '0.92rem', lineHeight: 1.75, color: th.text }}>{application}</div></div>}
+      {explanation && <div className="serif-verse" style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 13 }}><div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 12 }}><KawaiiVerseIcon size={18} /><span>{title || '해설'}</span></div><div style={{ fontSize: '0.94rem', lineHeight: 1.85, color: th.text }}>{explanation}</div></div>}
+      {meditation && <div className="serif-verse" style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 13 }}><div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 12 }}><KawaiiMeditationIcon size={18} /><span>묵상</span></div><div style={{ fontSize: '0.94rem', lineHeight: 1.85, color: th.text }}>{meditation}</div></div>}
+      {applicationItems.length > 0 && <div className="serif-verse" style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 13 }}><div style={{ color: th.accent, fontWeight: 900, fontSize: 12, marginBottom: 7 }}>오늘 적용</div><div style={{ display: 'grid', gap: 5 }}>{applicationItems.map((item, index) => <div key={`${item}-${index}`} style={{ fontSize: '0.92rem', lineHeight: 1.75, color: th.text }}>{index + 1}. {item}</div>)}</div></div>}
       {prayer && <div className="serif-verse" style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 13 }}><div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 12 }}><KawaiiPrayerIcon size={22} /><span>기도문</span></div><div style={{ fontSize: '0.94rem', lineHeight: 1.85, color: th.text, fontStyle: 'normal' }}>{ensureAmen(prayer)}</div></div>}
     </div>;
   }
@@ -637,13 +714,13 @@ export default function App() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
           <span style={{ fontSize: 10, fontWeight: 900, color: th.sub }}>{v.category} · 오늘의 말씀</span>
           <div style={{ display: 'flex', gap: 5 }}>
-            <button aria-label="읽어주기" onClick={() => speak(v.content)} style={circle(false)}><KawaiiAudioIcon size={18} /></button>
+            <button aria-label="읽어주기" onClick={() => speak(sanitizeScriptureText(v.content))} style={circle(false)}><KawaiiAudioIcon size={18} /></button>
             <button aria-label="저장" onClick={() => toggleSave(ref, v.content, v.meditation, v.prayer)} style={circle(isSaved(ref))}>{isSaved(ref) ? <BookmarkCheck size={13} /> : <Bookmark size={13} />}</button>
             <button aria-label="복사" onClick={() => copyText(ref, v.content)} style={circle(false)}><Copy size={13} /></button>
             <button aria-label="공유" onClick={() => shareVerse(ref, v.content)} style={circle(false)}><KawaiiShareIcon size={18} /></button>
           </div>
         </div>
-        <p className="serif-verse" style={{ margin: 0, lineHeight: 1.88, fontSize: large ? fsize : '0.96rem', wordBreak: 'keep-all' }}>"{v.content}"</p>
+        <p className="serif-verse" style={{ margin: 0, lineHeight: 1.88, fontSize: large ? fsize : '0.96rem', wordBreak: 'keep-all' }}>{sanitizeScriptureText(v.content)}</p>
         <button onClick={() => openCuratedDetail(v)} style={{ ...btn(false), marginTop: 11, padding: '7px 10px' }}>{ref}</button>
       </div>
       <div style={{ padding: '0 14px 14px' }}><InsightBlocks {...devotion} /></div>
@@ -762,7 +839,7 @@ export default function App() {
       title={guideTitle}
     />
     
-    <main style={{ position: 'relative', maxWidth: 1120, margin: '0 auto', padding: tab === 'read' ? '6px 10px 92px' : '16px 16px 112px', minHeight: '100vh' }}>
+    <main style={{ position: 'relative', maxWidth: 1120, margin: '0 auto', padding: tab === 'read' ? '6px 10px 106px' : '16px 16px 126px', minHeight: '100vh' }}>
       <header style={{ position: 'sticky', top: 0, zIndex: 20, display: 'flex', alignItems: 'center', gap: 7, padding: tab === 'read' ? '4px 0 7px' : '8px 0 14px', background: `linear-gradient(180deg, ${th.bg} 80%, transparent)` }}>
         <button aria-label="홈으로 이동" onClick={() => { setDetail(null); setTab('home'); setActiveReadingRange(null); }} style={{ ...circle(tab === 'home'), width: tab === 'read' ? 36 : 46, height: tab === 'read' ? 36 : 46, borderRadius: tab === 'read' ? 12 : 18 }}>{pageIcon}</button>
         <div style={{ minWidth: 0, flex: 1 }}>
@@ -875,7 +952,7 @@ export default function App() {
                     WebkitTapHighlightColor: 'transparent',
                   }}
                 >
-                  <MoodIcon label={item.label} size={42} />
+                  <MoodIcon label={item.label} size={item.label === '소망' ? 54 : 42} />
                   <span>{item.label}</span>
                 </button>
               );
@@ -901,7 +978,7 @@ export default function App() {
                 </div>
               </div>
               <button onClick={() => { setIsHomeQuestionOpen(true); setIsHomeQuestionExpanded(false); }} style={{ width: '100%', minHeight: 152, textAlign: 'left', border: `1px solid rgba(225, 202, 166, 0.82)`, borderRadius: 18, backgroundImage: `linear-gradient(180deg, rgba(255,252,247,0.72), rgba(255,252,247,0.90)), url(${currentVerseBackground})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', color: th.text, padding: '20px 16px 14px', fontFamily: 'inherit', cursor: 'pointer', boxShadow: '0 12px 24px rgba(112, 87, 57, 0.10)', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <p className="serif-verse" style={{ margin: 0, fontSize: fsize, lineHeight: 1.82, wordBreak: 'keep-all' }}>"{decodeHtml(currentHomeVerse.content)}"</p>
+                <p className="serif-verse" style={{ margin: 0, fontSize: fsize, lineHeight: 1.82, wordBreak: 'keep-all' }}>{sanitizeScriptureText(currentHomeVerse.content)}</p>
                 <div className="title-font" style={{ marginTop: 'auto', color: th.accent, fontWeight: 800, fontSize: 13, lineHeight: 1.2 }}>{currentHomeRef}</div>
               </button>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, marginTop: 9 }}>
@@ -913,11 +990,11 @@ export default function App() {
                   {assetIcon(verseSaveIcon, 30, { transform: isSaved(currentHomeRef) ? 'scale(1.08)' : 'scale(1)' })}
                   <span>저장</span>
                 </button>
-                <button onClick={() => handleGoToMemory({ ref: currentHomeRef, text: currentHomeVerse.content })} style={verseActionButton(false)} aria-label="암송">
+                <button onClick={() => handleGoToMemory({ ref: currentHomeRef, text: sanitizeScriptureText(currentHomeVerse.content) })} style={verseActionButton(false)} aria-label="암송">
                   {assetIcon(verseMemoryIcon, 30)}
                   <span>암송</span>
                 </button>
-                <button onClick={() => speak(`${currentHomeRef}. ${decodeHtml(currentHomeVerse.content)}`)} style={verseActionButton(speaking)} aria-label="듣기">
+                <button onClick={() => speak(`${currentHomeRef}. ${sanitizeScriptureText(currentHomeVerse.content)}`)} style={verseActionButton(speaking)} aria-label="듣기">
                   {assetIcon(verseListenIcon, 30)}
                   <span>듣기</span>
                 </button>
@@ -927,12 +1004,12 @@ export default function App() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 13 }}>
                     {assetIcon(designDecorations.pottedSprout, 25)}
                     <span className={homeDevotionLoading ? "animate-pulse" : ""}>
-                      {homeDevotionLoading ? '묵상할 바를 생각중입니다...' : (currentHomeDevotion.title || '묵상')}
+                      {homeDevotionLoading ? '해설과 묵상을 불러오고 있습니다...' : (currentHomeDevotion.title || '묵상')}
                     </span>
                   </div>
                   <div style={{ fontSize: fsize, lineHeight: 1.8 }}>
                     {homeDevotionLoading
-                      ? '하나님의 말씀 앞에 잠시 머물며, 오늘 내 마음에 닿는 한 구절을 조용히 되새겨 봅니다. 주님께서 이 말씀을 통해 어떤 은혜를 보여주실지 기대하며 기다립니다.'
+                      ? '본문의 의미를 살피고, 오늘의 삶에 적용할 내용을 준비하고 있습니다.'
                       : decodeHtml(currentHomeDevotion.meditation)}
                   </div>
                 </div>
@@ -940,7 +1017,7 @@ export default function App() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 13 }}>
                     {assetIcon(designDecorations.crossClouds, 27)}
                     <span className={homeDevotionLoading ? "animate-pulse" : ""}>
-                      {homeDevotionLoading ? '기도할 바를 생각중입니다...' : '기도문'}
+                      {homeDevotionLoading ? '기도문을 준비하고 있습니다.' : '기도문'}
                     </span>
                   </div>
                   <div style={{ fontSize: fsize, lineHeight: 1.8 }}>
@@ -993,8 +1070,8 @@ export default function App() {
 
       {tab === 'saved' && <div style={{ display: 'grid', gap: 12 }}>
         <Card 
-          title="다시 읽는 말씀" 
-          subtitle="일별, 주별, 월별, 주제별, 권별로 정리" 
+          title={SAVED_CONTENT_LABELS[savedContentMode].title} 
+          subtitle="말씀과 묵상 기록을 다시 읽기" 
           T={th} 
           compact
           headerAction={
@@ -1014,6 +1091,13 @@ export default function App() {
             </button>
           }
         >
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6, marginBottom: 10 }}>
+            {(Object.keys(SAVED_CONTENT_LABELS) as SavedContentMode[]).map(mode => (
+              <button key={mode} onClick={() => setSavedContentMode(mode)} style={{ ...chip(savedContentMode === mode), padding: '7px 4px' }}>
+                {SAVED_CONTENT_LABELS[mode].menu}
+              </button>
+            ))}
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {([['date', '일별'], ['week', '주별'], ['month', '월별']] as const).map(([mode, label]) => (
@@ -1041,9 +1125,9 @@ export default function App() {
               </button>
             </div>
           </div>
-          {saved.length === 0 && <div style={{ color: th.sub, fontSize: 14 }}>저장된 말씀이 없습니다.</div>}
+          {savedGroups.length === 0 && <div style={{ color: th.sub, fontSize: 14 }}>{SAVED_CONTENT_LABELS[savedContentMode].empty}</div>}
           {isReorderingSaved && <div style={{ color: th.sub, fontSize: 11, marginBottom: 8 }}>카드를 길게 잡고 원하는 위치로 끌어 옮겨보세요.</div>}
-          <div style={{ display: 'grid', gap: 12 }}>{savedGroups.map(([label, items]) => <section key={label} style={{ display: 'grid', gap: 7 }}><div style={{ display: 'flex', alignItems: 'center', gap: 6, color: th.sub, fontWeight: 900, fontSize: 12 }}><KawaiiCalendarIcon size={17} />{label}</div>{items.map(s => <button key={`${label}-${s.ref}`} draggable={isReorderingSaved} onDragStart={() => setDraggedSavedRef(s.ref)} onDragOver={e => { if (isReorderingSaved) e.preventDefault(); }} onDrop={e => { e.preventDefault(); if (draggedSavedRef) moveSavedVerse(draggedSavedRef, s.ref); setDraggedSavedRef(null); }} onDragEnd={() => setDraggedSavedRef(null)} onClick={() => { if (!isReorderingSaved) openVerseDetail(s.ref, s.text); }} className={isReorderingSaved ? 'reorder-card' : undefined} style={{ textAlign: 'left', border: `1px solid ${draggedSavedRef === s.ref ? th.accent : th.line}`, borderRadius: 16, background: th.solid, color: th.text, padding: 12, fontFamily: 'inherit', cursor: isReorderingSaved ? 'grab' : 'pointer', boxShadow: th.soft }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}><span style={{ fontWeight: 900, color: th.accent, fontSize: 13 }}>{s.ref}</span><span onClick={e => { e.stopPropagation(); if (!isReorderingSaved) toggleSave(s.ref, s.text); }}>{isReorderingSaved ? <GripVertical size={14} color={th.sub} /> : <X size={13} color={th.sub} />}</span></div><div className="serif-verse" style={{ fontSize: fsize, lineHeight: 1.85, wordBreak: 'keep-all' }}>"{s.text}"</div></button>)}</section>)}</div>
+          <div style={{ display: 'grid', gap: 12 }}>{savedGroups.map(([label, items]) => <section key={label} style={{ display: 'grid', gap: 7 }}><div style={{ display: 'flex', alignItems: 'center', gap: 6, color: th.sub, fontWeight: 900, fontSize: 12 }}><KawaiiCalendarIcon size={17} />{label}</div>{items.map(s => <button key={`${label}-${s.ref}`} draggable={isReorderingSaved && savedContentMode === 'verse'} onDragStart={() => setDraggedSavedRef(s.ref)} onDragOver={e => { if (isReorderingSaved && savedContentMode === 'verse') e.preventDefault(); }} onDrop={e => { e.preventDefault(); if (draggedSavedRef) moveSavedVerse(draggedSavedRef, s.ref); setDraggedSavedRef(null); }} onDragEnd={() => setDraggedSavedRef(null)} onClick={() => { if (!isReorderingSaved) openVerseDetail(s.ref, s.text); }} className={isReorderingSaved ? 'reorder-card' : undefined} style={{ textAlign: 'left', border: `1px solid ${draggedSavedRef === s.ref ? th.accent : th.line}`, borderRadius: 16, background: th.solid, color: th.text, padding: 12, fontFamily: 'inherit', cursor: isReorderingSaved && savedContentMode === 'verse' ? 'grab' : 'pointer', boxShadow: th.soft }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}><span style={{ fontWeight: 900, color: th.accent, fontSize: 13 }}>{s.ref}</span><span onClick={e => { e.stopPropagation(); if (!isReorderingSaved) toggleSave(s.ref, s.text); }}>{isReorderingSaved && savedContentMode === 'verse' ? <GripVertical size={14} color={th.sub} /> : <X size={13} color={th.sub} />}</span></div><div className="serif-verse" style={{ fontSize: fsize, lineHeight: 1.85, wordBreak: 'keep-all', whiteSpace: 'pre-line' }}>{getSavedContent(s, savedContentMode)}</div></button>)}</section>)}</div>
         </Card>
       </div>}
 
@@ -1061,7 +1145,7 @@ export default function App() {
       </div>
     )}
 
-    <nav style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 90, padding: '0 12px calc(4px + env(safe-area-inset-bottom))', background: `linear-gradient(180deg, transparent, ${th.bg} 50%, ${th.bg})`, transform: isNavVisible ? 'translateY(0)' : 'translateY(72px)', opacity: isNavVisible ? 1 : 0, transition: 'transform 260ms ease, opacity 220ms ease' }}>
+    <nav style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 90, padding: '0 12px calc(14px + env(safe-area-inset-bottom))', background: `linear-gradient(180deg, transparent, ${th.bg} 50%, ${th.bg})`, transform: isNavVisible ? 'translateY(0)' : 'translateY(86px)', opacity: isNavVisible ? 1 : 0, transition: 'transform 260ms ease, opacity 220ms ease' }}>
       <div style={{ maxWidth: 500, margin: '0 auto', display: 'grid', gridTemplateColumns: `repeat(${navItems.length}, 1fr)`, gap: 2, background: 'transparent', boxShadow: 'none', padding: 0 }}>
         {navItems.map(n => (
           <button 
@@ -1126,7 +1210,7 @@ export default function App() {
             <button aria-label="묵상 질문 닫기" onClick={() => setIsHomeQuestionOpen(false)} style={{ ...circle(false), width: 34, height: 34, borderRadius: 12 }}><X size={14} /></button>
           </div>
           <VerseQuestionPanel
-            verse={{ ref: currentHomeRef, text: currentHomeVerse.content }}
+            verse={{ ref: currentHomeRef, text: sanitizeScriptureText(currentHomeVerse.content) }}
             devotion={currentHomeDevotion}
           />
         </section>
@@ -1158,9 +1242,14 @@ export default function App() {
             </div>
           </div>
           <div style={{ borderRadius: 18, background: th.solid, border: `1px solid ${th.line}`, padding: 14, marginBottom: 10 }}>
-            <div className="serif-verse" style={{ fontSize: fsize, lineHeight: 1.9, wordBreak: 'keep-all' }}>"{detail.text}"</div>
+            <div className="serif-verse" style={{ fontSize: fsize, lineHeight: 1.9, wordBreak: 'keep-all' }}>{sanitizeScriptureText(detail.text)}</div>
           </div>
-          <VerseDevotionPanel selectedVerse={detail} onGoToMemory={handleGoToMemory} fontSize={fsize} />
+          <VerseDevotionPanel
+            selectedVerse={detail}
+            onGoToMemory={handleGoToMemory}
+            onSaveDevotionSection={(section, devotion) => saveDevotionSection(section, detail, devotion)}
+            fontSize={fsize}
+          />
         </section>
       </div>
     )}

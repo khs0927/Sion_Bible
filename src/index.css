@@ -155,7 +155,7 @@ input, textarea, select {
   font-family: 'OAGothic', 'S-Core Dream', sans-serif;
   font-size: 24px;
   line-height: 1.22;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0;
 }
 
@@ -164,7 +164,7 @@ input, textarea, select {
   color: #8b7f72;
   font-size: 12px;
   line-height: 1.5;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .meditation-question-input {
@@ -205,7 +205,7 @@ input, textarea, select {
   justify-content: center;
   gap: 5px;
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 700;
   transition: transform 0.18s ease, background 0.18s ease, opacity 0.18s ease;
 }
 
@@ -223,7 +223,7 @@ input, textarea, select {
   margin: 2px 0 10px;
   color: #6c5b49;
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .meditation-question-list {
@@ -250,7 +250,7 @@ input, textarea, select {
   margin: 0;
   color: #3b352f;
   font-size: 14px;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .meditation-category-icon {
@@ -284,7 +284,7 @@ input, textarea, select {
   border: 1px solid #eadfce;
   color: #5c5147;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   box-shadow: 0 3px 8px rgba(91, 73, 48, 0.05);
   transition: background 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
 }
@@ -315,7 +315,7 @@ input, textarea, select {
   text-align: center;
   color: #3d3129;
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .meditation-question-loading div {
@@ -343,7 +343,7 @@ input, textarea, select {
   margin-bottom: 5px;
   color: #a17c5b;
   font-size: 10px;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .meditation-answer-card p {

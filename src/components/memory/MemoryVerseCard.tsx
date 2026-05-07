@@ -1,5 +1,6 @@
 import { Trash2, BookOpen } from 'lucide-react';
 import type { MemoryVerse } from '../../types/memory';
+import { sanitizeScriptureText } from '../../utils/textUtils';
 
 type ThemeTokens = Record<string, string>;
 
@@ -33,7 +34,7 @@ export function MemoryVerseCard({ verse, T, onPractice, onDelete }: { verse: Mem
       </div>
 
       <p className="text-[15px] leading-relaxed serif-verse text-[#3D3129] line-clamp-3">
-        "{verse.text}"
+        {sanitizeScriptureText(verse.text)}
       </p>
     </article>
   );

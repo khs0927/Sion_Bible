@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { getOrGenerateVerseDevotion, readCachedVerseDevotion, type VerseDevotionResult } from '../../services/verseDevotionApi';
 import { VerseQuestionPanel } from './VerseQuestionPanel';
-import { KawaiiMeditationIcon, KawaiiPrayerIcon } from '../icons';
+import { Bookmark, Check } from 'lucide-react';
+import { KawaiiVerseIcon } from '../icons';
 import { ensureAmen } from '../../utils/prayer';
 
 interface SelectedVerse {
@@ -16,15 +17,122 @@ interface SelectedVerse {
 interface VerseDevotionPanelProps {
   selectedVerse: SelectedVerse | null;
   onGoToMemory?: (verse: SelectedVerse) => void;
+  onSaveDevotionSection?: (section: 'explanation' | 'meditation' | 'prayer' | 'application', devotion: VerseDevotionResult) => void;
   fontSize?: string;
 }
 
 function stripMarkdown(text: string) {
-  return text.replace(/\*\*/g, '');
+  return String(text || '').replace(/\*\*/g, '');
+}
+
+function softenDevotionText(text: string) {
+  return text
+    .replace(/예수께서/g, '예수님께서')
+    .replace(/예수에게/g, '예수님께')
+    .replace(/예수를/g, '예수님을')
+    .replace(/예수의/g, '예수님의')
+    .replace(/예수는/g, '예수님은')
+    .replace(/예수가/g, '예수님이')
+    .replace(/예수와/g, '예수님과')
+    .replace(/예수 안/g, '예수 그리스도 안')
+    .replace(/(?<!그리스도 )예수(?!님| 그리스도)/g, '예수님')
+    .replace(/국한하지 말고/g, '국한하기보다')
+    .replace(/기억하라/g, '기억해볼 수 있습니다')
+    .replace(/참석해 보세요/g, '기억해 보세요')
+    .replace(/참석해보세요/g, '기억해 보세요');
+}
+
+function formatDevotionText(text: string) {
+  return softenDevotionText(stripMarkdown(text))
+    .replace(/(?:^|\s)\d+[.)]\s*/g, ' ')
+    .replace(/\s*(복음적 관점|오해 방지)\s*:\s*/g, '\n\n')
+    .replace(/\s+(그러나|그리고 이어서|따라서|그러므로|다만|이 구절의 핵심은|이 본문은|오늘 이 말씀은)\s+/g, '\n\n$1 ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function DevotionParagraph({
+  children,
+  fontSize,
+  strong = false,
+}: {
+  children: string;
+  fontSize: string;
+  strong?: boolean;
+}) {
+  return (
+    <div
+      className={`whitespace-pre-line text-[#5C4D42] leading-relaxed serif-verse ${strong ? 'font-semibold' : ''}`}
+      style={{ fontSize, fontFamily: "'MaruBuri', 'S-Core Dream', serif" }}
+    >
+      {formatDevotionText(children)}
+    </div>
+  );
+}
+
+function asApplicationList(value: VerseDevotionResult['application']) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return String(value || '')
+    .split(/\n+/)
+    .map((item) => item.replace(/^\s*\d+[.)]\s*/, '').trim())
+    .filter(Boolean);
+}
+
+function SectionCard({
+  title,
+  children,
+  delay = '',
+  tone = 'default',
+  titleSize = 'label',
+  titleFontSize,
+  onBookmark,
+}: {
+  title: string;
+  children: ReactNode;
+  delay?: string;
+  tone?: 'default' | 'prayer' | 'question';
+  titleSize?: 'label' | 'body';
+  titleFontSize?: string;
+  onBookmark?: () => void;
+}) {
+  const toneClass = tone === 'prayer'
+    ? 'bg-[#FFF8F1]/80'
+    : tone === 'question'
+      ? 'bg-[#F6F2E8]/90 border-[#E4D1B8]'
+      : 'bg-white/70';
+
+  return (
+    <article className={`rounded-[22px] p-5 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500 ${delay} ${toneClass}`}>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <p
+          className={`font-bold text-[#A17C5B] serif-verse ${titleSize === 'body' ? '' : 'text-[11px]'}`}
+          style={{
+            fontFamily: "'MaruBuri', 'S-Core Dream', serif",
+            fontSize: titleSize === 'body' ? titleFontSize || '1rem' : undefined,
+          }}
+        >
+          {title}
+        </p>
+        {onBookmark && (
+          <button
+            type="button"
+            aria-label={`${title} 저장`}
+            onClick={onBookmark}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[11px] border border-[#EAD8C4] bg-white/80 text-[#A17C5B] shadow-sm"
+          >
+            <Bookmark size={15} strokeWidth={2.3} />
+          </button>
+        )}
+      </div>
+      {children}
+    </article>
+  );
 }
 
 export function VerseDevotionPanel({
   selectedVerse,
+  onSaveDevotionSection,
   fontSize = '1rem',
 }: VerseDevotionPanelProps) {
   const [loading, setLoading] = useState(false);
@@ -84,55 +192,64 @@ export function VerseDevotionPanel({
     <div className="mt-2 space-y-3">
       {devotion && (
         <>
-          <article className="rounded-[22px] bg-white/70 p-5 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <article className="rounded-[24px] bg-white/75 p-5 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500">
             <div className="flex items-center gap-1 mb-2 text-[#A17C5B]">
-              <KawaiiMeditationIcon size={22} />
+              <KawaiiVerseIcon size={22} />
               <p className={`text-xs font-bold ${loading ? 'animate-pulse' : ''}`}>
-                {loading ? '묵상할 바를 생각중입니다...' : '묵상'}
+                {loading ? '해설과 묵상을 불러오고 있습니다...' : '말씀 해설'}
               </p>
             </div>
-            <h3 className="text-lg font-black text-[#3D3129] mb-2 leading-tight title-font">
+            <h3 className="text-lg font-black text-[#3D3129] mb-3 leading-tight title-font">
               {devotion.title}
             </h3>
-            {devotion.keyPhrase && (
-              <div className="mb-3 inline-flex max-w-full items-center gap-2 rounded-full bg-[#FFF8F1] px-3 py-1.5 text-[11px] font-black text-[#A17C5B] border border-[#F5E6D3]">
-                <span className="opacity-70">핵심 표현</span>
-                <span className="truncate text-[#3D3129]">{devotion.keyPhrase}</span>
+            {devotion.coreMessage && (
+              <div className="mb-3 rounded-[18px] border border-[#F5E6D3] bg-[#FFF8F1] px-4 py-3">
+                <p className="mb-1 text-[10px] font-bold text-[#A17C5B]">핵심 메시지</p>
+                <p className="text-[14px] leading-relaxed font-bold text-[#3D3129] serif-verse">
+                  {stripMarkdown(devotion.coreMessage)}
+                </p>
               </div>
             )}
-            <p className="whitespace-pre-line text-[#5C4D42] leading-relaxed serif-verse" style={{ fontSize }}>
-              {stripMarkdown(devotion.meditation)}
-            </p>
+            {(devotion.keyWords?.length || devotion.keyPhrase) && (
+              <div className="flex flex-wrap gap-1.5">
+                {(devotion.keyWords?.length ? devotion.keyWords : [devotion.keyPhrase || '말씀']).map((word) => (
+                  <span key={word} className="rounded-full border border-[#F5E6D3] bg-white/80 px-3 py-1 text-[11px] font-bold text-[#7B6A5D]">
+                    {word}
+                  </span>
+                ))}
+              </div>
+            )}
           </article>
 
-          <article className="rounded-[22px] bg-white/70 p-5 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-75">
-            <div className="flex items-center gap-1 mb-2 text-[#A17C5B]">
-              <KawaiiPrayerIcon size={22} />
-              <p className={`text-xs font-bold ${loading ? 'animate-pulse' : ''}`}>
-                {loading ? '기도할 바를 생각중입니다...' : '기도문'}
-              </p>
-            </div>
-            <p className="whitespace-pre-line text-[#5C4D42] leading-relaxed serif-verse" style={{ fontSize }}>
-              {ensureAmen(stripMarkdown(devotion.prayer))}
-            </p>
-          </article>
-
-          {devotion.application && (
-            <article className="rounded-[20px] bg-white/70 p-4 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100">
-              <p className="text-[11px] font-bold text-[#A17C5B] mb-1.5">오늘의 적용</p>
-              <p className="whitespace-pre-line text-[#5C4D42] leading-relaxed font-medium serif-verse" style={{ fontSize: `calc(${fontSize} * 0.95)` }}>
-                {stripMarkdown(devotion.application)}
-              </p>
-            </article>
+          {devotion.explanation && (
+            <SectionCard title="해설" delay="delay-75" titleSize="body" titleFontSize={fontSize} onBookmark={() => onSaveDevotionSection?.('explanation', devotion)}>
+              <DevotionParagraph fontSize={fontSize}>{devotion.explanation}</DevotionParagraph>
+            </SectionCard>
           )}
 
-          {devotion.reflectionQuestion && (
-            <article className="rounded-[20px] bg-white/70 p-4 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-150">
-              <p className="text-[11px] font-bold text-[#A17C5B] mb-1.5">오늘 붙들 질문</p>
-              <p className="whitespace-pre-line text-[#5C4D42] leading-relaxed font-black serif-verse" style={{ fontSize: `calc(${fontSize} * 0.95)` }}>
-                {stripMarkdown(devotion.reflectionQuestion)}
-              </p>
-            </article>
+          <SectionCard title="묵상" delay="delay-100" titleSize="body" titleFontSize={fontSize} onBookmark={() => onSaveDevotionSection?.('meditation', devotion)}>
+            <DevotionParagraph fontSize={fontSize}>{devotion.meditation}</DevotionParagraph>
+          </SectionCard>
+
+          <SectionCard title="기도문" delay="delay-150" tone="prayer" titleSize="body" titleFontSize={fontSize} onBookmark={() => onSaveDevotionSection?.('prayer', devotion)}>
+            <DevotionParagraph fontSize={fontSize}>{ensureAmen(stripMarkdown(devotion.prayer))}</DevotionParagraph>
+          </SectionCard>
+
+          {asApplicationList(devotion.application).length > 0 && (
+            <SectionCard title="오늘의 적용" delay="delay-200" titleSize="body" titleFontSize={fontSize} onBookmark={() => onSaveDevotionSection?.('application', devotion)}>
+              <div className="space-y-2">
+                {asApplicationList(devotion.application).map((item, index) => (
+                  <div key={`${item}-${index}`} className="flex gap-2 rounded-[16px] border border-[#F5E6D3] bg-white/65 px-3 py-2">
+                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#E9F1E5] text-[#6F8F72]">
+                      <Check size={12} strokeWidth={3} />
+                    </span>
+                    <p className="text-[#5C4D42] leading-relaxed serif-verse" style={{ fontSize: `calc(${fontSize} * 0.92)` }}>
+                      {formatDevotionText(item)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
           )}
 
           <VerseQuestionPanel verse={selectedVerse} devotion={devotion} />
@@ -160,10 +277,10 @@ function DevotionLoadingMessage() {
       </div>
 
       <p className="text-lg font-black text-[#3D3129] mb-2">
-        묵상할 바를 생각중입니다...
+        해설과 묵상을 불러오고 있습니다...
       </p>
       <p className="text-xs leading-5 text-[#7B6A5D] font-medium serif-verse">
-        말씀을 다시 읽어보고 그 의미를 묵상해봅시다.
+        본문의 의미를 살피고, 오늘의 삶에 적용할 내용을 준비하고 있습니다.
       </p>
     </div>
   );

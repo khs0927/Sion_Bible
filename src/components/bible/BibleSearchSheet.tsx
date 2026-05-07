@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Search, Loader2, BookOpen, ArrowRight } from 'lucide-react';
 import { searchBibleVerses, highlightKeyword } from '../../services/bibleSearch';
 import type { BibleVerseRecord } from '../../types/bible';
+import { sanitizeScriptureText } from '../../utils/textUtils';
 
 interface BibleSearchSheetProps {
   onClose: () => void;
@@ -129,7 +130,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
                   <p 
                     className="leading-relaxed serif-verse line-clamp-3"
                     style={{ color: T.text, fontSize }}
-                    dangerouslySetInnerHTML={{ __html: highlightKeyword(v.text, query) }}
+                    dangerouslySetInnerHTML={{ __html: highlightKeyword(sanitizeScriptureText(v.text), query) }}
                   />
                 </button>
               ))}

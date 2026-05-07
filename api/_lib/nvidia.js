@@ -83,30 +83,40 @@ export function parseJsonLoose(value) {
 }
 
 export function validateVerseDevotion(parsed, options = {}) {
+  const reference = String(parsed?.reference ?? '').trim();
   const title = String(parsed?.title ?? '').trim();
-  const keyPhrase = String(parsed?.keyPhrase ?? '').trim();
+  const coreMessage = String(parsed?.coreMessage ?? '').trim();
+  const keyWords = Array.isArray(parsed?.keyWords)
+    ? parsed.keyWords.map((item) => String(item).trim()).filter(Boolean).slice(0, 5)
+    : [];
+  const keyPhrase = String(parsed?.keyPhrase ?? keyWords.join(', ')).trim();
+  const explanation = String(parsed?.explanation ?? '').trim();
   const meditation = String(parsed?.meditation ?? '').trim();
   const prayer = String(parsed?.prayer ?? '').trim();
-  const application = String(parsed?.application ?? '').trim();
-  const reflectionQuestion = String(parsed?.reflectionQuestion ?? '').trim();
-  const verseText = String(options.verseText ?? '').trim();
+  const application = Array.isArray(parsed?.application)
+    ? parsed.application.map((item) => String(item).trim()).filter(Boolean).slice(0, 5)
+    : String(parsed?.application ?? '').split(/\n+/).map((item) => item.replace(/^\s*\d+[.)]\s*/, '').trim()).filter(Boolean).slice(0, 5);
+  const question = String(parsed?.question ?? parsed?.reflectionQuestion ?? '').trim();
 
-  if (!title || !meditation || !prayer || !application) return null;
-  const combined = `${title}\n${keyPhrase}\n${meditation}\n${prayer}\n${application}\n${reflectionQuestion}`;
+  if (!title || !coreMessage || !explanation || !meditation || !prayer || application.length < 1 || !question) return null;
+  const combined = `${title}\n${coreMessage}\n${keyWords.join('\n')}\n${explanation}\n${meditation}\n${prayer}\n${application.join('\n')}\n${question}`;
   if (!/[가-힣]/.test(combined)) return null;
-  if ((combined.match(/\?/g) ?? []).length > 6) return null;
-  if (/\b(minutes?|hours?|meditation|prayer|application)\b/i.test(combined)) return null;
-  if (meditation.length < 100 || prayer.length < 70 || application.length < 40) return null;
-  if (keyPhrase && verseText && !verseText.includes(keyPhrase)) return null;
+  if (/\b(minutes?|hours?|meditation|prayer|application|explanation|coreMessage)\b/i.test(combined)) return null;
+  if (explanation.length < 260 || meditation.length < 90 || prayer.length < 90) return null;
   if (hasExcessiveRepeats(combined)) return null;
 
   return {
+    reference,
     title,
+    coreMessage,
+    keyWords,
     keyPhrase,
+    explanation,
     meditation,
     prayer,
     application,
-    reflectionQuestion,
+    question,
+    reflectionQuestion: question,
   };
 }
 
