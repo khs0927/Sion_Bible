@@ -162,9 +162,32 @@ export function MemoryPracticePage({
         {verse.level === 1 && (
           <section className="p-8 rounded-[32px] border shadow-sm space-y-6" style={{ background: T.panel, borderColor: T.line }}>
             <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: T.accent }}>1단계 · 전체 읽기</div>
-            <p className="text-xl leading-[2] text-[#3D3129] serif-verse font-medium text-justify">
-              {scriptureText}
-            </p>
+            <div className="text-xl leading-[1.8] text-[#3D3129] serif-verse font-medium">
+              {(() => {
+                const keywords = ['하나님', '예수', '그리스도', '성령', '주님', '은혜', '사랑', '믿음', '진리', '생명', '구원', '평강', '소망', '말씀', '약속', '기도'];
+                // Break lines at natural pauses: punctuation or specific Korean verb endings
+                const lines = scriptureText
+                  .replace(/([,;]|가로되|나이다|하소서|하노니|하시며|하시면|지니|지어다|이오니|이니이다|하옵소서|하리라)\s+/g, '$1\n')
+                  .split('\n');
+
+                return lines.map((line, i) => (
+                  <p key={i} className="mb-2 last:mb-0">
+                    {line.split(' ').map((word, j) => {
+                      const hasKeyword = keywords.some(k => word.includes(k));
+                      return (
+                        <span 
+                          key={j} 
+                          className={hasKeyword ? "font-black" : ""} 
+                          style={{ color: hasKeyword ? T.accent : 'inherit' }}
+                        >
+                          {word}{' '}
+                        </span>
+                      );
+                    })}
+                  </p>
+                ));
+              })()}
+            </div>
             <div className="bg-[#FFF8F1] p-4 rounded-2xl border border-dashed border-[#e8d8ce]">
               <p className="text-xs text-[#A17C5B] font-bold text-center leading-relaxed">
                 💡 말씀을 소리 내어 천천히 읽으며<br/>마음에 깊이 새겨보세요.
