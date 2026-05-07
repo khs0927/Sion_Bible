@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { Calendar, Check, ChevronDown, ChevronUp, SlidersHorizontal, X } from 'lucide-react';
+import { BookOpen, Calendar, Check, ChevronDown, ChevronUp, SlidersHorizontal, X } from 'lucide-react';
 import { createCustomReadingPlanTemplate, READING_PLAN_BOOK_OPTIONS, READING_PLAN_TEMPLATES } from '../../data/readingPlans';
 import { getTodayReadingDay, isDayCompleted } from '../../services/readingPlanStats';
 import type { ReadingPlanProgress, ReadingDayTask, ReadingPlanTemplate } from '../../types/readingPlan';
@@ -379,7 +379,13 @@ export function ReadingPlanHome({
             )}
 
             <section style={{ display: 'grid', gap: 9 }}>
-                <div style={{ fontWeight: 900, fontSize: 13, color: T.sub }}>내가 만든 코스</div>
+                <div style={{ ...secondaryButton(T), justifyContent: 'space-between', borderRadius: 20, minHeight: 52, padding: '12px 14px', cursor: 'default' }}>
+                  <span className="title-font" style={{ fontSize: 18, fontWeight: 800 }}>내가 만든 코스</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: T.accent, fontSize: 12, fontWeight: 900 }}>
+                    <BookOpen size={16} />
+                    {userTemplates.length}개
+                  </span>
+                </div>
                 {userTemplates.length === 0 && (
                   <div style={{ borderRadius: 18, border: `1px dashed ${T.line}`, background: T.solid, color: T.sub, padding: 14, fontSize: 13, lineHeight: 1.6 }}>
                     아직 만든 코스가 없습니다. 위의 만들기 창을 열어 원하는 성경과 기간을 골라보세요.

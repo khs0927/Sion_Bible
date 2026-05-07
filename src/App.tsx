@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type UIEvent as ReactUIEvent } from 'react';
 import { Bookmark, BookmarkCheck, CheckSquare, ChevronLeft, ChevronRight, Copy, Download, GripVertical, Loader2, Send, X, Search } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { decodeHtml } from './utils/textUtils';
@@ -11,9 +11,14 @@ import { MemoryHome } from './components/memory/MemoryHome';
 import { getDailyDevotion } from './services/dailyDevotions';
 import { readCachedVerseDevotion } from './services/verseDevotionApi';
 import { VerseDevotionPanel } from './components/bible/VerseDevotionPanel';
+import { VerseQuestionPanel } from './components/bible/VerseQuestionPanel';
 import { ChapterNavigatorSheet } from './components/bible/ChapterNavigatorSheet';
 import { AppNavIcon } from './components/ui/AppNavIcon';
 import { appBookBackground, continueCardBackground, designDecorations, moodCardBackground, verseBackgrounds } from './assets/design';
+import verseCopyIcon from './assets/design/verse-actions/copy.png';
+import verseSaveIcon from './assets/design/verse-actions/save.png';
+import verseMemoryIcon from './assets/design/verse-actions/memory.png';
+import verseListenIcon from './assets/design/verse-actions/listen.png';
 import { addMemoryVerse, isVerseMemorized } from './services/memoryStorage';
 import { BibleVersePicker } from './components/bible/BibleVersePicker';
 import { convertTaskToBibleRange } from './services/readingPlanToBibleRange';
@@ -186,6 +191,10 @@ export default function App() {
   const [readSelectedVerses, setReadSelectedVerses] = useState<ReadSelectedVerse[]>([]);
   const [readSelectionResetKey, setReadSelectionResetKey] = useState(0);
   const [isNavVisible, setIsNavVisible] = useState(true);
+  const [isHomeQuestionOpen, setIsHomeQuestionOpen] = useState(false);
+  const [isHomeQuestionExpanded, setIsHomeQuestionExpanded] = useState(false);
+  const [isDetailExpanded, setIsDetailExpanded] = useState(false);
+  const sheetDragStart = useRef<{ y: number; expanded: boolean; sheet: 'homeQuestion' | 'detail' } | null>(null);
   const allReadingPlanTemplates = useMemo(
     () => [...ALL_READING_PLAN_TEMPLATES, ...userReadingTemplates],
     [userReadingTemplates],
@@ -254,6 +263,7 @@ export default function App() {
   const th = TH(theme);
   const fsize = FS[fontSize];
   const currentHomeVerse = homeHistory[homeIndex] ?? BIBLE_VERSES[getDailyIdx()];
+  const currentHomeRef = `${currentHomeVerse.book} ${currentHomeVerse.chapter}:${currentHomeVerse.verse}`;
   const currentHomeDevotion = homeDevotion ?? getDailyDevotion(currentHomeVerse);
   const currentVerseBackground = verseBackgrounds[
     `${currentHomeVerse.book}-${currentHomeVerse.chapter}-${currentHomeVerse.verse}`
@@ -261,12 +271,39 @@ export default function App() {
       .reduce((sum, char) => sum + char.charCodeAt(0), 0) % verseBackgrounds.length
   ];
   const recentJournals = journals.slice(0, 2);
+  const setSheetExpanded = (sheet: 'homeQuestion' | 'detail', expanded: boolean) => {
+    if (sheet === 'homeQuestion') setIsHomeQuestionExpanded(expanded);
+    else setIsDetailExpanded(expanded);
+  };
+  const toggleSheetExpanded = (sheet: 'homeQuestion' | 'detail') => {
+    if (sheet === 'homeQuestion') setIsHomeQuestionExpanded((expanded) => !expanded);
+    else setIsDetailExpanded((expanded) => !expanded);
+  };
+  const beginSheetDrag = (sheet: 'homeQuestion' | 'detail', expanded: boolean) => (event: ReactPointerEvent<HTMLButtonElement>) => {
+    sheetDragStart.current = { y: event.clientY, expanded, sheet };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const finishSheetDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const start = sheetDragStart.current;
+    if (!start) return;
+    const deltaY = event.clientY - start.y;
+    sheetDragStart.current = null;
+    if (Math.abs(deltaY) < 8) {
+      toggleSheetExpanded(start.sheet);
+      return;
+    }
+    setSheetExpanded(start.sheet, deltaY < 0);
+  };
+  const expandSheetOnScroll = (sheet: 'homeQuestion' | 'detail') => (event: ReactUIEvent<HTMLElement>) => {
+    if (event.currentTarget.scrollTop > 8) setSheetExpanded(sheet, true);
+  };
 
   // Sync AI devotion for currentHomeVerse
   useEffect(() => {
     let active = true;
+    setIsHomeQuestionOpen(false);
     const fetchDevotion = async () => {
-      const ref = `${currentHomeVerse.book} ${currentHomeVerse.chapter}:${currentHomeVerse.verse}`;
+      const ref = currentHomeRef;
       const text = currentHomeVerse.content;
       
       // First check curated/cache
@@ -289,7 +326,7 @@ export default function App() {
 
     fetchDevotion();
     return () => { active = false; };
-  }, [currentHomeVerse]);
+  }, [currentHomeVerse, currentHomeRef]);
 
   const handleSelectChapter = ({ bookId, chapter }: { bookId: string; bookName: string; chapter: number }) => {
     const book = BIBLE_BOOKS.find(b => b.id === bookId);
@@ -434,6 +471,8 @@ export default function App() {
   const installBtn = (active: boolean): CSSProperties => ({ minWidth: 78, height: 38, borderRadius: 12, border: active ? 'none' : `1px solid ${th.line}`, background: active ? `linear-gradient(145deg, ${th.accent}, ${th.mint})` : th.card, color: active ? '#fff' : th.text, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, boxShadow: active ? '0 10px 20px rgba(74, 112, 86, 0.2)' : th.soft, flex: '0 0 auto', fontFamily: 'inherit', fontWeight: 900, fontSize: 11, outline: 'none', WebkitTapHighlightColor: 'transparent' });
   const chip = (active: boolean): CSSProperties => ({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '7px 10px', minHeight: 32, borderRadius: 999, border: active ? 'none' : `1px solid ${th.line}`, background: active ? `linear-gradient(145deg, ${th.accent}, ${th.mint})` : th.card, color: active ? '#fff' : th.sub, cursor: 'pointer', fontWeight: active ? 900 : 700, fontSize: 11, fontFamily: 'inherit', outline: 'none', WebkitTapHighlightColor: 'transparent' });
   const iconTile = (_tone: string): CSSProperties => ({ width: 54, height: 54, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: '0', color: '#fff', boxShadow: 'none', outline: 'none', WebkitTapHighlightColor: 'transparent', overflow: 'visible', flex: '0 0 auto' });
+  const verseActionButton = (active = false): CSSProperties => ({ border: `1px solid ${active ? th.accent : 'rgba(225, 202, 166, 0.74)'}`, background: active ? 'rgba(143, 175, 123, 0.12)' : 'rgba(255,255,255,0.84)', boxShadow: '0 8px 18px rgba(112, 87, 57, 0.08)', padding: '5px 7px', minHeight: 42, borderRadius: 14, display: 'inline-flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer', color: active ? th.accent : th.text, fontFamily: 'inherit', fontSize: 11, fontWeight: 900, lineHeight: 1, outline: 'none', WebkitTapHighlightColor: 'transparent' });
+  const verseArrowButton = (disabled = false): CSSProperties => ({ border: '0', background: 'transparent', boxShadow: 'none', padding: 0, width: 34, height: 34, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.35 : 1, flex: '0 0 auto', outline: 'none', WebkitTapHighlightColor: 'transparent', color: '#9d8159' });
   const assetIcon = (src: string, size: number, style?: CSSProperties) => (
     <img src={src} alt="" aria-hidden="true" style={{ width: size, height: size, objectFit: 'contain', display: 'block', pointerEvents: 'none', ...style }} />
   );
@@ -455,9 +494,28 @@ export default function App() {
     next.splice(toIndex, 0, moved);
     saveSaved(next);
   };
-  const copyText = async (ref: string, text: string) => { await navigator.clipboard.writeText(`${compactRef(ref)} ${text}`); alert('복사되었습니다!'); };
+  const writeClipboard = async (value: string) => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+      } else {
+        throw new Error('Clipboard API unavailable');
+      }
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = value;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+  };
+  const copyText = async (ref: string, text: string) => { await writeClipboard(`${compactRef(ref)} ${decodeHtml(text)}`); alert('복사되었습니다!'); };
   const copyVerseBlock = async (ref: string, text: string) => {
-    await navigator.clipboard.writeText(`${decodeHtml(text)}\n${ref}`);
+    await writeClipboard(`${decodeHtml(text)}\n${ref}`);
     alert('복사되었습니다!');
   };
   const speak = (text: string) => {
@@ -520,14 +578,19 @@ export default function App() {
     const pick = await pickHomeVerse();
     setHomeHistory(prev => [...prev, pick]); setHomeIndex(homeIndex + 1);
   };
+  const prevHomeVerse = () => {
+    if (homeIndex > 0) setHomeIndex(homeIndex - 1);
+  };
 
   const openCuratedDetail = (v: BibleVerse) => {
     const devotion = getDailyDevotion(v);
+    setIsDetailExpanded(false);
     setDetail({ ref: `${v.book} ${v.chapter}:${v.verse}`, text: v.content, ...devotion });
   };
   const openVerseDetail = (ref: string, text: string) => {
     const initial = detailFor(ref, text);
     const cached = readCachedVerseDevotion(ref, text);
+    setIsDetailExpanded(false);
     setDetail(cached ? { ref, text, ...cached, fromCache: true } : initial);
   };
   const installApp = async () => {
@@ -830,14 +893,35 @@ export default function App() {
                     <div className="title-font" style={{ fontSize: 18, fontWeight: 800, whiteSpace: 'nowrap' }}>오늘 붙들 말씀</div>
                     <div style={{ fontSize: 11, color: th.sub, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedMood ? `${selectedMood}에 관한 말씀` : '오늘의 말씀'}</div>
                   </div>
-                  <button onClick={nextHomeVerse} style={{ ...btn(false), padding: '7px 10px', whiteSpace: 'nowrap', flex: '0 0 auto' }}>말씀 더보기</button>
                 </div>
-                <button aria-label="저장" onClick={() => toggleSave(`${currentHomeVerse.book} ${currentHomeVerse.chapter}:${currentHomeVerse.verse}`, currentHomeVerse.content, currentHomeVerse.meditation, currentHomeVerse.prayer)} style={{ border: '0', background: 'transparent', boxShadow: 'none', padding: 0, width: 48, height: 42, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: isSaved(`${currentHomeVerse.book} ${currentHomeVerse.chapter}:${currentHomeVerse.verse}`) ? th.accent : th.text, flex: '0 0 auto' }}>{assetIcon(designDecorations.bookmarks, 40, { transform: isSaved(`${currentHomeVerse.book} ${currentHomeVerse.chapter}:${currentHomeVerse.verse}`) ? 'scale(1.08)' : 'scale(1)' })}</button>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 2, flex: '0 0 auto' }}>
+                  <button aria-label="이전 말씀" onClick={prevHomeVerse} disabled={homeIndex <= 0} style={verseArrowButton(homeIndex <= 0)}><ChevronLeft size={28} strokeWidth={2.7} /></button>
+                  <button onClick={nextHomeVerse} style={{ ...btn(false), padding: '7px 10px', whiteSpace: 'nowrap', flex: '0 0 auto' }}>말씀 더보기</button>
+                  <button aria-label="다음 말씀" onClick={nextHomeVerse} style={verseArrowButton()}><ChevronRight size={28} strokeWidth={2.7} /></button>
+                </div>
               </div>
-              <button onClick={nextHomeVerse} style={{ width: '100%', minHeight: 152, textAlign: 'left', border: `1px solid rgba(225, 202, 166, 0.82)`, borderRadius: 18, backgroundImage: `linear-gradient(180deg, rgba(255,252,247,0.72), rgba(255,252,247,0.90)), url(${currentVerseBackground})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', color: th.text, padding: '22px 18px 18px', fontFamily: 'inherit', cursor: 'pointer', boxShadow: '0 12px 24px rgba(112, 87, 57, 0.10)', overflow: 'hidden' }}>
+              <button onClick={() => { setIsHomeQuestionOpen(true); setIsHomeQuestionExpanded(false); }} style={{ width: '100%', minHeight: 152, textAlign: 'left', border: `1px solid rgba(225, 202, 166, 0.82)`, borderRadius: 18, backgroundImage: `linear-gradient(180deg, rgba(255,252,247,0.72), rgba(255,252,247,0.90)), url(${currentVerseBackground})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', color: th.text, padding: '20px 16px 14px', fontFamily: 'inherit', cursor: 'pointer', boxShadow: '0 12px 24px rgba(112, 87, 57, 0.10)', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <p className="serif-verse" style={{ margin: 0, fontSize: fsize, lineHeight: 1.82, wordBreak: 'keep-all' }}>"{decodeHtml(currentHomeVerse.content)}"</p>
-                <div className="title-font" style={{ marginTop: 9, color: th.accent, fontWeight: 800, fontSize: 13 }}>{currentHomeVerse.book} {currentHomeVerse.chapter}:{currentHomeVerse.verse}</div>
+                <div className="title-font" style={{ marginTop: 'auto', color: th.accent, fontWeight: 800, fontSize: 13, lineHeight: 1.2 }}>{currentHomeRef}</div>
               </button>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, marginTop: 9 }}>
+                <button onClick={() => copyVerseBlock(currentHomeRef, currentHomeVerse.content)} style={verseActionButton(false)} aria-label="복사">
+                  {assetIcon(verseCopyIcon, 30)}
+                  <span>복사</span>
+                </button>
+                <button onClick={() => toggleSave(currentHomeRef, currentHomeVerse.content, currentHomeDevotion.meditation, currentHomeDevotion.prayer)} style={verseActionButton(isSaved(currentHomeRef))} aria-label="저장">
+                  {assetIcon(verseSaveIcon, 30, { transform: isSaved(currentHomeRef) ? 'scale(1.08)' : 'scale(1)' })}
+                  <span>저장</span>
+                </button>
+                <button onClick={() => handleGoToMemory({ ref: currentHomeRef, text: currentHomeVerse.content })} style={verseActionButton(false)} aria-label="암송">
+                  {assetIcon(verseMemoryIcon, 30)}
+                  <span>암송</span>
+                </button>
+                <button onClick={() => speak(`${currentHomeRef}. ${decodeHtml(currentHomeVerse.content)}`)} style={verseActionButton(speaking)} aria-label="듣기">
+                  {assetIcon(verseListenIcon, 30)}
+                  <span>듣기</span>
+                </button>
+              </div>
               <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
                 <div className="serif-verse" style={{ borderRadius: 16, background: th.solid, border: `1px solid ${th.line}`, padding: 13, position: 'relative', overflow: 'hidden' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 13 }}>
@@ -995,7 +1079,7 @@ export default function App() {
               flexDirection: 'column', 
               alignItems: 'center', 
               justifyContent: 'center', 
-              gap: 0, 
+              gap: 1, 
               cursor: 'pointer', 
               fontFamily: 'inherit', 
               transition: 'transform 180ms ease', 
@@ -1013,7 +1097,7 @@ export default function App() {
               fontSize: 10,
               fontWeight: 800,
               lineHeight: 1,
-              marginTop: -5,
+              marginTop: -2,
             }}>{n.label}</span>
           </button>
         ))}
@@ -1021,11 +1105,47 @@ export default function App() {
     </nav>
 
 
+    {isHomeQuestionOpen && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 118, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+        <div onClick={() => setIsHomeQuestionOpen(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(40, 34, 27, 0.34)', backdropFilter: 'blur(4px)' }} />
+        <section onScroll={expandSheetOnScroll('homeQuestion')} style={{ position: 'relative', width: '100%', maxWidth: 520, height: isHomeQuestionExpanded ? 'calc(100vh - 10px)' : '72vh', maxHeight: 'calc(100vh - 10px)', overflowY: 'auto', background: th.panel, border: `1px solid ${th.line}`, borderTopLeftRadius: 28, borderTopRightRadius: 28, boxShadow: th.shadow, padding: '10px 14px calc(18px + env(safe-area-inset-bottom))', transition: 'height 220ms ease' }}>
+          <button
+            aria-label={isHomeQuestionExpanded ? '묵상 질문 팝업 내리기' : '묵상 질문 팝업 올리기'}
+            onPointerDown={beginSheetDrag('homeQuestion', isHomeQuestionExpanded)}
+            onPointerUp={finishSheetDrag}
+            onPointerCancel={() => { sheetDragStart.current = null; }}
+            style={{ width: 76, height: 24, border: 0, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 6px', cursor: 'grab', touchAction: 'none' }}
+          >
+            <span style={{ width: 42, height: 4, borderRadius: 999, background: th.line, display: 'block' }} />
+          </button>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
+            <div>
+              <div className="title-font" style={{ fontWeight: 800, fontSize: 16, lineHeight: 1.2 }}>오늘 붙들 말씀</div>
+              <div style={{ color: th.accent, fontSize: 12, fontWeight: 900, marginTop: 3 }}>{currentHomeRef}</div>
+            </div>
+            <button aria-label="묵상 질문 닫기" onClick={() => setIsHomeQuestionOpen(false)} style={{ ...circle(false), width: 34, height: 34, borderRadius: 12 }}><X size={14} /></button>
+          </div>
+          <VerseQuestionPanel
+            verse={{ ref: currentHomeRef, text: currentHomeVerse.content }}
+            devotion={currentHomeDevotion}
+          />
+        </section>
+      </div>
+    )}
+
     {detail && (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 120, display: 'flex', alignItems: 'flex-end' }}>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 120, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
         <div onClick={() => setDetail(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.38)', backdropFilter: 'blur(4px)' }} />
-        <div style={{ position: 'relative', width: '100%', maxHeight: '85vh', overflowY: 'auto', background: th.panel, borderTopLeftRadius: 26, borderTopRightRadius: 26, border: `1px solid ${th.line}`, padding: 16 }}>
-          <div style={{ width: 38, height: 4, borderRadius: 4, background: th.line, margin: '0 auto 12px' }} />
+        <section onScroll={expandSheetOnScroll('detail')} style={{ position: 'relative', width: '100%', maxWidth: 720, height: isDetailExpanded ? 'calc(100vh - 10px)' : '85vh', maxHeight: 'calc(100vh - 10px)', overflowY: 'auto', background: th.panel, borderTopLeftRadius: 26, borderTopRightRadius: 26, border: `1px solid ${th.line}`, padding: '10px 16px 16px', transition: 'height 220ms ease' }}>
+          <button
+            aria-label={isDetailExpanded ? '구절 팝업 내리기' : '구절 팝업 올리기'}
+            onPointerDown={beginSheetDrag('detail', isDetailExpanded)}
+            onPointerUp={finishSheetDrag}
+            onPointerCancel={() => { sheetDragStart.current = null; }}
+            style={{ width: 76, height: 24, border: 0, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', cursor: 'grab', touchAction: 'none' }}
+          >
+            <span style={{ width: 42, height: 4, borderRadius: 999, background: th.line, display: 'block' }} />
+          </button>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <div style={{ fontWeight: 900, color: th.accent, fontSize: 15 }}>{detail.ref}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1041,7 +1161,7 @@ export default function App() {
             <div className="serif-verse" style={{ fontSize: fsize, lineHeight: 1.9, wordBreak: 'keep-all' }}>"{detail.text}"</div>
           </div>
           <VerseDevotionPanel selectedVerse={detail} onGoToMemory={handleGoToMemory} fontSize={fsize} />
-        </div>
+        </section>
       </div>
     )}
 

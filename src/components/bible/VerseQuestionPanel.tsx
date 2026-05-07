@@ -1,42 +1,43 @@
 import { useState } from 'react';
+import { BookOpen, Check, Cross, Heart, Send, Sparkles } from 'lucide-react';
 import { askVerseQuestion, type VerseQuestionAnswer } from '../../services/verseQuestionApi';
 import type { VerseDevotionResult } from '../../services/verseDevotionApi';
 
 const QUESTION_GROUPS = [
   {
-    label: '본문 이해',
-    questions: [
-      '핵심 메시지는?',
-      '앞뒤 흐름은?',
-      '핵심 단어는?',
-    ],
+    id: 'understanding',
+    title: '본문 이해',
+    icon: <BookOpen size={18} />,
+    color: 'orange',
+    questions: ['핵심 메시지는?', '앞뒤 흐름은?', '핵심 단어는?'],
   },
   {
-    label: '하나님 관점',
-    questions: [
-      '하나님은 어떤 분이신가요?',
-      '이 말씀이 비추는 내 마음은?',
-    ],
+    id: 'god',
+    title: '하나님 관점',
+    icon: <Heart size={18} />,
+    color: 'rose',
+    questions: ['하나님은 어떤 분이신가요?', '이 말씀이 비추는 내 마음은?'],
   },
   {
-    label: '예수님 연결',
-    questions: [
-      '예수님과 어떻게 연결되나요?',
-    ],
+    id: 'jesus',
+    title: '예수님 연결',
+    icon: <Cross size={18} />,
+    color: 'purple',
+    questions: ['예수님과 어떻게 연결되나요?'],
   },
   {
-    label: '오늘 적용',
-    questions: [
-      '오늘 무엇에 순종할까요?',
-      '내려놓을 것은 무엇인가요?',
-    ],
+    id: 'apply',
+    title: '오늘 적용',
+    icon: <Check size={18} />,
+    color: 'green',
+    questions: ['오늘 무엇에 순종할까요?', '내려놓을 것은 무엇인가요?'],
   },
   {
-    label: '기도와 암송',
-    questions: [
-      '어떻게 기도하면 좋을까요?',
-      '붙들 핵심 단어는?',
-    ],
+    id: 'prayer',
+    title: '기도와 암송',
+    icon: <Sparkles size={18} />,
+    color: 'yellow',
+    questions: ['어떻게 기도하면 좋을까요?', '붙들 핵심 단어는?'],
   },
 ];
 
@@ -50,12 +51,16 @@ interface VerseQuestionPanelProps {
 
 export function VerseQuestionPanel({ verse, devotion }: VerseQuestionPanelProps) {
   const [question, setQuestion] = useState('');
+  const [selectedQuestion, setSelectedQuestion] = useState('');
   const [answer, setAnswer] = useState<VerseQuestionAnswer | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleAsk(nextQuestion: string) {
-    if (!nextQuestion.trim()) return;
-    setQuestion(nextQuestion);
+    const trimmed = nextQuestion.trim();
+    if (!trimmed || loading) return;
+
+    setQuestion(trimmed);
+    setSelectedQuestion(trimmed);
     setLoading(true);
     setAnswer(null);
 
@@ -65,9 +70,9 @@ export function VerseQuestionPanel({ verse, devotion }: VerseQuestionPanelProps)
         verseText: verse.text,
         meditation: devotion.meditation,
         prayer: devotion.prayer,
-        question: nextQuestion,
+        question: trimmed,
       });
-      // Strip markdown bold markers (asterisks)
+
       if (result.answer) {
         result.answer = result.answer.replace(/\*\*/g, '');
       }
@@ -80,87 +85,78 @@ export function VerseQuestionPanel({ verse, devotion }: VerseQuestionPanelProps)
   }
 
   return (
-    <section className="mt-2 rounded-[24px] bg-white/40 p-4 backdrop-blur-sm border border-white/50 shadow-sm">
-      <div className="space-y-4">
-        {/* Input at the top */}
-        <div className="bg-white/50 rounded-2xl p-1 shadow-inner">
-          <div className="flex gap-2 p-1">
-            <input
-              value={question}
-              onChange={(event) => setQuestion(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && question.trim() && !loading) handleAsk(question);
-              }}
-              placeholder="본문이나 묵상에서 궁금한 점을 적어보세요."
-              className="min-w-0 flex-1 rounded-xl border border-[#E8D8C8] bg-white px-4 py-3.5 text-sm outline-none focus:border-[#F5C292] transition-colors shadow-sm"
-            />
-            <button
-              type="button"
-              disabled={!question.trim() || loading}
-              onClick={() => handleAsk(question)}
-              className="rounded-xl bg-[#F5C292] px-5 py-3.5 font-black text-[#3D3129] disabled:opacity-50 shadow-sm hover:bg-[#F3B070] transition-colors"
-            >
-              {loading ? '...' : '질문'}
-            </button>
-          </div>
+    <section className="meditation-question-panel" aria-label="묵상 질문하기">
+      <div className="meditation-question-title">
+        <div className="meditation-question-leaf" aria-hidden="true">⌁</div>
+        <h2>묵상 질문하기</h2>
+        <p>하나님의 말씀을 더 깊이 묵상해보세요</p>
+      </div>
+
+      <div className="meditation-question-input">
+        <input
+          value={question}
+          onChange={(event) => setQuestion(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') handleAsk(question);
+          }}
+          placeholder="본문이나 묵상에서 궁금한 점을 적어보세요."
+        />
+        <button type="button" disabled={!question.trim() || loading} onClick={() => handleAsk(question)}>
+          <span>{loading ? '...' : '질문'}</span>
+          <Send size={16} />
+        </button>
+      </div>
+
+      {loading && (
+        <div className="meditation-question-loading">
+          <div />
+          <p>답변을 준비하고 있어요</p>
         </div>
+      )}
 
-        {loading && (
-          <div className="rounded-[22px] bg-white/60 p-5 text-center shadow-sm border border-white/80">
-            <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-[#F5C292] border-t-transparent mb-2" />
-            <p className="text-sm font-bold text-[#3D3129]">답변을 준비하고 있어요.</p>
+      {answer && !loading && (
+        <article className="meditation-answer-card">
+          <div>
+            <span>질문</span>
+            <p>{answer.question}</p>
           </div>
-        )}
-
-        {answer && !loading && (
-          <article className="rounded-[22px] bg-[#FFF8F1]/90 p-5 shadow-inner border border-[#F5E6D3] animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className="mb-3">
-              <p className="text-[10px] font-bold text-[#A17C5B] mb-1">질문</p>
-              <p className="text-sm font-bold text-[#3D3129] leading-6">{answer.question}</p>
+          <div className="meditation-answer-divider" />
+          <div>
+            <span>답변</span>
+            <p>{answer.answer}</p>
+          </div>
+          {answer.followUpQuestion && (
+            <div className="meditation-followup">
+              <span>이어 묵상할 질문</span>
+              <p>{answer.followUpQuestion}</p>
             </div>
+          )}
+        </article>
+      )}
 
-            <div className="h-px bg-[#F5E6D3] mb-3" />
+      <div className="meditation-question-guide">궁금한 질문을 선택해보세요</div>
 
-            <div>
-              <p className="text-[10px] font-bold text-[#A17C5B] mb-1">답변</p>
-              <p className="text-[15px] whitespace-pre-line leading-7 text-[#5C4D42]">{answer.answer}</p>
+      <div className="meditation-question-list">
+        {QUESTION_GROUPS.map((group) => (
+          <article key={group.id} className="meditation-question-card">
+            <div className="meditation-category-title">
+              <div className={`meditation-category-icon ${group.color}`}>{group.icon}</div>
+              <h3>{group.title}</h3>
             </div>
-
-            {answer.followUpQuestion && (
-              <div className="mt-3 rounded-2xl bg-white/70 p-4 border border-[#F5E6D3]">
-                <p className="text-[10px] font-bold text-[#A17C5B] mb-1">이어서 묵상할 질문</p>
-                <p className="text-sm font-black leading-6 text-[#3D3129]">{answer.followUpQuestion}</p>
-              </div>
-            )}
+            <div className="meditation-chip-list">
+              {group.questions.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  className={`meditation-question-chip ${selectedQuestion === item ? 'active' : ''}`}
+                  onClick={() => handleAsk(item)}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
           </article>
-        )}
-
-        {/* Example Questions at the bottom */}
-        <div className="space-y-3">
-          <p className="px-1 text-xs text-[#7B6A5D] font-bold">
-            궁금한 질문을 선택해보세요!
-          </p>
-
-          <div className="space-y-4">
-            {QUESTION_GROUPS.map((group) => (
-              <div key={group.label} className="space-y-1.5">
-                <p className="px-1 text-[10px] font-black text-[#A17C5B] uppercase tracking-wider">{group.label}</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {group.questions.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => handleAsk(item)}
-                      className="rounded-xl bg-white/80 px-3 py-2 text-[11px] font-bold text-[#5C4D42] border border-[#E8D8C8] hover:bg-[#FDF2E7] hover:border-[#F5C292] transition-all shadow-sm whitespace-nowrap"
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
     </section>
   );
