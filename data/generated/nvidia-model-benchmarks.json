@@ -1,0 +1,373 @@
+{
+  "primaryFastModel": "qwen/qwen3.5-122b-a10b",
+  "secondaryFastModel": "nvidia/nemotron-3-nano-30b-a3b",
+  "qualityModel": "openai/gpt-oss-120b",
+  "deepModel": "openai/gpt-oss-120b",
+  "benchmarkedAt": "2026-05-07T18:56:04.614Z",
+  "listedModelCount": 131,
+  "likelyChatModelCount": 118,
+  "benchmarkedModelCount": 20,
+  "results": [
+    {
+      "model": "qwen/qwen3.5-122b-a10b",
+      "ok": true,
+      "parseJsonSuccess": true,
+      "validateSuccess": true,
+      "hasKorean": true,
+      "explanationLength": 200,
+      "meditationLength": 210,
+      "prayerLength": 266,
+      "applicationCount": 3,
+      "questionLength": 88,
+      "endsWithRequiredPrayerEnding": true,
+      "latencyMs": 6304,
+      "score": 80
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "ok": true,
+      "parseJsonSuccess": true,
+      "validateSuccess": false,
+      "hasKorean": true,
+      "explanationLength": 64,
+      "meditationLength": 104,
+      "prayerLength": 76,
+      "applicationCount": 3,
+      "questionLength": 43,
+      "endsWithRequiredPrayerEnding": true,
+      "latencyMs": 1524,
+      "score": 32
+    },
+    {
+      "model": "openai/gpt-oss-20b",
+      "ok": true,
+      "parseJsonSuccess": true,
+      "validateSuccess": false,
+      "hasKorean": true,
+      "explanationLength": 171,
+      "meditationLength": 247,
+      "prayerLength": 210,
+      "applicationCount": 3,
+      "questionLength": 42,
+      "endsWithRequiredPrayerEnding": false,
+      "latencyMs": 3818,
+      "score": 25
+    },
+    {
+      "model": "nvidia/nemotron-3-nano-30b-a3b",
+      "ok": true,
+      "parseJsonSuccess": true,
+      "validateSuccess": false,
+      "hasKorean": true,
+      "explanationLength": 126,
+      "meditationLength": 74,
+      "prayerLength": 140,
+      "applicationCount": 3,
+      "questionLength": 39,
+      "endsWithRequiredPrayerEnding": true,
+      "latencyMs": 4691,
+      "score": 12
+    },
+    {
+      "model": "openai/gpt-oss-120b",
+      "ok": true,
+      "parseJsonSuccess": true,
+      "validateSuccess": false,
+      "hasKorean": true,
+      "explanationLength": 146,
+      "meditationLength": 166,
+      "prayerLength": 165,
+      "applicationCount": 3,
+      "questionLength": 52,
+      "endsWithRequiredPrayerEnding": true,
+      "latencyMs": 8370,
+      "score": 10
+    },
+    {
+      "model": "bigcode/starcoder2-15b",
+      "ok": false,
+      "statusCode": 502,
+      "parseJsonSuccess": false,
+      "validateSuccess": false,
+      "hasKorean": false,
+      "explanationLength": 0,
+      "meditationLength": 0,
+      "prayerLength": 0,
+      "applicationCount": 0,
+      "questionLength": 0,
+      "endsWithRequiredPrayerEnding": false,
+      "latencyMs": 127,
+      "score": -41,
+      "error": {
+        "message": "NVIDIA API failed: 502",
+        "statusCode": 502
+      }
+    },
+    {
+      "model": "baai/bge-m3",
+      "ok": false,
+      "statusCode": 404,
+      "parseJsonSuccess": false,
+      "validateSuccess": false,
+      "hasKorean": false,
+      "explanationLength": 0,
+      "meditationLength": 0,
+      "prayerLength": 0,
+      "applicationCount": 0,
+      "questionLength": 0,
+      "endsWithRequiredPrayerEnding": false,
+      "latencyMs": 128,
+      "score": -41,
+      "error": {
+        "message": "NVIDIA API failed: 404",
+        "statusCode": 404
+      }
+    },
+    {
+      "model": "aisingapore/sea-lion-7b-instruct",
+      "ok": false,
+      "statusCode": 404,
+      "parseJsonSuccess": false,
+      "validateSuccess": false,
+      "hasKorean": false,
+      "explanationLength": 0,
+      "meditationLength": 0,
+      "prayerLength": 0,
+      "applicationCount": 0,
+      "questionLength": 0,
+      "endsWithRequiredPrayerEnding": false,
+      "latencyMs": 142,
+      "score": -41,
+      "error": {
+        "message": "NVIDIA API failed: 404",
+        "statusCode": 404
+      }
+    },
+    {
+      "model": "deepseek-ai/deepseek-coder-6.7b-instruct",
+      "ok": false,
+      "statusCode": 404,
+      "parseJsonSuccess": false,
+      "validateSuccess": false,
+      "hasKorean": false,
+      "explanationLength": 0,
+      "meditationLength": 0,
+      "prayerLength": 0,
+      "applicationCount": 0,
+      "questionLength": 0,
+      "endsWithRequiredPrayerEnding": false,
+      "latencyMs": 165,
+      "score": -41,
+      "error": {
+        "message": "NVIDIA API failed: 404",
+        "statusCode": 404
+      }
+    },
+    {
+      "model": "databricks/dbrx-instruct",
+      "ok": false,
+      "statusCode": 404,
+      "parseJsonSuccess": false,
+      "validateSuccess": false,
+      "hasKorean": false,
+      "explanationLength": 0,
+      "meditationLength": 0,
+      "prayerLength": 0,
+      "applicationCount": 0,
+      "questionLength": 0,
+      "endsWithRequiredPrayerEnding": false,
+      "latencyMs": 185,
+      "score": -41,
+      "error": {
+        "message": "NVIDIA API failed: 404",
+        "statusCode": 404
+      }
+    },
+    {
+      "model": "01-ai/yi-large",
+      "ok": false,
+      "statusCode": 404,
+      "parseJsonSuccess": false,
+      "validateSuccess": false,
+      "hasKorean": false,
+      "explanationLength": 0,
+      "meditationLength": 0,
+      "prayerLength": 0,
+      "applicationCount": 0,
+      "questionLength": 0,
+      "endsWithRequiredPrayerEnding": false,
+      "latencyMs": 212,
+      "score": -41,
+      "error": {
+        "message": "NVIDIA API failed: 404",
+        "statusCode": 404
+      }
+    },
+    {
+      "model": "ai21labs/jamba-1.5-large-instruct",
+      "ok": false,
+      "statusCode": 404,
+      "parseJsonSuccess": false,
+      "validateSuccess": false,
+      "hasKorean": false,
+      "explanationLength": 0,
+      "meditationLength": 0,
+      "prayerLength": 0,
+      "applicationCount": 0,
+      "questionLength": 0,
+      "endsWithRequiredPrayerEnding": false,
+      "latencyMs": 374,
+      "score": -41,
+      "error": {
+        "message": "NVIDIA API failed: 404",
+        "statusCode": 404
+      }
+    },
+    {
+      "model": "adept/fuyu-8b",
+      "ok": false,
+      "statusCode": 404,
+      "parseJsonSuccess": false,
+      "validateSuccess": false,
+      "hasKorean": false,
+      "explanationLength": 0,
+      "meditationLength": 0,
+      "prayerLength": 0,
+      "applicationCount": 0,
+      "questionLength": 0,
+      "endsWithRequiredPrayerEnding": false,
+      "latencyMs": 470,
+      "score": -41,
+      "error": {
+        "message": "NVIDIA API failed: 404",
+        "statusCode": 404
+      }
+    },
+    {
+      "model": "abacusai/dracarys-llama-3.1-70b-instruct",
+      "ok": false,
+      "parseJsonSuccess": false,
+      "validateSuccess": false,
+      "hasKorean": false,
+      "explanationLength": 0,
+      "meditationLength": 0,
+      "prayerLength": 0,
+      "applicationCount": 0,
+      "questionLength": 0,
+      "endsWithRequiredPrayerEnding": false,
+      "latencyMs": 12004,
+      "score": -91,
+      "error": {
+        "message": "This operation was aborted"
+      }
+    },
+    {
+      "model": "qwen/qwen3.5-397b-a17b",
+      "ok": false,
+      "parseJsonSuccess": false,
+      "validateSuccess": false,
+      "hasKorean": false,
+      "explanationLength": 0,
+      "meditationLength": 0,
+      "prayerLength": 0,
+      "applicationCount": 0,
+      "questionLength": 0,
+      "endsWithRequiredPrayerEnding": false,
+      "latencyMs": 12005,
+      "score": -91,
+      "error": {
+        "message": "This operation was aborted"
+      }
+    },
+    {
+      "model": "deepseek-ai/deepseek-v4-pro",
+      "ok": false,
+      "parseJsonSuccess": false,
+      "validateSuccess": false,
+      "hasKorean": false,
+      "explanationLength": 0,
+      "meditationLength": 0,
+      "prayerLength": 0,
+      "applicationCount": 0,
+      "questionLength": 0,
+      "endsWithRequiredPrayerEnding": false,
+      "latencyMs": 12006,
+      "score": -91,
+      "error": {
+        "message": "This operation was aborted"
+      }
+    },
+    {
+      "model": "bytedance/seed-oss-36b-instruct",
+      "ok": false,
+      "parseJsonSuccess": false,
+      "validateSuccess": false,
+      "hasKorean": false,
+      "explanationLength": 0,
+      "meditationLength": 0,
+      "prayerLength": 0,
+      "applicationCount": 0,
+      "questionLength": 0,
+      "endsWithRequiredPrayerEnding": false,
+      "latencyMs": 12010,
+      "score": -91,
+      "error": {
+        "message": "This operation was aborted"
+      }
+    },
+    {
+      "model": "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+      "ok": false,
+      "parseJsonSuccess": false,
+      "validateSuccess": false,
+      "hasKorean": false,
+      "explanationLength": 0,
+      "meditationLength": 0,
+      "prayerLength": 0,
+      "applicationCount": 0,
+      "questionLength": 0,
+      "endsWithRequiredPrayerEnding": false,
+      "latencyMs": 12014,
+      "score": -91,
+      "error": {
+        "message": "This operation was aborted"
+      }
+    },
+    {
+      "model": "deepseek-ai/deepseek-v4-flash",
+      "ok": false,
+      "parseJsonSuccess": false,
+      "validateSuccess": false,
+      "hasKorean": false,
+      "explanationLength": 0,
+      "meditationLength": 0,
+      "prayerLength": 0,
+      "applicationCount": 0,
+      "questionLength": 0,
+      "endsWithRequiredPrayerEnding": false,
+      "latencyMs": 12014,
+      "score": -91,
+      "error": {
+        "message": "This operation was aborted"
+      }
+    },
+    {
+      "model": "nvidia/llama-3.3-nemotron-super-49b-v1",
+      "ok": false,
+      "parseJsonSuccess": false,
+      "validateSuccess": false,
+      "hasKorean": false,
+      "explanationLength": 0,
+      "meditationLength": 0,
+      "prayerLength": 0,
+      "applicationCount": 0,
+      "questionLength": 0,
+      "endsWithRequiredPrayerEnding": false,
+      "latencyMs": 12017,
+      "score": -91,
+      "error": {
+        "message": "This operation was aborted"
+      }
+    }
+  ]
+}

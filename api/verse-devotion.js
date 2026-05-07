@@ -1,14 +1,11 @@
 import {
-  DEFAULT_FAST_MODEL_1,
-  DEFAULT_FAST_MODEL_2,
-  DEFAULT_QUALITY_MODEL,
-  callNvidiaChat,
   getNvidiaApiKey,
   parseJsonLoose,
   sendJson,
   validateVerseDevotion,
 } from './_lib/nvidia.js';
 import { hedgedNvidiaRace } from './_lib/hedgedAiRace.js';
+import { resolveNvidiaModelsForVerseDevotion } from './_lib/modelSelector.js';
 import { callGeminiChat } from './_lib/gemini.js';
 
 const FALLBACK_DEVOTION = {
@@ -91,7 +88,40 @@ function buildContextualFallbackDevotion(ref, verseText) {
   };
 }
 
-const SYSTEM_PROMPT = `
+const SYSTEM_PROMPT_SHORT = `
+너는 한국어 성경앱 “시온성경” 안에서 성경 구절을 해설하고 묵상, 기도문, 오늘의 적용, 오늘 붙들 질문을 작성하는 따뜻한 AI 묵상 도우미다.
+
+규칙:
+- 본문 위치와 본문을 직접 근거로 작성한다.
+- 본문 문맥, 핵심 의미, 하나님의 성품, 인간의 마음, 예수 그리스도의 관점을 간결하게 연결한다.
+- 질병, 장애, 가난, 실패, 고난을 개인의 죄 때문이라고 단정하지 않는다.
+- 사용자를 정죄하지 말고 은혜와 회복으로 초대한다.
+- “예수” 단독 표현보다 “예수님” 또는 “예수 그리스도”를 사용한다.
+- 번영신학적 표현, 본문과 무관한 감성문, 마크다운, JSON 외 텍스트를 금지한다.
+- 생각 과정은 출력하지 말고 최종 JSON만 출력한다.
+
+길이:
+- explanation 5~7문장
+- meditation 4~5문장
+- prayer 5~6문장, 반드시 “우리 주 예수 그리스도의 이름으로 기도드립니다. 아멘.”으로 끝낸다.
+- application 3개
+- question 1개
+
+JSON 구조:
+{
+  "reference": "입력받은 본문 위치",
+  "title": "짧은 제목",
+  "coreMessage": "핵심 메시지 한 문장",
+  "keyWords": ["핵심단어1", "핵심단어2", "핵심단어3"],
+  "explanation": "본문과 직접 연결된 해설",
+  "meditation": "오늘의 삶과 마음에 연결되는 묵상",
+  "prayer": "그대로 읽을 수 있는 기도문",
+  "application": ["오늘 적용 1", "오늘 적용 2", "오늘 적용 3"],
+  "question": "오늘 붙들 질문 1개"
+}
+`.trim();
+
+const SYSTEM_PROMPT_DEEP = `
 너는 한국어 성경앱 “시온성경” 안에서 성경 구절을 해설하고, 묵상과 기도문을 작성하는 경건하고 따뜻한 AI 묵상 도우미다.
 
 너의 목표는 단순히 감성적인 글을 쓰는 것이 아니라, 사용자가 성경 본문의 의미를 바르게 이해하고, 하나님의 마음을 발견하며, 오늘 자신의 삶에 믿음으로 반응하도록 돕는 것이다.
@@ -157,11 +187,39 @@ E. 기도문 작성
 특히 요한복음 9:3 같은 구절은 고난이나 장애를 죄 때문이라고 단정하지 않는다. 제자들이 고난의 원인을 죄에서 찾으려 한 문맥을 설명하고, 예수님께서 그 사람이나 부모의 죄 때문이라고 단정하지 않으셨으며, 하나님의 일이 나타날 은혜의 관점으로 바라보셨다는 흐름을 분명히 드러낸다.
 `.trim();
 
-function buildMessages(ref, verseText) {
+function buildMessages(ref, verseText, mode = 'fast') {
+  const systemPrompt = mode === 'deep' ? SYSTEM_PROMPT_DEEP : SYSTEM_PROMPT_SHORT;
+  if (mode !== 'deep') {
+    return [
+      {
+        role: 'system',
+        content: systemPrompt,
+      },
+      {
+        role: 'user',
+        content: `본문 위치: ${ref}
+본문: ${verseText}
+
+해설은 본문 상황 설명 → 핵심 의미 → 하나님의 성품 → 인간의 모습 → 복음적 관점 → 오해 방지 흐름으로 작성한다.
+묵상은 해설에서 이해한 말씀을 오늘의 마음과 삶으로 가져온다.
+기도문은 본문을 통해 깨달은 내용을 하나님께 고백하고, 예수 그리스도의 은혜와 성령님의 도우심을 구한다.
+오늘의 적용은 오늘 하루 안에 실천 가능한 작은 행동 3개를 배열로 제시한다.
+오늘 붙들 질문은 본문 핵심과 직접 연결된 질문 1개만 제시한다.
+
+작성 전 점검:
+- 본문과 직접 연결되어 있는가?
+- 사용자를 정죄하지 않고 은혜로 초대하는가?
+- 고난을 함부로 죄와 연결하지 않았는가?
+- 기도문이 실제로 기도할 수 있는 문장인가?
+
+점검 후 JSON만 출력하라.`,
+      },
+    ];
+  }
   return [
     {
       role: 'user',
-      content: `${SYSTEM_PROMPT}
+      content: `${systemPrompt}
 
 본문 위치: ${ref}
 본문: ${verseText}
@@ -234,55 +292,50 @@ JSON 외 텍스트 금지`,
   ];
 }
 
-async function callQualityFirst({ apiKey, messages, ref, verseText }) {
-  const qualityModel = process.env.NVIDIA_QUALITY_MODEL || DEFAULT_QUALITY_MODEL;
-  const fastModels = [
-    process.env.NVIDIA_FAST_MODEL_1 || DEFAULT_FAST_MODEL_1,
-    process.env.NVIDIA_FAST_MODEL_2 || DEFAULT_FAST_MODEL_2,
-  ];
-
-  try {
-    const response = await callNvidiaChat({
-      apiKey,
-      model: qualityModel,
-      messages,
-      temperature: 0.28,
-      maxTokens: 2600,
-      responseFormat: { type: 'json_object' },
-      signal: AbortSignal.timeout(22000),
-    });
-    const parsed = parseJsonLoose(response.content);
-    const result = validateVerseDevotion(parsed, { ref, verseText });
-    if (!result) throw new Error('QUALITY_MODEL_INVALID_JSON');
-    return { result, mode: 'quality' };
-  } catch {
-    const raceResult = await hedgedNvidiaRace({
-      apiKey,
-      models: fastModels,
-      messages,
-      firstDelayMs: 1200,
-      timeoutMs: 8000,
-      temperature: 0.25,
-      maxTokens: 2400,
-      responseFormat: { type: 'json_object' },
-      validate: (parsed) => validateVerseDevotion(parsed, { ref, verseText }),
-    });
-    return { result: raceResult.result, mode: 'fast-fallback' };
-  }
+function numberEnv(name, fallback) {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
-async function callFastThenQuality({ apiKey, messages, fastModels, ref, verseText }) {
-  return hedgedNvidiaRace({
+function shouldIncludeDebug() {
+  return process.env.NODE_ENV !== 'production' || process.env.AI_DEBUG === '1';
+}
+
+async function callFastHedged({ apiKey, messages, ref, verseText }) {
+  const modelConfig = await resolveNvidiaModelsForVerseDevotion();
+  const raceResult = await hedgedNvidiaRace({
     apiKey,
-    models: fastModels,
+    models: modelConfig.modelsForRace,
+    delaysMs: [0, numberEnv('NVIDIA_HEDGE_DELAY_MS', 700), numberEnv('NVIDIA_QUALITY_DELAY_MS', 1800)],
     messages,
-    firstDelayMs: 1200,
-    timeoutMs: 14000,
-    temperature: 0.25,
-    maxTokens: 2400,
+    timeoutMs: numberEnv('NVIDIA_TOTAL_TIMEOUT_MS', 14000),
+    temperature: 0.22,
+    maxTokens: 1900,
     responseFormat: { type: 'json_object' },
     validate: (parsed) => validateVerseDevotion(parsed, { ref, verseText }),
   });
+  return { ...raceResult, modelConfig, mode: 'fast' };
+}
+
+async function callDeepHedged({ apiKey, messages, ref, verseText }) {
+  const modelConfig = await resolveNvidiaModelsForVerseDevotion();
+  const models = [
+    modelConfig.qualityModel,
+    modelConfig.primaryFastModel,
+    modelConfig.deepModel,
+  ];
+  const raceResult = await hedgedNvidiaRace({
+    apiKey,
+    models,
+    delaysMs: [0, 1200, 2500],
+    messages,
+    timeoutMs: 22000,
+    temperature: 0.25,
+    maxTokens: 2300,
+    responseFormat: { type: 'json_object' },
+    validate: (parsed) => validateVerseDevotion(parsed, { ref, verseText }),
+  });
+  return { ...raceResult, modelConfig, mode: 'deep' };
 }
 
 export default async function handler(req, res) {
@@ -313,21 +366,30 @@ export default async function handler(req, res) {
       });
     }
 
-    const messages = buildMessages(ref, verseText);
-    const fastModels = [
-      process.env.NVIDIA_FAST_MODEL_1 || DEFAULT_FAST_MODEL_1,
-      process.env.NVIDIA_FAST_MODEL_2 || DEFAULT_FAST_MODEL_2,
-    ];
+    const requestMode = mode === 'deep' ? 'deep' : 'fast';
+    const messages = buildMessages(ref, verseText, requestMode);
 
     try {
-      const raceResult = mode === 'deep'
-        ? await callQualityFirst({ apiKey, messages, ref, verseText })
-        : await callFastThenQuality({ apiKey, messages, fastModels, ref, verseText });
+      const raceResult = requestMode === 'deep'
+        ? await callDeepHedged({ apiKey, messages, ref, verseText })
+        : await callFastHedged({ apiKey, messages, ref, verseText });
 
       return sendJson(res, 200, {
         ok: true,
         ...raceResult.result,
         fallback: false,
+        provider: 'nvidia',
+        model: raceResult.model,
+        ...(shouldIncludeDebug() ? {
+          debug: {
+            provider: 'nvidia',
+            selectedModels: raceResult.modelConfig?.modelsForRace || [],
+            winningModel: raceResult.model,
+            latencyMs: raceResult.latencyMs,
+            attempts: raceResult.attempts,
+            modelSource: raceResult.modelConfig?.source,
+          },
+        } : {}),
       });
     } catch (nvidiaError) {
       const message = nvidiaError instanceof Error ? nvidiaError.message : String(nvidiaError);
