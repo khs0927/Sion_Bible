@@ -9,3 +9,11 @@ export function decodeHtml(text: string) {
     .replace(/&#39;/g, "'")
     .replace(/!&#x27;/g, "!"); // Specific fix for the user's screenshot
 }
+
+export function sanitizeScriptureText(text: string) {
+  return decodeHtml(text)
+    .replace(/[“”"']/g, '')
+    .replace(/[!?！？]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}

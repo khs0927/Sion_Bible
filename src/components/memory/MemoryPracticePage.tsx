@@ -5,6 +5,7 @@ import { MemoryClozePractice } from './MemoryClozePractice';
 import { MemoryArrangePractice } from './MemoryArrangePractice';
 import { MemoryInitialHintPractice } from './MemoryInitialHintPractice';
 import { MemoryFullBlankPractice } from './MemoryFullBlankPractice';
+import { sanitizeScriptureText } from '../../utils/textUtils';
 
 type ThemeTokens = Record<string, string>;
 type StageMeta = {
@@ -35,6 +36,7 @@ export function MemoryPracticePage({
   onFinish: () => void;
 }) {
   const isLastStage = verse.level === 5;
+  const scriptureText = sanitizeScriptureText(verse.text);
   const [showNotificationPopup, setShowNotificationPopup] = useState(false);
   const [autoNotificationEnabled, setAutoNotificationEnabled] = useState(true);
 
@@ -161,7 +163,7 @@ export function MemoryPracticePage({
           <section className="p-8 rounded-[32px] border shadow-sm space-y-6" style={{ background: T.panel, borderColor: T.line }}>
             <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: T.accent }}>1단계 · 전체 읽기</div>
             <p className="text-xl leading-[2] text-[#3D3129] serif-verse font-medium text-justify">
-              "{verse.text}"
+              {scriptureText}
             </p>
             <div className="bg-[#FFF8F1] p-4 rounded-2xl border border-dashed border-[#e8d8ce]">
               <p className="text-xs text-[#A17C5B] font-bold text-center leading-relaxed">
@@ -171,10 +173,10 @@ export function MemoryPracticePage({
           </section>
         )}
         
-        {verse.level === 2 && <MemoryClozePractice text={verse.text} T={T} />}
-        {verse.level === 3 && <MemoryFullBlankPractice text={verse.text} T={T} />}
-        {verse.level === 4 && <MemoryArrangePractice text={verse.text} T={T} />}
-        {verse.level === 5 && <MemoryInitialHintPractice text={verse.text} T={T} />}
+        {verse.level === 2 && <MemoryClozePractice text={scriptureText} T={T} />}
+        {verse.level === 3 && <MemoryFullBlankPractice text={scriptureText} T={T} />}
+        {verse.level === 4 && <MemoryArrangePractice text={scriptureText} T={T} />}
+        {verse.level === 5 && <MemoryInitialHintPractice text={scriptureText} T={T} />}
       </div>
 
       {!isLastStage && (

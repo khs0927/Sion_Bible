@@ -1,5 +1,6 @@
 import { Check } from 'lucide-react';
-import { decodeHtml } from '../../utils/textUtils';
+import { sanitizeScriptureText } from '../../utils/textUtils';
+import verseSaveIcon from '../../assets/design/verse-actions/save.png';
 
 interface Verse {
   verse: number;
@@ -26,6 +27,8 @@ export function BibleVerseSelectableList({
   mode,
   onVerseClick,
   fontSize,
+  onToggleSave,
+  isSaved,
   selectionMode = false,
 }: BibleVerseSelectableListProps) {
 
@@ -36,39 +39,60 @@ export function BibleVerseSelectableList({
         const showCheckbox = mode === 'select' || selectionMode;
         
         return (
-          <button
+          <div
             key={v.verse}
             id={`verse-${v.verse}`}
-            onClick={() => {
-              if (showCheckbox) {
-                onToggleVerse(v.verse);
-              } else {
-                onVerseClick(v);
-              }
-            }}
             className={`w-full text-left px-3 py-2.5 transition-all relative ${
-              isSelected && mode === 'select'
+              isSelected && showCheckbox
                 ? 'bg-[#8d95d8]/10'
                 : 'bg-white hover:bg-[#FFF8F1]'
             }`}
           >
             <div className="flex items-start gap-2.5">
-              <span className={`mt-[0.18em] inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-black leading-none ${
-                isSelected && showCheckbox
-                  ? 'bg-[#8d95d8] text-white'
-                  : 'bg-[#F7EFE7] text-[#8C6F55]'
-              }`}>
-                {isSelected && showCheckbox ? <Check size={12} strokeWidth={4} /> : v.verse}
-              </span>
+              <div className="mt-[0.18em] flex w-6 shrink-0 flex-col items-center gap-1">
+                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-[#F7EFE7] text-[10px] font-black leading-none text-[#8C6F55]">
+                  {v.verse}
+                </span>
+                {showCheckbox ? (
+                  <button
+                    type="button"
+                    aria-label={`${v.verse}절 선택`}
+                    onClick={() => onToggleVerse(v.verse)}
+                    className={`inline-flex h-6 w-6 items-center justify-center rounded-md border transition-all ${
+                      isSelected
+                        ? 'border-[#8d95d8] bg-[#8d95d8] text-white'
+                        : 'border-[#E8D8C8] bg-white text-transparent'
+                    }`}
+                  >
+                    <Check size={14} strokeWidth={4} />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    aria-label={`${v.verse}절 저장`}
+                    onClick={() => onToggleSave?.(v)}
+                    className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition-transform active:scale-95 ${
+                      isSaved?.(v.verse) ? 'scale-105' : ''
+                    }`}
+                  >
+                    <img src={verseSaveIcon} alt="" aria-hidden="true" className="block h-7 w-7 object-contain" />
+                  </button>
+                )}
+              </div>
 
-              <p 
-                className="min-w-0 flex-1 leading-[1.72] text-[#3D3129] serif-verse"
+              <button
+                type="button"
+                onClick={() => {
+                  if (showCheckbox) onToggleVerse(v.verse);
+                  else onVerseClick(v);
+                }}
+                className="min-w-0 flex-1 bg-transparent p-0 text-left leading-[1.72] text-[#3D3129] serif-verse"
                 style={{ fontSize }}
               >
-                {decodeHtml(v.text)}
-              </p>
+                {sanitizeScriptureText(v.text)}
+              </button>
             </div>
-          </button>
+          </div>
         );
       })}
     </div>
