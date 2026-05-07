@@ -11,7 +11,7 @@ interface SelectedVerse {
   title?: string;
   meditation?: string;
   prayer?: string;
-  application?: string;
+  application?: string | string[];
 }
 
 interface VerseDevotionPanelProps {

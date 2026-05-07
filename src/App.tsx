@@ -688,7 +688,7 @@ export default function App() {
     setTab('memory');
   };
 
-  function InsightBlocks({ title, meditation, prayer, application, explanation, question, reflectionQuestion }: { title?: string; meditation?: string; prayer?: string; application?: string | string[]; explanation?: string; question?: string; reflectionQuestion?: string }) {
+  function InsightBlocks({ title, meditation, prayer, application, explanation }: { title?: string; meditation?: string; prayer?: string; application?: string | string[]; explanation?: string; question?: string; reflectionQuestion?: string }) {
     const hasInsight = Boolean(meditation || prayer);
     const applicationItems = Array.isArray(application)
       ? application
