@@ -7,6 +7,8 @@ import { BIBLE_BOOKS } from './data/bibleBooks';
 import { BIBLE_VERSES, type BibleVerse } from './data/verses';
 import { KawaiiApplicationIcon, KawaiiAudioIcon, KawaiiBibleIcon, KawaiiCalendarIcon, KawaiiComfortIcon, KawaiiHomeIcon, KawaiiJournalIcon, KawaiiMeditationIcon, KawaiiPrayerIcon, KawaiiRandomIcon, KawaiiSavedIcon, KawaiiSettingsIcon, KawaiiShareIcon, KawaiiVerseIcon, KawaiiWisdomIcon, MoodIcon } from './components/icons';
 import { ReadingPlanHome } from './components/readingPlan/ReadingPlanHome';
+import { ReadingRoomLayout } from './components/reading-room/ReadingRoomLayout';
+import { ReadingRoomPage } from './components/reading-room/ReadingRoomPage';
 import { MemoryHome } from './components/memory/MemoryHome';
 import { getDailyDevotion } from './services/dailyDevotions';
 import { createContextualFallback, readCachedVerseDevotion, type VerseDevotionResult } from './services/verseDevotionApi';
@@ -271,6 +273,7 @@ export default function App() {
   const [activeReadingRange, setActiveReadingRange] = useState<BibleReadRange | null>(null);
   const [readingProgress, setReadingProgress] = useState<import('./types/readingPlan').ReadingPlanProgress | null>(null);
   const [userReadingTemplates, setUserReadingTemplates] = useState<ReadingPlanTemplate[]>([]);
+  const [routePath, setRoutePath] = useState(() => (typeof window === 'undefined' ? '/' : window.location.pathname));
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isChapterSheetOpen, setIsChapterSheetOpen] = useState(false);
   const [homeDevotion, setHomeDevotion] = useState<import('./services/verseDevotionApi').VerseDevotionResult | null>(null);
@@ -301,6 +304,12 @@ export default function App() {
 
   useEffect(() => {
     setReadingProgress(getActiveReadingPlan());
+  }, []);
+
+  useEffect(() => {
+    const syncRoute = () => setRoutePath(window.location.pathname);
+    window.addEventListener('popstate', syncRoute);
+    return () => window.removeEventListener('popstate', syncRoute);
   }, []);
 
   useEffect(() => {
@@ -770,25 +779,61 @@ export default function App() {
     </article>;
   }
 
+  const navigateAppPath = (path: string) => {
+    if (window.location.pathname !== path) {
+      window.history.pushState({}, '', path);
+    }
+    setRoutePath(path);
+    window.scrollTo(0, 0);
+  };
+
+  const exitReadingRoom = () => {
+    navigateAppPath('/');
+    setTab('home');
+    setActiveReadingRange(null);
+    clearReadSelection();
+  };
+
+  const openBibleFromReadingRoom = () => {
+    navigateAppPath('/');
+    setTab('read');
+    setActiveReadingRange(null);
+    clearReadSelection();
+  };
+
   const navigateToBible = (bookId: string, chapter: number) => {
     const book = BIBLE_BOOKS.find(b => b.id === bookId);
     if (book) {
       handleBibleNavigate(book, chapter);
+      if (routePath.startsWith('/reading-room')) navigateAppPath('/');
       setTab('read');
       setDetail(null);
       window.scrollTo(0, 0);
     }
   };
 
-  const handleNavigateToRange = () => {
-    if (!todayReadingTask) return;
-    const range = convertTaskToBibleRange(todayReadingTask);
+  const handleNavigateToRange = (taskOverride?: ReadingDayTask | null) => {
+    const task = taskOverride ?? todayReadingTask;
+    if (!task) return;
+    setTodayReadingTask(task);
+    const range = convertTaskToBibleRange(task);
+    if (routePath.startsWith('/reading-room')) navigateAppPath('/');
     setActiveReadingRange(range);
     setTab('read');
     window.scrollTo(0, 0);
   };
 
   const handleNavTab = (nextTab: Tab) => {
+    if (nextTab === 'plan') {
+      setTab('plan');
+      setActiveReadingRange(null);
+      clearReadSelection();
+      navigateAppPath('/reading-room');
+      return;
+    }
+    if (routePath.startsWith('/reading-room')) {
+      navigateAppPath('/');
+    }
     if (nextTab !== 'read') {
       setActiveReadingRange(null);
       clearReadSelection();
@@ -841,6 +886,7 @@ export default function App() {
     const firstTask = template.tasks[0];
     if (firstTask) {
       setTodayReadingTask(firstTask);
+      if (routePath.startsWith('/reading-room')) navigateAppPath('/');
       setActiveReadingRange(convertTaskToBibleRange(firstTask));
       setTab('read');
       window.scrollTo(0, 0);
@@ -870,6 +916,21 @@ export default function App() {
       }, 800); // 800ms to allow fetch and render
     }
   };
+
+  if (routePath.startsWith('/reading-room')) {
+    return (
+      <ReadingRoomLayout onExit={exitReadingRoom} onOpenBible={openBibleFromReadingRoom}>
+        <ReadingRoomPage
+          progress={readingProgress}
+          userTemplates={userReadingTemplates}
+          onToggleToday={handleToggleReadingDay}
+          onStartPlan={handleStartPlan}
+          onStartPlanAndRead={handleStartPlanAndRead}
+          onNavigateToRange={handleNavigateToRange}
+        />
+      </ReadingRoomLayout>
+    );
+  }
 
   return <div style={{ minHeight: '100vh', backgroundColor: th.bg, backgroundImage: theme === 'a-soft' ? `linear-gradient(180deg, rgba(241,238,231,0.90), rgba(241,238,231,0.78) 42%, rgba(241,238,231,0.96)), url(${appBookBackground})` : `radial-gradient(circle at top left, rgba(255,255,255,0.16), transparent 34%)`, backgroundSize: theme === 'a-soft' ? 'cover' : 'auto', backgroundPosition: 'center top', backgroundAttachment: theme === 'a-soft' ? 'fixed' : 'scroll', color: th.text, fontFamily: "'S-Core Dream', sans-serif" }}>
     {isSearchOpen && <BibleSearchSheet onClose={() => setIsSearchOpen(false)} onNavigate={handleSearchNavigate} T={th} fontSize={fsize} />}

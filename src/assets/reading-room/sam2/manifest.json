@@ -1,0 +1,898 @@
+{
+  "sam2": {
+    "repo": "scratch\\sam2",
+    "checkpoint": "scratch\\sam2\\checkpoints\\sam2.1_hiera_tiny.pt",
+    "available": true
+  },
+  "note": "Assets were split from the supplied design boards in the local SAM2 workspace and exported as production-ready transparent PNG crops.",
+  "assets": [
+    {
+      "name": "bible_green",
+      "folder": "illustrations",
+      "source": "illustration",
+      "box": [
+        45,
+        145,
+        190,
+        310
+      ],
+      "path": "src/assets/reading-room/sam2/illustrations/bible_green.png"
+    },
+    {
+      "name": "bible_gold",
+      "folder": "illustrations",
+      "source": "illustration",
+      "box": [
+        225,
+        145,
+        360,
+        310
+      ],
+      "path": "src/assets/reading-room/sam2/illustrations/bible_gold.png"
+    },
+    {
+      "name": "bible_purple",
+      "folder": "illustrations",
+      "source": "illustration",
+      "box": [
+        410,
+        145,
+        545,
+        310
+      ],
+      "path": "src/assets/reading-room/sam2/illustrations/bible_purple.png"
+    },
+    {
+      "name": "open_bible_leaf",
+      "folder": "illustrations",
+      "source": "illustration",
+      "box": [
+        620,
+        150,
+        805,
+        295
+      ],
+      "path": "src/assets/reading-room/sam2/illustrations/open_bible_leaf.png"
+    },
+    {
+      "name": "sprout_character",
+      "folder": "illustrations",
+      "source": "illustration",
+      "box": [
+        885,
+        145,
+        1005,
+        310
+      ],
+      "path": "src/assets/reading-room/sam2/illustrations/sprout_character.png"
+    },
+    {
+      "name": "point_jar",
+      "folder": "illustrations",
+      "source": "illustration",
+      "box": [
+        1045,
+        160,
+        1165,
+        295
+      ],
+      "path": "src/assets/reading-room/sam2/illustrations/point_jar.png"
+    },
+    {
+      "name": "streak_flame",
+      "folder": "illustrations",
+      "source": "illustration",
+      "box": [
+        1190,
+        160,
+        1305,
+        295
+      ],
+      "path": "src/assets/reading-room/sam2/illustrations/streak_flame.png"
+    },
+    {
+      "name": "point_droplet",
+      "folder": "illustrations",
+      "source": "illustration",
+      "box": [
+        1320,
+        160,
+        1410,
+        295
+      ],
+      "path": "src/assets/reading-room/sam2/illustrations/point_droplet.png"
+    },
+    {
+      "name": "badge_read_start",
+      "folder": "badges",
+      "source": "illustration",
+      "box": [
+        42,
+        370,
+        145,
+        480
+      ],
+      "path": "src/assets/reading-room/sam2/badges/badge_read_start.png"
+    },
+    {
+      "name": "badge_7_days",
+      "folder": "badges",
+      "source": "illustration",
+      "box": [
+        155,
+        365,
+        285,
+        485
+      ],
+      "path": "src/assets/reading-room/sam2/badges/badge_7_days.png"
+    },
+    {
+      "name": "badge_30_chapters",
+      "folder": "badges",
+      "source": "illustration",
+      "box": [
+        275,
+        365,
+        405,
+        485
+      ],
+      "path": "src/assets/reading-room/sam2/badges/badge_30_chapters.png"
+    },
+    {
+      "name": "badge_explorer",
+      "folder": "badges",
+      "source": "illustration",
+      "box": [
+        395,
+        365,
+        525,
+        485
+      ],
+      "path": "src/assets/reading-room/sam2/badges/badge_explorer.png"
+    },
+    {
+      "name": "badge_locked",
+      "folder": "badges",
+      "source": "illustration",
+      "box": [
+        505,
+        365,
+        625,
+        485
+      ],
+      "path": "src/assets/reading-room/sam2/badges/badge_locked.png"
+    },
+    {
+      "name": "reward_crown",
+      "folder": "rewards",
+      "source": "illustration",
+      "box": [
+        625,
+        365,
+        730,
+        485
+      ],
+      "path": "src/assets/reading-room/sam2/rewards/reward_crown.png"
+    },
+    {
+      "name": "reward_medal",
+      "folder": "rewards",
+      "source": "illustration",
+      "box": [
+        760,
+        365,
+        855,
+        485
+      ],
+      "path": "src/assets/reading-room/sam2/rewards/reward_medal.png"
+    },
+    {
+      "name": "reward_shield",
+      "folder": "rewards",
+      "source": "illustration",
+      "box": [
+        890,
+        365,
+        985,
+        485
+      ],
+      "path": "src/assets/reading-room/sam2/rewards/reward_shield.png"
+    },
+    {
+      "name": "calendar_30",
+      "folder": "illustrations",
+      "source": "illustration",
+      "box": [
+        1005,
+        365,
+        1095,
+        485
+      ],
+      "path": "src/assets/reading-room/sam2/illustrations/calendar_30.png"
+    },
+    {
+      "name": "reading_card_genesis",
+      "folder": "cards",
+      "source": "illustration",
+      "box": [
+        1125,
+        385,
+        1415,
+        510
+      ],
+      "path": "src/assets/reading-room/sam2/cards/reading_card_genesis.png"
+    },
+    {
+      "name": "course_365_landscape",
+      "folder": "courses",
+      "source": "illustration",
+      "box": [
+        40,
+        570,
+        265,
+        715
+      ],
+      "path": "src/assets/reading-room/sam2/courses/course_365_landscape.png"
+    },
+    {
+      "name": "course_180_hills",
+      "folder": "courses",
+      "source": "illustration",
+      "box": [
+        285,
+        570,
+        510,
+        715
+      ],
+      "path": "src/assets/reading-room/sam2/courses/course_180_hills.png"
+    },
+    {
+      "name": "course_nt100_night",
+      "folder": "courses",
+      "source": "illustration",
+      "box": [
+        520,
+        570,
+        745,
+        715
+      ],
+      "path": "src/assets/reading-room/sam2/courses/course_nt100_night.png"
+    },
+    {
+      "name": "course_gospels30_purple",
+      "folder": "courses",
+      "source": "illustration",
+      "box": [
+        755,
+        570,
+        980,
+        715
+      ],
+      "path": "src/assets/reading-room/sam2/courses/course_gospels30_purple.png"
+    },
+    {
+      "name": "leaf_sprig_01",
+      "folder": "decorations",
+      "source": "illustration",
+      "box": [
+        40,
+        780,
+        115,
+        850
+      ],
+      "path": "src/assets/reading-room/sam2/decorations/leaf_sprig_01.png"
+    },
+    {
+      "name": "leaf_sprig_02",
+      "folder": "decorations",
+      "source": "illustration",
+      "box": [
+        120,
+        775,
+        190,
+        850
+      ],
+      "path": "src/assets/reading-room/sam2/decorations/leaf_sprig_02.png"
+    },
+    {
+      "name": "leaf_sprig_03",
+      "folder": "decorations",
+      "source": "illustration",
+      "box": [
+        200,
+        770,
+        275,
+        850
+      ],
+      "path": "src/assets/reading-room/sam2/decorations/leaf_sprig_03.png"
+    },
+    {
+      "name": "flower_small",
+      "folder": "decorations",
+      "source": "illustration",
+      "box": [
+        290,
+        770,
+        365,
+        850
+      ],
+      "path": "src/assets/reading-room/sam2/decorations/flower_small.png"
+    },
+    {
+      "name": "lavender_sprig",
+      "folder": "decorations",
+      "source": "illustration",
+      "box": [
+        385,
+        770,
+        455,
+        850
+      ],
+      "path": "src/assets/reading-room/sam2/decorations/lavender_sprig.png"
+    },
+    {
+      "name": "leaf_sprig_04",
+      "folder": "decorations",
+      "source": "illustration",
+      "box": [
+        475,
+        770,
+        545,
+        850
+      ],
+      "path": "src/assets/reading-room/sam2/decorations/leaf_sprig_04.png"
+    },
+    {
+      "name": "sparkles",
+      "folder": "decorations",
+      "source": "illustration",
+      "box": [
+        620,
+        785,
+        805,
+        845
+      ],
+      "path": "src/assets/reading-room/sam2/decorations/sparkles.png"
+    },
+    {
+      "name": "leaf_scatter",
+      "folder": "decorations",
+      "source": "illustration",
+      "box": [
+        890,
+        780,
+        1415,
+        845
+      ],
+      "path": "src/assets/reading-room/sam2/decorations/leaf_scatter.png"
+    },
+    {
+      "name": "nav_home",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        35,
+        185,
+        95,
+        245
+      ],
+      "path": "src/assets/reading-room/sam2/icons/nav_home.png"
+    },
+    {
+      "name": "nav_recommended_course",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        125,
+        185,
+        185,
+        245
+      ],
+      "path": "src/assets/reading-room/sam2/icons/nav_recommended_course.png"
+    },
+    {
+      "name": "nav_my_course",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        215,
+        185,
+        275,
+        245
+      ],
+      "path": "src/assets/reading-room/sam2/icons/nav_my_course.png"
+    },
+    {
+      "name": "nav_records",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        315,
+        185,
+        375,
+        245
+      ],
+      "path": "src/assets/reading-room/sam2/icons/nav_records.png"
+    },
+    {
+      "name": "nav_more",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        395,
+        185,
+        455,
+        245
+      ],
+      "path": "src/assets/reading-room/sam2/icons/nav_more.png"
+    },
+    {
+      "name": "course_list",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        515,
+        185,
+        575,
+        245
+      ],
+      "path": "src/assets/reading-room/sam2/icons/course_list.png"
+    },
+    {
+      "name": "bible_closed",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        605,
+        175,
+        665,
+        245
+      ],
+      "path": "src/assets/reading-room/sam2/icons/bible_closed.png"
+    },
+    {
+      "name": "bible_open",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        690,
+        185,
+        750,
+        245
+      ],
+      "path": "src/assets/reading-room/sam2/icons/bible_open.png"
+    },
+    {
+      "name": "bookmark",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        785,
+        185,
+        845,
+        245
+      ],
+      "path": "src/assets/reading-room/sam2/icons/bookmark.png"
+    },
+    {
+      "name": "heart_like",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        875,
+        185,
+        935,
+        245
+      ],
+      "path": "src/assets/reading-room/sam2/icons/heart_like.png"
+    },
+    {
+      "name": "check_selected",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        985,
+        185,
+        1045,
+        245
+      ],
+      "path": "src/assets/reading-room/sam2/icons/check_selected.png"
+    },
+    {
+      "name": "check_unselected",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        1075,
+        185,
+        1135,
+        245
+      ],
+      "path": "src/assets/reading-room/sam2/icons/check_unselected.png"
+    },
+    {
+      "name": "bell",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        1165,
+        185,
+        1225,
+        245
+      ],
+      "path": "src/assets/reading-room/sam2/icons/bell.png"
+    },
+    {
+      "name": "settings",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        1250,
+        185,
+        1310,
+        245
+      ],
+      "path": "src/assets/reading-room/sam2/icons/settings.png"
+    },
+    {
+      "name": "back_arrow",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        1340,
+        185,
+        1400,
+        245
+      ],
+      "path": "src/assets/reading-room/sam2/icons/back_arrow.png"
+    },
+    {
+      "name": "share",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        35,
+        370,
+        95,
+        430
+      ],
+      "path": "src/assets/reading-room/sam2/icons/share.png"
+    },
+    {
+      "name": "help",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        125,
+        370,
+        185,
+        430
+      ],
+      "path": "src/assets/reading-room/sam2/icons/help.png"
+    },
+    {
+      "name": "calendar",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        215,
+        370,
+        275,
+        430
+      ],
+      "path": "src/assets/reading-room/sam2/icons/calendar.png"
+    },
+    {
+      "name": "clock",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        305,
+        370,
+        365,
+        430
+      ],
+      "path": "src/assets/reading-room/sam2/icons/clock.png"
+    },
+    {
+      "name": "chevron_left",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        395,
+        370,
+        455,
+        430
+      ],
+      "path": "src/assets/reading-room/sam2/icons/chevron_left.png"
+    },
+    {
+      "name": "crown_365",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        500,
+        350,
+        585,
+        420
+      ],
+      "path": "src/assets/reading-room/sam2/icons/crown_365.png"
+    },
+    {
+      "name": "achievement_badge",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        595,
+        350,
+        685,
+        425
+      ],
+      "path": "src/assets/reading-room/sam2/icons/achievement_badge.png"
+    },
+    {
+      "name": "flame",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        690,
+        350,
+        770,
+        425
+      ],
+      "path": "src/assets/reading-room/sam2/icons/flame.png"
+    },
+    {
+      "name": "droplet",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        785,
+        350,
+        865,
+        425
+      ],
+      "path": "src/assets/reading-room/sam2/icons/droplet.png"
+    },
+    {
+      "name": "gift",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        875,
+        370,
+        935,
+        430
+      ],
+      "path": "src/assets/reading-room/sam2/icons/gift.png"
+    },
+    {
+      "name": "lock",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        985,
+        370,
+        1045,
+        430
+      ],
+      "path": "src/assets/reading-room/sam2/icons/lock.png"
+    },
+    {
+      "name": "ellipsis",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        1075,
+        370,
+        1135,
+        430
+      ],
+      "path": "src/assets/reading-room/sam2/icons/ellipsis.png"
+    },
+    {
+      "name": "progress_ring",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        1160,
+        350,
+        1235,
+        420
+      ],
+      "path": "src/assets/reading-room/sam2/icons/progress_ring.png"
+    },
+    {
+      "name": "plus_circle",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        1250,
+        370,
+        1310,
+        430
+      ],
+      "path": "src/assets/reading-room/sam2/icons/plus_circle.png"
+    },
+    {
+      "name": "tag",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        1340,
+        350,
+        1410,
+        420
+      ],
+      "path": "src/assets/reading-room/sam2/icons/tag.png"
+    },
+    {
+      "name": "leaf_small",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        45,
+        705,
+        100,
+        760
+      ],
+      "path": "src/assets/reading-room/sam2/icons/leaf_small.png"
+    },
+    {
+      "name": "leaf_large",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        130,
+        700,
+        190,
+        765
+      ],
+      "path": "src/assets/reading-room/sam2/icons/leaf_large.png"
+    },
+    {
+      "name": "sparkle_icon",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        220,
+        700,
+        280,
+        760
+      ],
+      "path": "src/assets/reading-room/sam2/icons/sparkle_icon.png"
+    },
+    {
+      "name": "flower_icon",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        310,
+        700,
+        370,
+        760
+      ],
+      "path": "src/assets/reading-room/sam2/icons/flower_icon.png"
+    },
+    {
+      "name": "cloud_icon",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        390,
+        700,
+        455,
+        760
+      ],
+      "path": "src/assets/reading-room/sam2/icons/cloud_icon.png"
+    },
+    {
+      "name": "completed_day",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        520,
+        700,
+        580,
+        760
+      ],
+      "path": "src/assets/reading-room/sam2/icons/completed_day.png"
+    },
+    {
+      "name": "incomplete_day",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        610,
+        700,
+        670,
+        760
+      ],
+      "path": "src/assets/reading-room/sam2/icons/incomplete_day.png"
+    },
+    {
+      "name": "special_reward",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        685,
+        690,
+        765,
+        770
+      ],
+      "path": "src/assets/reading-room/sam2/icons/special_reward.png"
+    },
+    {
+      "name": "mission_flag",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        875,
+        700,
+        935,
+        760
+      ],
+      "path": "src/assets/reading-room/sam2/icons/mission_flag.png"
+    },
+    {
+      "name": "next_chevron",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        965,
+        700,
+        1025,
+        760
+      ],
+      "path": "src/assets/reading-room/sam2/icons/next_chevron.png"
+    },
+    {
+      "name": "download",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        1055,
+        700,
+        1115,
+        760
+      ],
+      "path": "src/assets/reading-room/sam2/icons/download.png"
+    },
+    {
+      "name": "close",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        1145,
+        700,
+        1205,
+        760
+      ],
+      "path": "src/assets/reading-room/sam2/icons/close.png"
+    },
+    {
+      "name": "info",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        1235,
+        700,
+        1295,
+        760
+      ],
+      "path": "src/assets/reading-room/sam2/icons/info.png"
+    },
+    {
+      "name": "menu",
+      "folder": "icons",
+      "source": "icon",
+      "box": [
+        1325,
+        700,
+        1395,
+        760
+      ],
+      "path": "src/assets/reading-room/sam2/icons/menu.png"
+    }
+  ]
+}
