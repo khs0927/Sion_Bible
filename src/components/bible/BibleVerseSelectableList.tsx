@@ -96,7 +96,7 @@ export function BibleVerseSelectableList({
                   else onVerseClick(v);
                 }}
                 className="min-w-0 flex-1 bg-transparent p-0 text-left leading-[1.72] text-[#3D3129] serif-verse"
-                style={{ fontSize }}
+                style={{ fontSize, whiteSpace: 'pre-wrap' }}
               >
                 {sanitizeScriptureText(v.text)}
               </button>
