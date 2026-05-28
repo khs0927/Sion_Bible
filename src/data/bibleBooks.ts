@@ -32,7 +32,7 @@ export const BIBLE_BOOKS: BibleBook[] = [
   { id: 'sng', number: 22, name: '아가', abbr: '아', testament: 'old', chapters: 8 },
   { id: 'isa', number: 23, name: '이사야', abbr: '사', testament: 'old', chapters: 66 },
   { id: 'jer', number: 24, name: '예레미야', abbr: '렘', testament: 'old', chapters: 52 },
-  { id: 'lam', number: 25, name: '예레미야 애가', abbr: '애', testament: 'old', chapters: 5 },
+  { id: 'lam', number: 25, name: '예레미야애가', abbr: '애', testament: 'old', chapters: 5 },
   { id: 'ezk', number: 26, name: '에스겔', abbr: '겔', testament: 'old', chapters: 48 },
   { id: 'dan', number: 27, name: '다니엘', abbr: '단', testament: 'old', chapters: 12 },
   { id: 'hos', number: 28, name: '호세아', abbr: '호', testament: 'old', chapters: 14 },
