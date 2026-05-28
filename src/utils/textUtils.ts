@@ -11,9 +11,12 @@ export function decodeHtml(text: string) {
 }
 
 export function sanitizeScriptureText(text: string) {
-  return decodeHtml(text)
+  const cleaned = decodeHtml(text)
     .replace(/[“”"']/g, '')
     .replace(/[!?！？]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
+  
+  // Insert a newline immediately after angle brackets (e.g., <천지 창조> -> <천지 창조>\n)
+  return cleaned.replace(/(<[^>]+>)\s*/g, '$1\n');
 }
