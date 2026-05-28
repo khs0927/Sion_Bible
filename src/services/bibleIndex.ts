@@ -19,9 +19,9 @@ export async function loadBibleVerseIndex(): Promise<BibleVerseRecord[]> {
     const data = await response.json();
     bibleIndex = data as BibleVerseRecord[];
     
-    // Validate verse count
-    if (bibleIndex.length !== 31102 && bibleIndex.length !== 30929) {
-      console.warn(`Unexpected bible verse count: ${bibleIndex.length}. Standard Protestant Bible usually has 31,102 verses.`);
+    // Validate the index is substantial without assuming a specific source edition.
+    if (bibleIndex.length < 30000) {
+      console.warn(`Unexpected bible verse count: ${bibleIndex.length}.`);
     }
     
     return bibleIndex;

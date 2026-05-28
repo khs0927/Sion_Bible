@@ -1,6 +1,10 @@
 {
-  "version": "korean-revised",
-  "verseCount": 30929,
-  "createdAt": "2026-05-04T18:24:41.601Z",
-  "source": "https://github.com/thiagobodruk/bible"
+  "version": "user-provided-korean-bible",
+  "verseCount": 31039,
+  "createdAt": "2026-05-28T17:20:19.141Z",
+  "source": "C:/Users/khs09/Downloads/성경(구약+신약).md",
+  "encoding": "utf-8",
+  "rangeLinesExpanded": 11,
+  "headingLinesSkipped": 4,
+  "malformedContinuationLinesAppended": 45
 }
