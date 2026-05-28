@@ -403,26 +403,20 @@ export default function App() {
     if (event.currentTarget.scrollTop > 8) setSheetExpanded(sheet, true);
   };
 
-  // Sync AI devotion for currentHomeVerse
+  // Sync AI devotion for currentHomeVerse (Uses real AI model like Bible tab)
   useEffect(() => {
     let active = true;
     const requestKey = `${currentHomeRef}:${currentHomeVerse.content}`;
     setIsHomeQuestionOpen(false);
 
-    setHomeDevotion(createContextualFallback(currentHomeRef, currentHomeVerse.content, 'LOCAL_INITIAL'));
+    setHomeDevotion(null); // Clear previous devotion so nothing shows while loading
     setHomeDevotionLoading(true);
     const fetchDevotion = async () => {
       const ref = currentHomeRef;
       const text = currentHomeVerse.content;
       const isCurrentRequest = () => active && requestKey === `${currentHomeRef}:${currentHomeVerse.content}`;
       
-      // 1. Show curated/local devotion immediately while the API prepares a deeper response.
-      const curated = getDailyDevotion(currentHomeVerse);
-      if (isCurrentRequest() && !curated.fallback && (curated.meditation || curated.prayer)) {
-        setHomeDevotion(curated);
-      }
-
-      // 2. Check cache for AI generated devotions
+      // 1. Check cache for AI generated devotions (Llama 3.1 8B)
       const cached = readCachedVerseDevotion(ref, text);
       if (cached) {
         if (isCurrentRequest()) {
@@ -432,7 +426,7 @@ export default function App() {
         return;
       }
 
-      // 3. Generate new AI devotion
+      // 2. Generate new AI devotion via Llama 3.1 8B
       setHomeDevotionLoading(true);
       try {
         const { getOrGenerateVerseDevotion } = await import('./services/verseDevotionApi');
@@ -446,7 +440,11 @@ export default function App() {
         }
       } catch (e) {
         console.error('Failed to fetch devotion', e);
-        if (isCurrentRequest()) setHomeDevotionLoading(false);
+        if (isCurrentRequest()) {
+          // If AI fails completely, load fallback as a last resort
+          setHomeDevotion(createContextualFallback(ref, text, 'LOCAL_FALLBACK'));
+          setHomeDevotionLoading(false);
+        }
       }
     };
 
@@ -1114,42 +1112,44 @@ export default function App() {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 13 }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                       {assetIcon(designDecorations.pottedSprout, 25)}
-                      <span className={homeDevotionLoading ? "animate-pulse" : ""}>
-                        {homeDevotionLoading ? '묵상문을 준비하고 있습니다.' : '묵상문'}
+                      <span className={homeDevotionLoading ? "animate-pulse text-[#A89278]" : ""}>
+                        {homeDevotionLoading ? '묵상문을 불러오고 있습니다.' : '묵상문'}
                       </span>
                     </span>
                     <button
                       type="button"
                       aria-label="묵상문 저장"
-                      onClick={() => saveDevotionSection('meditation', { ref: currentHomeRef, text: currentHomeVerse.content }, currentHomeDevotion)}
-                      style={{ ...circle(false), width: 30, height: 30, borderRadius: 10 }}
+                      disabled={homeDevotionLoading || !currentHomeDevotion}
+                      onClick={() => currentHomeDevotion && saveDevotionSection('meditation', { ref: currentHomeRef, text: currentHomeVerse.content }, currentHomeDevotion)}
+                      style={{ ...circle(false), width: 30, height: 30, borderRadius: 10, opacity: homeDevotionLoading ? 0.3 : 1, cursor: homeDevotionLoading ? 'not-allowed' : 'pointer' }}
                     >
                       <Bookmark size={14} />
                     </button>
                   </div>
                   <div style={{ fontSize: fsize, lineHeight: 1.8 }}>
-                    {decodeHtml(currentHomeDevotion.meditation)}
+                    {homeDevotionLoading ? '' : decodeHtml(currentHomeDevotion?.meditation)}
                   </div>
                 </div>
                 <div className="serif-verse" style={{ borderRadius: 16, background: th.solid, border: `1px solid ${th.line}`, padding: 13, position: 'relative', overflow: 'hidden' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 13 }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                       {assetIcon(designDecorations.crossClouds, 27)}
-                      <span className={homeDevotionLoading ? "animate-pulse" : ""}>
-                        {homeDevotionLoading ? '기도문을 준비하고 있습니다.' : '기도문'}
+                      <span className={homeDevotionLoading ? "animate-pulse text-[#A89278]" : ""}>
+                        {homeDevotionLoading ? '기도문을 불러오고 있습니다.' : '기도문'}
                       </span>
                     </span>
                     <button
                       type="button"
                       aria-label="기도문 저장"
-                      onClick={() => saveDevotionSection('prayer', { ref: currentHomeRef, text: currentHomeVerse.content }, currentHomeDevotion)}
-                      style={{ ...circle(false), width: 30, height: 30, borderRadius: 10 }}
+                      disabled={homeDevotionLoading || !currentHomeDevotion}
+                      onClick={() => currentHomeDevotion && saveDevotionSection('prayer', { ref: currentHomeRef, text: currentHomeVerse.content }, currentHomeDevotion)}
+                      style={{ ...circle(false), width: 30, height: 30, borderRadius: 10, opacity: homeDevotionLoading ? 0.3 : 1, cursor: homeDevotionLoading ? 'not-allowed' : 'pointer' }}
                     >
                       <Bookmark size={14} />
                     </button>
                   </div>
                   <div style={{ fontSize: fsize, lineHeight: 1.8 }}>
-                    {ensureAmen(decodeHtml(currentHomeDevotion.prayer))}
+                    {homeDevotionLoading ? '' : ensureAmen(decodeHtml(currentHomeDevotion?.prayer))}
                   </div>
                 </div>
               </div>
