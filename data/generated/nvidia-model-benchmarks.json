@@ -1,6 +1,6 @@
 {
-  "primaryFastModel": "qwen/qwen3.5-122b-a10b",
-  "secondaryFastModel": "nvidia/nemotron-3-nano-30b-a3b",
+  "primaryFastModel": "openai/gpt-oss-120b",
+  "secondaryFastModel": "openai/gpt-oss-120b",
   "qualityModel": "openai/gpt-oss-120b",
   "deepModel": "openai/gpt-oss-120b",
   "benchmarkedAt": "2026-05-07T18:56:04.614Z",

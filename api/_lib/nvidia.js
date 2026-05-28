@@ -2,10 +2,10 @@ export const NVIDIA_BASE_URL = process.env.NVIDIA_BASE_URL || 'https://integrate
 export const NVIDIA_CHAT_ENDPOINT = `${NVIDIA_BASE_URL.replace(/\/+$/, '')}/chat/completions`;
 export const NVIDIA_MODELS_ENDPOINT = `${NVIDIA_BASE_URL.replace(/\/+$/, '')}/models`;
 
-export const DEFAULT_PRIMARY_FAST_MODEL = 'openai/gpt-oss-20b';
-export const DEFAULT_SECONDARY_FAST_MODEL = 'nvidia/nemotron-3-nano-30b-a3b';
-export const DEFAULT_QUALITY_MODEL = 'nvidia/llama-3.3-nemotron-super-49b-v1.5';
-export const DEFAULT_QUALITY_MODEL_FALLBACK = 'nvidia/llama-3.3-nemotron-super-49b-v1';
+export const DEFAULT_PRIMARY_FAST_MODEL = 'openai/gpt-oss-120b';
+export const DEFAULT_SECONDARY_FAST_MODEL = 'openai/gpt-oss-120b';
+export const DEFAULT_QUALITY_MODEL = 'openai/gpt-oss-120b';
+export const DEFAULT_QUALITY_MODEL_FALLBACK = 'openai/gpt-oss-120b';
 export const DEFAULT_DEEP_MODEL = 'openai/gpt-oss-120b';
 
 export const PREFERRED_NVIDIA_MODELS = [
@@ -321,7 +321,7 @@ export function validateVerseDevotion(parsed, options = {}) {
   if (!title || !explanation || !meditation || !prayer || application.length < 3 || !question) return null;
   if (!hasKorean(combined)) return null;
   if (/\b(minutes?|hours?|meditation|prayer|application|explanation|coreMessage)\b/i.test(combined)) return null;
-  if (explanation.length < 180 || meditation.length < 80 || prayer.length < 100) return null;
+  if (explanation.length < 120 || meditation.length < 60 || prayer.length < 80) return null;
   if (hasExcessiveRepeats(combined)) return null;
 
   return {
