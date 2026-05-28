@@ -313,6 +313,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    setIsNavVisible(true);
+
+    if (tab !== 'read') {
+      return;
+    }
+
     let lastY = window.scrollY;
     const onScroll = () => {
       const nextY = window.scrollY;
@@ -323,7 +329,7 @@ export default function App() {
 
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [tab]);
 
   useEffect(() => {
     if (tab !== 'read') {
