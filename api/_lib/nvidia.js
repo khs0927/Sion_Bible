@@ -2,11 +2,11 @@ export const NVIDIA_BASE_URL = process.env.NVIDIA_BASE_URL || 'https://integrate
 export const NVIDIA_CHAT_ENDPOINT = `${NVIDIA_BASE_URL.replace(/\/+$/, '')}/chat/completions`;
 export const NVIDIA_MODELS_ENDPOINT = `${NVIDIA_BASE_URL.replace(/\/+$/, '')}/models`;
 
-export const DEFAULT_PRIMARY_FAST_MODEL = 'openai/gpt-oss-120b';
-export const DEFAULT_SECONDARY_FAST_MODEL = 'openai/gpt-oss-120b';
-export const DEFAULT_QUALITY_MODEL = 'openai/gpt-oss-120b';
-export const DEFAULT_QUALITY_MODEL_FALLBACK = 'openai/gpt-oss-120b';
-export const DEFAULT_DEEP_MODEL = 'openai/gpt-oss-120b';
+export const DEFAULT_PRIMARY_FAST_MODEL = 'meta/llama-3.1-8b-instruct';
+export const DEFAULT_SECONDARY_FAST_MODEL = 'meta/llama-3.1-8b-instruct';
+export const DEFAULT_QUALITY_MODEL = 'meta/llama-3.1-8b-instruct';
+export const DEFAULT_QUALITY_MODEL_FALLBACK = 'meta/llama-3.1-8b-instruct';
+export const DEFAULT_DEEP_MODEL = 'meta/llama-3.1-8b-instruct';
 
 export const PREFERRED_NVIDIA_MODELS = [
   DEFAULT_PRIMARY_FAST_MODEL,

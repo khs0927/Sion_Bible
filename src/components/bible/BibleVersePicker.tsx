@@ -4,6 +4,7 @@ import { BibleVerseSelectableList } from './BibleVerseSelectableList';
 import { type BibleBook } from '../../data/bibleBooks';
 import { Loader2 } from 'lucide-react';
 import { sanitizeScriptureText } from '../../utils/textUtils';
+import { loadBibleVerseIndex } from '../../services/bibleIndex';
 
 interface Verse {
   verse: number;
@@ -75,15 +76,21 @@ export function BibleVersePicker({
   // Remove the automatic onNavigate sync that causes loops.
   // Instead, onNavigate will be called by explicit user actions if needed.
 
-  const loadChapter = useCallback(async (bookNumber: string | number, chap: number) => {
-    const res = await fetch(`https://api.getbible.net/v2/korean/${bookNumber}/${chap}.json`, { mode: 'cors' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (!Array.isArray(data?.verses)) throw new Error('no verses');
-    return data.verses.map((v: any) => ({
-      verse: Number(v.verse),
-      text: sanitizeScriptureText((v.text ?? '').replace(/\[[^\]]*\]/g, ''))
-    }));
+  // Load chapter verses from local korean-bible-index.json (user's own Bible text)
+  const loadChapter = useCallback(async (bookName: string, chap: number) => {
+    const fullIndex = await loadBibleVerseIndex();
+    const chapterVerses = fullIndex.filter(
+      (v) => v.bookName === bookName && v.chapter === chap
+    );
+    if (chapterVerses.length === 0) {
+      throw new Error('해당 장의 말씀을 찾을 수 없습니다.');
+    }
+    return chapterVerses
+      .sort((a, b) => a.verse - b.verse)
+      .map((v) => ({
+        verse: v.verse,
+        text: sanitizeScriptureText(v.text),
+      }));
   }, []);
 
   const loadRangeChapters = useCallback(async (range: import('../../types/bible').BibleReadRange) => {
@@ -102,7 +109,7 @@ export function BibleVersePicker({
         if (!book) continue;
 
         for (let c = start; c <= end; c++) {
-          const loadedVerses = await loadChapter(book.number, c);
+          const loadedVerses = await loadChapter(book.name, c);
           allChapters.push({
             bookName: book.name,
             chapter: c,
@@ -132,7 +139,7 @@ export function BibleVersePicker({
         setLoading(true);
         setErr('');
         try {
-          const loaded = await loadChapter(selBook.number, selChap);
+          const loaded = await loadChapter(selBook.name, selChap);
           setVerses(loaded);
         } catch {
           setErr('말씀을 불러오지 못했습니다.');
