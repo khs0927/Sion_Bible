@@ -11,7 +11,7 @@ import { ReadingRoomLayout } from './components/reading-room/ReadingRoomLayout';
 import { ReadingRoomPage } from './components/reading-room/ReadingRoomPage';
 import { MemoryHome } from './components/memory/MemoryHome';
 import { getDailyDevotion } from './services/dailyDevotions';
-import { createContextualFallback, readCachedVerseDevotion, type VerseDevotionResult } from './services/verseDevotionApi';
+import { readCachedVerseDevotion, type VerseDevotionResult } from './services/verseDevotionApi';
 import { VerseDevotionPanel } from './components/bible/VerseDevotionPanel';
 import { VerseQuestionPanel } from './components/bible/VerseQuestionPanel';
 import { ChapterNavigatorSheet } from './components/bible/ChapterNavigatorSheet';
@@ -276,8 +276,6 @@ export default function App() {
   const [routePath, setRoutePath] = useState(() => (typeof window === 'undefined' ? '/' : window.location.pathname));
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isChapterSheetOpen, setIsChapterSheetOpen] = useState(false);
-  const [homeDevotion, setHomeDevotion] = useState<import('./services/verseDevotionApi').VerseDevotionResult | null>(null);
-  const [homeDevotionLoading, setHomeDevotionLoading] = useState(false);
   const [isPwaGuideOpen, setIsPwaGuideOpen] = useState(false);
   const [isReadSelectMode, setIsReadSelectMode] = useState(false);
   const [readSelectedVerses, setReadSelectedVerses] = useState<ReadSelectedVerse[]>([]);
@@ -368,7 +366,7 @@ export default function App() {
   const fsize = FS[fontSize];
   const currentHomeVerse = homeHistory[homeIndex] ?? BIBLE_VERSES[getDailyIdx()];
   const currentHomeRef = `${currentHomeVerse.book} ${currentHomeVerse.chapter}:${currentHomeVerse.verse}`;
-  const currentHomeDevotion = homeDevotion ?? getDailyDevotion(currentHomeVerse);
+  const currentHomeDevotion = getDailyDevotion(currentHomeVerse);
   const currentHomeExplanation = currentHomeDevotion.explanation || currentHomeDevotion.meditation;
   const currentVerseBackground = verseBackgrounds[
     `${currentHomeVerse.book}-${currentHomeVerse.chapter}-${currentHomeVerse.verse}`
@@ -403,54 +401,7 @@ export default function App() {
     if (event.currentTarget.scrollTop > 8) setSheetExpanded(sheet, true);
   };
 
-  // Sync AI devotion for currentHomeVerse (Uses real AI model like Bible tab)
-  useEffect(() => {
-    let active = true;
-    const requestKey = `${currentHomeRef}:${currentHomeVerse.content}`;
-    setIsHomeQuestionOpen(false);
 
-    setHomeDevotion(null); // Clear previous devotion so nothing shows while loading
-    setHomeDevotionLoading(true);
-    const fetchDevotion = async () => {
-      const ref = currentHomeRef;
-      const text = currentHomeVerse.content;
-      const isCurrentRequest = () => active && requestKey === `${currentHomeRef}:${currentHomeVerse.content}`;
-      
-      // 1. Check cache for AI generated devotions (Llama 3.1 8B)
-      const cached = readCachedVerseDevotion(ref, text);
-      if (cached) {
-        if (isCurrentRequest()) {
-          setHomeDevotion(cached);
-          setHomeDevotionLoading(false);
-        }
-        return;
-      }
-
-      // 2. Generate new AI devotion via Llama 3.1 8B
-      setHomeDevotionLoading(true);
-      try {
-        const { getOrGenerateVerseDevotion } = await import('./services/verseDevotionApi');
-        const response = await getOrGenerateVerseDevotion({ ref, verseText: text });
-
-        if (isCurrentRequest()) {
-          if (response?.result) {
-            setHomeDevotion(response.result);
-          }
-          setHomeDevotionLoading(false);
-        }
-      } catch (e) {
-        console.error('Failed to fetch devotion', e);
-        if (isCurrentRequest()) {
-          // If AI fails completely, load fallback as a last resort
-          setHomeDevotion(createContextualFallback(ref, text, 'LOCAL_FALLBACK'));
-          setHomeDevotionLoading(false);
-        }
-      }
-    };
-
-    fetchDevotion();
-    return () => { active = false; };
-  }, [currentHomeVerse, currentHomeRef]);
 
   const handleSelectChapter = ({ bookId, chapter }: { bookId: string; bookName: string; chapter: number }) => {
     const book = BIBLE_BOOKS.find(b => b.id === bookId);
@@ -1107,51 +1058,15 @@ export default function App() {
                   <span>듣기</span>
                 </button>
               </div>
-              <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
-                <div className="serif-verse" style={{ borderRadius: 16, background: th.solid, border: `1px solid ${th.line}`, padding: 13, position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 13 }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      {assetIcon(designDecorations.pottedSprout, 25)}
-                      <span className={homeDevotionLoading ? "animate-pulse text-[#A89278]" : ""}>
-                        {homeDevotionLoading ? '묵상문을 불러오고 있습니다.' : '묵상문'}
-                      </span>
-                    </span>
-                    <button
-                      type="button"
-                      aria-label="묵상문 저장"
-                      disabled={homeDevotionLoading || !currentHomeDevotion}
-                      onClick={() => currentHomeDevotion && saveDevotionSection('meditation', { ref: currentHomeRef, text: currentHomeVerse.content }, currentHomeDevotion)}
-                      style={{ ...circle(false), width: 30, height: 30, borderRadius: 10, opacity: homeDevotionLoading ? 0.3 : 1, cursor: homeDevotionLoading ? 'not-allowed' : 'pointer' }}
-                    >
-                      <Bookmark size={14} />
-                    </button>
-                  </div>
-                  <div style={{ fontSize: fsize, lineHeight: 1.8 }}>
-                    {homeDevotionLoading ? '' : decodeHtml(currentHomeDevotion?.meditation)}
-                  </div>
-                </div>
-                <div className="serif-verse" style={{ borderRadius: 16, background: th.solid, border: `1px solid ${th.line}`, padding: 13, position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 7, color: th.accent, fontWeight: 900, fontSize: 13 }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      {assetIcon(designDecorations.crossClouds, 27)}
-                      <span className={homeDevotionLoading ? "animate-pulse text-[#A89278]" : ""}>
-                        {homeDevotionLoading ? '기도문을 불러오고 있습니다.' : '기도문'}
-                      </span>
-                    </span>
-                    <button
-                      type="button"
-                      aria-label="기도문 저장"
-                      disabled={homeDevotionLoading || !currentHomeDevotion}
-                      onClick={() => currentHomeDevotion && saveDevotionSection('prayer', { ref: currentHomeRef, text: currentHomeVerse.content }, currentHomeDevotion)}
-                      style={{ ...circle(false), width: 30, height: 30, borderRadius: 10, opacity: homeDevotionLoading ? 0.3 : 1, cursor: homeDevotionLoading ? 'not-allowed' : 'pointer' }}
-                    >
-                      <Bookmark size={14} />
-                    </button>
-                  </div>
-                  <div style={{ fontSize: fsize, lineHeight: 1.8 }}>
-                    {homeDevotionLoading ? '' : ensureAmen(decodeHtml(currentHomeDevotion?.prayer))}
-                  </div>
-                </div>
+              <div style={{ marginTop: 10 }}>
+                <VerseDevotionPanel
+                  selectedVerse={{
+                    ref: currentHomeRef,
+                    text: currentHomeVerse.content
+                  }}
+                  onSaveDevotionSection={(section, devotion) => saveDevotionSection(section, { ref: currentHomeRef, text: currentHomeVerse.content }, devotion)}
+                  fontSize={fsize}
+                />
               </div>
             </section>
 
