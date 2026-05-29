@@ -16,6 +16,7 @@ interface SelectedVerse {
 
 interface VerseDevotionPanelProps {
   selectedVerse: SelectedVerse | null;
+  initialDevotion?: VerseDevotionResult | null;
   onGoToMemory?: (verse: SelectedVerse) => void;
   onSaveDevotionSection?: (section: 'explanation' | 'meditation' | 'prayer' | 'application', devotion: VerseDevotionResult) => void;
   fontSize?: string;
@@ -136,6 +137,7 @@ function SectionCard({
 
 export function VerseDevotionPanel({
   selectedVerse,
+  initialDevotion,
   onSaveDevotionSection,
   fontSize = '1rem',
 }: VerseDevotionPanelProps) {
@@ -156,6 +158,13 @@ export function VerseDevotionPanel({
     async function run() {
       if (!selectedVerse) return;
       const isCurrentRequest = () => !cancelled && requestKey === `${selectedVerse.ref}:${selectedVerse.text}`;
+
+      if (initialDevotion) {
+        setDevotion(initialDevotion);
+        setErrorMessage('');
+        setLoading(false);
+        return;
+      }
 
       setDevotion(createContextualFallback(selectedVerse.ref, selectedVerse.text, 'LOCAL_INITIAL'));
       setErrorMessage('');
@@ -196,7 +205,7 @@ export function VerseDevotionPanel({
     return () => {
       cancelled = true;
     };
-  }, [selectedVerse?.ref, selectedVerse?.text, selectedVerse?.meditation, selectedVerse?.prayer]);
+  }, [selectedVerse?.ref, selectedVerse?.text, selectedVerse?.meditation, selectedVerse?.prayer, initialDevotion]);
 
   if (!selectedVerse) return null;
 

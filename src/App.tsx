@@ -1062,6 +1062,7 @@ export default function App() {
                     ref: currentHomeRef,
                     text: currentHomeVerse.content
                   }}
+                  initialDevotion={currentHomeDevotion}
                   onSaveDevotionSection={(section, devotion) => saveDevotionSection(section, { ref: currentHomeRef, text: currentHomeVerse.content }, devotion)}
                   fontSize={fsize}
                 />
