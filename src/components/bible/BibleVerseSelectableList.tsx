@@ -1,5 +1,6 @@
 import { Check, Bookmark } from 'lucide-react';
 import { sanitizeScriptureText } from '../../utils/textUtils';
+import { isJesusSpokenVerse, RED_LETTER_COLOR } from '../../utils/redLetters';
 
 interface Verse {
   verse: number;
@@ -17,6 +18,8 @@ interface BibleVerseSelectableListProps {
   isSaved?: (verseNumber: number) => boolean;
   onCopy?: (verse: Verse) => void;
   selectionMode?: boolean;
+  bookName?: string;
+  chapter?: number;
 }
 
 export function BibleVerseSelectableList({
@@ -29,6 +32,8 @@ export function BibleVerseSelectableList({
   onToggleSave,
   isSaved,
   selectionMode = false,
+  bookName,
+  chapter,
 }: BibleVerseSelectableListProps) {
 
   return (
@@ -37,6 +42,9 @@ export function BibleVerseSelectableList({
         const isSelected = selectedVerses.includes(v.verse);
         const showCheckbox = mode === 'select' || selectionMode;
         const saved = isSaved?.(v.verse);
+        const isRedLetter = bookName && chapter
+          ? isJesusSpokenVerse(bookName, chapter, v.verse, v.text)
+          : false;
         
         return (
           <div
@@ -95,8 +103,13 @@ export function BibleVerseSelectableList({
                   if (showCheckbox) onToggleVerse(v.verse);
                   else onVerseClick(v);
                 }}
-                className="min-w-0 flex-1 bg-transparent p-0 text-left leading-[1.72] text-[#3D3129] serif-verse"
-                style={{ fontSize, whiteSpace: 'pre-wrap' }}
+                className="min-w-0 flex-1 bg-transparent p-0 text-left leading-[1.72] serif-verse"
+                style={{
+                  fontSize,
+                  whiteSpace: 'pre-wrap',
+                  color: isRedLetter ? RED_LETTER_COLOR : '#3D3129',
+                  fontWeight: isRedLetter ? 650 : 400,
+                }}
               >
                 {sanitizeScriptureText(v.text)}
               </button>
