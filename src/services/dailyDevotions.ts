@@ -122,10 +122,32 @@ function buildPrayer(ref: string, keyPhrase: string) {
   return `아버지, 오늘 ${ref} 말씀을 제 마음에 새깁니다. '${keyPhrase}'라는 말씀을 통해 아버지의 마음을 바라봅니다. 제 생각과 감정보다 아버지의 말씀을 더 신뢰합니다. 오늘도 이 말씀을 붙들고 작은 순종으로 아버지의 길을 걷습니다. 아버지, 감사합니다. 예수 그리스도의 이름으로 기도드립니다. 아멘.`;
 }
 
+
+function buildCuratedHomeDevotion(ref: string, verse: BibleVerse, curated: VerseDevotionResult) {
+  const keyPhrase = curated.keyPhrase || pickKeyPhrase(verse);
+  const categoryMessage = CATEGORY_MESSAGES[verse.category];
+  return buildLocalDevotionFromVerse(ref, verse.content, {
+    ...curated,
+    reference: ref,
+    title: curated.title || REF_TITLES[ref] || CATEGORY_TITLES[verse.category],
+    coreMessage: curated.coreMessage || categoryMessage,
+    keyWords: curated.keyWords?.length ? curated.keyWords : [verse.category, '말씀', '오늘'],
+    keyPhrase,
+    explanation: `${ref} 말씀은 오늘의 상황을 해석하기 전에 먼저 하나님을 바라보게 합니다. ${categoryMessage} 이 구절은 단순한 위로나 교훈에 머물지 않고, 지금 내 마음이 어디를 향하고 있는지 조용히 비추어 줍니다. ${verse.meditation}`,
+    meditation: verse.meditation,
+    prayer: verse.prayer,
+    application: CATEGORY_APPLICATIONS[verse.category],
+    question: `오늘 '${keyPhrase}' 말씀 앞에서 하나님께 맡기고 순종해야 할 한 가지는 무엇일까?`,
+    reflectionQuestion: `오늘 '${keyPhrase}' 말씀 앞에서 하나님께 맡기고 순종해야 할 한 가지는 무엇일까?`,
+    fallback: false,
+    model: curated.model || 'curated-home-ko-v1',
+  });
+}
+
 export function getDailyDevotion(verse: BibleVerse): VerseDevotionResult {
   const ref = refOf(verse);
   const curated = HOME_DEVOTIONS_CURATED[ref];
-  if (curated) return buildLocalDevotionFromVerse(ref, verse.content, curated);
+  if (curated) return buildCuratedHomeDevotion(ref, verse, curated);
 
   const keyPhrase = pickKeyPhrase(verse);
 
