@@ -255,6 +255,8 @@ export function BibleVersePicker({
               onToggleSave={onToggleSave ? (v) => onToggleSave({ ref: `${chap.bookName} ${chap.chapter}:${v.verse}`, text: v.text }) : undefined}
               isSaved={isSaved ? (vNum) => isSaved(`${chap.bookName} ${chap.chapter}:${vNum}`) : undefined}
               onCopy={onCopy ? (v) => onCopy(v.text) : undefined}
+              bookName={chap.bookName}
+              chapter={chap.chapter}
             />
           </div>
         ))}
@@ -271,6 +273,8 @@ export function BibleVersePicker({
             onToggleSave={onToggleSave ? (v) => onToggleSave({ ref: `${selBook.name} ${selChap}:${v.verse}`, text: v.text }) : undefined}
             isSaved={isSaved ? (vNum) => isSaved(`${selBook.name} ${selChap}:${vNum}`) : undefined}
             onCopy={onCopy ? (v) => onCopy(v.text) : undefined}
+            bookName={selBook.name}
+            chapter={selChap}
           />
         )}
 
