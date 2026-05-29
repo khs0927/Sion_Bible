@@ -151,7 +151,7 @@ export async function resolveNvidiaModelsForVerseDevotion() {
   const secondaryFastModel = recommended.secondaryFastModel || DEFAULT_SECONDARY_FAST_MODEL;
   const qualityModel = recommended.qualityModel || DEFAULT_QUALITY_MODEL_FALLBACK;
   const deepModel = recommended.deepModel || DEFAULT_DEEP_MODEL;
-  const modelsForRace = compactModels([primaryFastModel, secondaryFastModel, qualityModel]);
+  const modelsForRace = compactModels([qualityModel, primaryFastModel, secondaryFastModel]);
 
   return {
     ...recommended,

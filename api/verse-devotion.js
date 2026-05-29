@@ -292,6 +292,61 @@ JSON 외 텍스트 금지`,
   ];
 }
 
+function buildCleanMessages(ref, verseText, mode = 'fast') {
+  const depthGuide = mode === 'deep'
+    ? '해설은 6~8문장, 묵상은 5~6문장, 기도문은 5~7문장으로 깊이 있게 작성한다.'
+    : '해설은 4~6문장, 묵상은 4~5문장, 기도문은 4~6문장으로 간결하게 작성한다.';
+
+  return [
+    {
+      role: 'system',
+      content: `너는 한국어 성경 묵상문을 작성하는 조심스럽고 따뜻한 도우미다.
+반드시 자연스러운 현대 한국어만 사용한다. 한자, 중국어, 일본어, 러시아어, 베트남어, 힌디어, 깨진 인코딩 문자를 절대 섞지 않는다.
+본문에 없는 내용을 지어내지 말고, 본문 흐름과 하나님의 성품, 예수 그리스도의 은혜, 오늘의 작은 순종으로 연결한다.
+입력된 본문 위치를 다른 성경책이나 장절로 바꾸지 않는다.
+고난이나 질병, 실패를 개인의 죄 때문이라고 단정하지 않는다.
+출력은 JSON 객체만 반환한다. 마크다운, 코드블록, 설명 문장을 붙이지 않는다.
+기도문은 반드시 "우리 주 예수 그리스도의 이름으로 기도드립니다. 아멘."으로 끝낸다.
+${depthGuide}
+JSON 필드: reference, title, coreMessage, keyWords, keyPhrase, explanation, meditation, prayer, application, question`,
+    },
+    {
+      role: 'user',
+      content: `본문 위치: ${ref}
+본문: ${verseText}
+
+이 말씀에 맞는 묵상 데이터를 작성해줘.
+title, coreMessage, explanation, meditation 중 최소 두 곳에는 본문 위치나 본문 핵심어를 직접 반영해줘.
+본문의 주요 표현을 2개 이상 그대로 사용해줘.
+application은 오늘 바로 실천할 수 있는 짧은 행동 3개 배열로 작성해줘.
+question은 오늘 마음에 붙들 질문 1개만 작성해줘.`,
+    },
+  ];
+}
+
+function buildCleanContextualFallbackDevotion(ref) {
+  const normalizedRef = String(ref || '').trim() || '선택한 말씀';
+  const question = '오늘 이 말씀 앞에서 하나님께 맡겨야 할 마음은 무엇일까?';
+  return {
+    ok: true,
+    reference: normalizedRef,
+    title: '짧은 묵상',
+    coreMessage: '',
+    keyWords: ['말씀', '기도'],
+    keyPhrase: '말씀 붙들기',
+    explanation: '',
+    meditation: '성경구절을 다시 한번 천천히 읽어보며 그 의미를 묵상해봅시다.',
+    prayer: `주님, 이 말씀을 통해 오늘 제 마음을 비추시고 믿음으로 응답하게 해주세요. 우리 주 예수 그리스도의 이름으로 기도드립니다. 아멘.`,
+    application: [
+      '본문을 한 번 더 천천히 읽기',
+      '마음에 남는 한 문장으로 짧게 기도하기',
+    ],
+    question,
+    reflectionQuestion: question,
+    fallback: true,
+  };
+}
+
 function numberEnv(name, fallback) {
   const value = Number(process.env[name]);
   return Number.isFinite(value) && value > 0 ? value : fallback;
@@ -361,13 +416,13 @@ export default async function handler(req, res) {
     const apiKey = getNvidiaApiKey();
     if (!apiKey) {
       return sendJson(res, 200, {
-        ...buildContextualFallbackDevotion(ref, verseText),
+        ...buildCleanContextualFallbackDevotion(ref),
         errorCode: 'MISSING_NVIDIA_API_KEY',
       });
     }
 
     const requestMode = mode === 'deep' ? 'deep' : 'fast';
-    const messages = buildMessages(ref, verseText, requestMode);
+    const messages = buildCleanMessages(ref, verseText, requestMode);
 
     try {
       const raceResult = requestMode === 'deep'
@@ -420,13 +475,13 @@ export default async function handler(req, res) {
       }
 
       return sendJson(res, 200, {
-        ...buildContextualFallbackDevotion(ref, verseText),
+        ...buildCleanContextualFallbackDevotion(ref),
         errorCode,
       });
     }
   } catch (fatalError) {
     return sendJson(res, 200, {
-      ...buildContextualFallbackDevotion(req.body?.ref, req.body?.verseText),
+      ...buildCleanContextualFallbackDevotion(req.body?.ref),
       error: fatalError instanceof Error ? fatalError.message : String(fatalError),
       errorCode: 'UNKNOWN_ERROR',
     });

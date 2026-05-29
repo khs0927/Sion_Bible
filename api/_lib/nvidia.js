@@ -20,6 +20,7 @@ export const PREFERRED_NVIDIA_MODELS = [
 ];
 
 const REQUIRED_PRAYER_ENDING = '우리 주 예수 그리스도의 이름으로 기도드립니다. 아멘.';
+const MIXED_SCRIPT_PATTERN = /[\u0400-\u04FF\u0900-\u097F\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]/;
 
 export function getNvidiaApiKey() {
   return process.env.NVIDIA_API_KEY;
@@ -256,6 +257,17 @@ export function ensurePrayerEnding(value) {
 
 function normalizeJesusLanguage(value) {
   return String(value || '')
+    .replace(/您的/g, '하나님의')
+    .replace(/我们的\s*/g, '우리의 ')
+    .replace(/的心/g, '마음')
+    .replace(/勇氣/g, '용기')
+    .replace(/прис행/g, '동행')
+    .replace(/nhớ나며/g, '기억하며')
+    .replace(/nhớ나게/g, '기억나게')
+    .replace(/nhớ나/g, '기억하')
+    .replace(/पहच�/g, '확인')
+    .replace(/\bsouvent\b/gi, '')
+    .replace(/\b[A-Za-zÀ-ỹ]{2,}\b/g, '')
     .replace(/예수께서/g, '예수님께서')
     .replace(/예수에게/g, '예수님께')
     .replace(/예수를/g, '예수님을')
@@ -278,6 +290,53 @@ function normalizeApplication(value, fallback) {
 
 function hasKorean(value) {
   return /[가-힣]/.test(String(value || ''));
+}
+
+function hasMixedScript(value) {
+  return MIXED_SCRIPT_PATTERN.test(String(value || ''));
+}
+
+function verseTokens(value) {
+  const stopWords = new Set([
+    '하나님',
+    '말씀',
+    '오늘',
+    '우리',
+    '내가',
+    '네가',
+    '함께',
+    '주님',
+    '사랑',
+    '믿음',
+    '마음',
+    '하라',
+    '것이',
+  ]);
+  return String(value || '')
+    .replace(/[^\p{Script=Hangul}\p{N}\s]/gu, ' ')
+    .split(/\s+/)
+    .map((item) => item.trim())
+    .filter((item) => item.length >= 2 && !stopWords.has(item));
+}
+
+function hasVerseOverlap(parsed, options = {}) {
+  const verseText = String(options.verseText || '').trim();
+  if (!verseText) return true;
+  const required = verseTokens(verseText).filter((token) => token.length >= 3).slice(0, 12);
+  if (required.length === 0) return true;
+
+  const responseText = [
+    parsed?.title,
+    parsed?.coreMessage,
+    parsed?.keyPhrase,
+    parsed?.explanation,
+    parsed?.meditation,
+    parsed?.prayer,
+    Array.isArray(parsed?.application) ? parsed.application.join(' ') : parsed?.application,
+    parsed?.question,
+  ].join(' ');
+  const matches = required.filter((token) => responseText.includes(token));
+  return matches.length >= Math.min(2, required.length);
 }
 
 function hasExcessiveRepeats(value) {
@@ -320,6 +379,9 @@ export function validateVerseDevotion(parsed, options = {}) {
   const combined = `${title}\n${coreMessage}\n${keyWords.join('\n')}\n${explanation}\n${meditation}\n${prayer}\n${application.join('\n')}\n${question}`;
   if (!title || !explanation || !meditation || !prayer || application.length < 3 || !question) return null;
   if (!hasKorean(combined)) return null;
+  if (hasMixedScript(combined)) return null;
+  if (/\?{2,}/.test(combined)) return null;
+  if (!hasVerseOverlap(parsed, options)) return null;
   if (/\b(minutes?|hours?|meditation|prayer|application|explanation|coreMessage)\b/i.test(combined)) return null;
   if (explanation.length < 120 || meditation.length < 60 || prayer.length < 80) return null;
   if (hasExcessiveRepeats(combined)) return null;

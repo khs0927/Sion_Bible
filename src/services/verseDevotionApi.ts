@@ -1,4 +1,4 @@
-import { BIBLE_VERSES } from '../data/verses';
+﻿import { BIBLE_VERSES } from '../data/verses';
 
 export interface VerseDevotionResult {
   reference?: string;
@@ -20,11 +20,6 @@ export interface VerseDevotionResult {
 
 const CACHE_PREFIX = 'sion_verse_devotion_v12_';
 const REQUIRED_PRAYER_ENDING = '아버지, 감사합니다. 예수 그리스도의 이름으로 기도드립니다. 아멘.';
-interface DevotionContext {
-  ref: string;
-  verseText: string;
-}
-
 function normalizeRef(ref: string) {
   return String(ref || '').replace(/\s+(?=\d)/g, '').replace(/\s/g, '');
 }
@@ -53,6 +48,10 @@ function sanitizeKoreanDevotionText(value: string) {
     .replace(/cụ체적인/g, '구체적인')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+export function cleanDevotionText(value: unknown) {
+  return sanitizeKoreanDevotionText(String(value || ''));
 }
 
 function stripPrayerEnding(value: string) {
