@@ -1,4 +1,5 @@
 import type { BibleVerse } from '../data/verses';
+import { HOME_DEVOTIONS_CURATED } from '../data/homeDevotions.curated';
 import { buildLocalDevotionFromVerse, type VerseDevotionResult } from './verseDevotionApi';
 
 const CATEGORY_TITLES: Record<BibleVerse['category'], string> = {
@@ -123,6 +124,9 @@ function buildPrayer(ref: string, keyPhrase: string) {
 
 export function getDailyDevotion(verse: BibleVerse): VerseDevotionResult {
   const ref = refOf(verse);
+  const curated = HOME_DEVOTIONS_CURATED[ref];
+  if (curated) return buildLocalDevotionFromVerse(ref, verse.content, curated);
+
   const keyPhrase = pickKeyPhrase(verse);
 
   return buildLocalDevotionFromVerse(ref, verse.content, {

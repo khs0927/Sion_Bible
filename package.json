@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 3000",
+    "dev:api": "node scripts/local-api-dev-server.mjs",
     "dev:vercel": "npx vercel dev --listen 3000",
     "build": "vite build",
     "typecheck": "tsc --noEmit",

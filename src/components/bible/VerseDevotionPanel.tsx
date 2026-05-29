@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { buildLocalDevotionFromVerse, createContextualFallback, getOrGenerateVerseDevotion, readCachedVerseDevotion, type VerseDevotionResult } from '../../services/verseDevotionApi';
+import { cleanDevotionText, createContextualFallback, getOrGenerateVerseDevotion, readCachedVerseDevotion, type VerseDevotionResult } from '../../services/verseDevotionApi';
 import { VerseQuestionPanel } from './VerseQuestionPanel';
 import { Bookmark, Check } from 'lucide-react';
 import { KawaiiVerseIcon } from '../icons';
@@ -22,7 +22,7 @@ interface VerseDevotionPanelProps {
 }
 
 function stripMarkdown(text: string) {
-  return String(text || '').replace(/\*\*/g, '');
+  return cleanDevotionText(String(text || '').replace(/\*\*/g, ''));
 }
 
 function softenDevotionText(text: string) {
@@ -110,7 +110,7 @@ function SectionCard({
     <article className={`rounded-[22px] p-5 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500 ${delay} ${toneClass}`}>
       <div className="mb-3 flex items-center justify-between gap-3">
         <p
-          className={`font-bold text-[#A17C5B] serif-verse ${titleSize === 'body' ? '' : 'text-[11px]'}`}
+          className={`font-bold text-[#A17C5B] serif-verse ${title.includes('불러오고') ? 'animate-pulse' : ''} ${titleSize === 'body' ? '' : 'text-[11px]'}`}
           style={{
             fontFamily: "'MaruBuri', 'S-Core Dream', serif",
             fontSize: titleSize === 'body' ? titleFontSize || '1rem' : undefined,
@@ -157,28 +157,9 @@ export function VerseDevotionPanel({
       if (!selectedVerse) return;
       const isCurrentRequest = () => !cancelled && requestKey === `${selectedVerse.ref}:${selectedVerse.text}`;
 
-      const localDevotion = buildLocalDevotionFromVerse(selectedVerse.ref, selectedVerse.text, {
-        title: selectedVerse.title,
-        meditation: selectedVerse.meditation,
-        prayer: selectedVerse.prayer,
-        application: selectedVerse.application,
-        fallback: false,
-      });
-      const hasLocalContent = Boolean(selectedVerse.meditation || selectedVerse.prayer || selectedVerse.application);
-      setDevotion(hasLocalContent ? localDevotion : createContextualFallback(selectedVerse.ref, selectedVerse.text, 'LOCAL_INITIAL'));
+      setDevotion(createContextualFallback(selectedVerse.ref, selectedVerse.text, 'LOCAL_INITIAL'));
       setErrorMessage('');
       setLoading(true);
-
-      if (
-        localDevotion.explanation &&
-        localDevotion.application &&
-        (Array.isArray(localDevotion.application) ? localDevotion.application.length > 0 : String(localDevotion.application).trim()) &&
-        (localDevotion.question || localDevotion.reflectionQuestion) &&
-        selectedVerse.meditation &&
-        selectedVerse.prayer
-      ) {
-        setLoading(false);
-      }
 
       const cached = readCachedVerseDevotion(selectedVerse.ref, selectedVerse.text);
       if (cached) {
@@ -226,8 +207,8 @@ export function VerseDevotionPanel({
           <article className="rounded-[24px] bg-white/75 p-5 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500">
             <div className="flex items-center gap-1 mb-2 text-[#A17C5B]">
               <KawaiiVerseIcon size={22} />
-              <p className={`text-xs font-bold ${loading ? 'animate-pulse' : ''}`}>
-                {loading ? '묵상문을 준비하고 있습니다.' : '말씀 해설'}
+              <p className={`text-xs font-bold ${loading && devotion.fallback ? 'animate-pulse' : ''}`}>
+                {loading && devotion.fallback ? '묵상문을 불러오고 있습니다.' : '말씀 해설'}
               </p>
             </div>
             <h3 className="text-lg font-black text-[#3D3129] mb-3 leading-tight title-font">
@@ -258,11 +239,11 @@ export function VerseDevotionPanel({
             </SectionCard>
           )}
 
-          <SectionCard title="묵상" delay="delay-100" titleSize="body" titleFontSize={fontSize} onBookmark={() => onSaveDevotionSection?.('meditation', devotion)}>
+          <SectionCard title={loading ? '묵상문을 불러오고 있습니다.' : '묵상'} delay="delay-100" titleSize="body" titleFontSize={fontSize} onBookmark={() => onSaveDevotionSection?.('meditation', devotion)}>
             <DevotionParagraph fontSize={fontSize}>{devotion.meditation}</DevotionParagraph>
           </SectionCard>
 
-          <SectionCard title="기도문" delay="delay-150" tone="prayer" titleSize="body" titleFontSize={fontSize} onBookmark={() => onSaveDevotionSection?.('prayer', devotion)}>
+          <SectionCard title={loading ? '기도문을 불러오고 있습니다.' : '기도문'} delay="delay-150" tone="prayer" titleSize="body" titleFontSize={fontSize} onBookmark={() => onSaveDevotionSection?.('prayer', devotion)}>
             <DevotionParagraph fontSize={fontSize}>{ensureAmen(stripMarkdown(devotion.prayer))}</DevotionParagraph>
           </SectionCard>
 
@@ -320,7 +301,7 @@ function DevotionLoadingMessage() {
       </div>
 
       <p className="text-lg font-black text-[#3D3129] mb-2">
-        묵상문을 준비하고 있습니다.
+        묵상문을 불러오고 있습니다.
       </p>
       <p className="text-xs leading-5 text-[#7B6A5D] font-medium serif-verse">
         본문을 따라 오늘의 기도와 묵상을 준비하고 있습니다.

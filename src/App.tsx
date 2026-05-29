@@ -11,7 +11,7 @@ import { ReadingRoomLayout } from './components/reading-room/ReadingRoomLayout';
 import { ReadingRoomPage } from './components/reading-room/ReadingRoomPage';
 import { MemoryHome } from './components/memory/MemoryHome';
 import { getDailyDevotion } from './services/dailyDevotions';
-import { readCachedVerseDevotion, type VerseDevotionResult } from './services/verseDevotionApi';
+import { cleanDevotionText, readCachedVerseDevotion, type VerseDevotionResult } from './services/verseDevotionApi';
 import { VerseDevotionPanel } from './components/bible/VerseDevotionPanel';
 import { VerseQuestionPanel } from './components/bible/VerseQuestionPanel';
 import { ChapterNavigatorSheet } from './components/bible/ChapterNavigatorSheet';
@@ -400,8 +400,6 @@ export default function App() {
   const expandSheetOnScroll = (sheet: 'homeQuestion' | 'detail') => (event: ReactUIEvent<HTMLElement>) => {
     if (event.currentTarget.scrollTop > 8) setSheetExpanded(sheet, true);
   };
-
-
 
   const handleSelectChapter = ({ bookId, chapter }: { bookId: string; bookName: string; chapter: number }) => {
     const book = BIBLE_BOOKS.find(b => b.id === bookId);
@@ -1273,7 +1271,7 @@ export default function App() {
               )}
               {currentHomeExplanation && (
                 <div style={{ fontSize: fsize, lineHeight: 1.85, color: th.text }}>
-                  {decodeHtml(currentHomeExplanation)}
+                  {decodeHtml(cleanDevotionText(currentHomeExplanation))}
                 </div>
               )}
             </article>
