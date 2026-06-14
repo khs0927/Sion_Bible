@@ -34,5 +34,98 @@
   <body>
     <div id="root"></div>
     <script type="module" src="./src/main.tsx"></script>
+    <script>
+      (() => {
+        const CARD_SELECTOR = '.reorder-card';
+        let sourceCard = null;
+        let targetCard = null;
+        let startX = 0;
+        let startY = 0;
+        let isTracking = false;
+        let isDragging = false;
+
+        const createDragEvent = (type) => {
+          try {
+            return new DragEvent(type, { bubbles: true, cancelable: true });
+          } catch {
+            return new Event(type, { bubbles: true, cancelable: true });
+          }
+        };
+
+        const closestCard = (target) => {
+          if (!(target instanceof Element)) return null;
+          return target.closest(CARD_SELECTOR);
+        };
+
+        const clearTargetStyle = () => {
+          if (targetCard) targetCard.style.outline = '';
+        };
+
+        const resetDragState = () => {
+          if (sourceCard) sourceCard.style.opacity = '';
+          clearTargetStyle();
+          sourceCard = null;
+          targetCard = null;
+          isTracking = false;
+          isDragging = false;
+        };
+
+        const beginSyntheticDrag = () => {
+          if (!sourceCard || isDragging) return;
+          isDragging = true;
+          sourceCard.style.opacity = '0.72';
+          sourceCard.dispatchEvent(createDragEvent('dragstart'));
+        };
+
+        document.addEventListener('pointerdown', (event) => {
+          const card = closestCard(event.target);
+          if (!card || event.pointerType === 'mouse') return;
+          sourceCard = card;
+          targetCard = card;
+          startX = event.clientX;
+          startY = event.clientY;
+          isTracking = true;
+          isDragging = false;
+        }, { capture: true, passive: true });
+
+        document.addEventListener('pointermove', (event) => {
+          if (!isTracking || !sourceCard) return;
+
+          const distance = Math.hypot(event.clientX - startX, event.clientY - startY);
+          if (!isDragging && distance > 8) beginSyntheticDrag();
+          if (!isDragging) return;
+
+          event.preventDefault();
+          const hovered = closestCard(document.elementFromPoint(event.clientX, event.clientY));
+          if (!hovered || hovered === targetCard) return;
+
+          clearTargetStyle();
+          targetCard = hovered;
+          targetCard.style.outline = '2px dashed rgba(107, 142, 111, 0.55)';
+          targetCard.dispatchEvent(createDragEvent('dragover'));
+        }, { capture: true, passive: false });
+
+        const finishSyntheticDrag = () => {
+          if (!isTracking || !sourceCard) return;
+          const source = sourceCard;
+          const target = targetCard;
+
+          if (isDragging && target && target !== source) {
+            window.setTimeout(() => {
+              target.dispatchEvent(createDragEvent('drop'));
+              source.dispatchEvent(createDragEvent('dragend'));
+              resetDragState();
+            }, 0);
+            return;
+          }
+
+          if (isDragging) source.dispatchEvent(createDragEvent('dragend'));
+          resetDragState();
+        };
+
+        document.addEventListener('pointerup', finishSyntheticDrag, { capture: true, passive: true });
+        document.addEventListener('pointercancel', finishSyntheticDrag, { capture: true, passive: true });
+      })();
+    </script>
   </body>
 </html>
