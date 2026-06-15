@@ -1,13 +1,12 @@
 // UI patches for the Sion Bible PWA.
-// These patches intentionally run outside React because a few saved-screen controls
-// are injected by index.html and can otherwise fight React re-renders on iOS PWA.
+// Saved-screen controls are partially injected from index.html, so this module
+// keeps their iOS PWA interactions stable without changing the main React tree.
 
 (() => {
   const CHECK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>';
   const COPY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
   const selectedRefs = new Set<string>();
   let selectMode = false;
-  let allowOneBibleNav = false;
 
   const $all = <T extends Element = Element>(selector: string) => [...document.querySelectorAll<T>(selector)];
   const buttonText = (button: Element | null) => button?.textContent?.replace(/\s+/g, '').trim() || '';
@@ -38,19 +37,8 @@
       body.sion-saved-screen .sion-clean-bulk-copy { border-color: transparent !important; color: #fff !important; background: linear-gradient(145deg, #6F8F72, #86B7AD) !important; }
       body.sion-saved-screen .sion-clean-bulk-cancel { color: #756B61 !important; background: #fff !important; }
       body.sion-saved-screen .sion-bulk-copy-bar { display: none !important; }
-
       .sion-nav-verified { min-height: 60px !important; touch-action: manipulation !important; }
       .sion-nav-verified.active { transform: translateY(-2px) !important; }
-      .sion-bible-nav-backdrop { position: fixed; inset: 0; z-index: 10040; display: flex; align-items: flex-end; justify-content: center; padding: 16px; background: rgba(35,29,24,.32); backdrop-filter: blur(4px); }
-      .sion-bible-nav-sheet { width: min(100%, 430px); border: 1px solid #E4D8CA; border-radius: 24px; background: #FFFCF7; box-shadow: 0 18px 44px rgba(52,45,39,.18); padding: 16px; color: #342D27; font-family: 'S-Core Dream', Pretendard, system-ui, sans-serif; }
-      .sion-bible-nav-title { font-weight: 900; font-size: 18px; margin-bottom: 4px; }
-      .sion-bible-nav-desc { color: #756B61; font-size: 12px; line-height: 1.55; margin-bottom: 12px; }
-      .sion-bible-nav-options { display: grid; gap: 8px; }
-      .sion-bible-nav-option { width: 100%; border: 1px solid #E4D8CA; border-radius: 16px; background: #F8F3EC; color: #342D27; padding: 12px 13px; font: inherit; font-weight: 900; text-align: left; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-      .sion-bible-nav-option.primary { border-color: transparent; background: linear-gradient(145deg, #6F8F72, #86B7AD); color: #fff; }
-      .sion-bible-nav-option small { display: block; color: #756B61; font-size: 11px; font-weight: 700; margin-top: 3px; }
-      .sion-bible-nav-option.primary small { color: rgba(255,255,255,.86); }
-      .sion-bible-nav-close { width: 100%; margin-top: 10px; border: 1px solid #E4D8CA; border-radius: 15px; background: #fff; color: #756B61; padding: 11px; font: inherit; font-weight: 900; }
     `;
     document.head.appendChild(style);
   };
@@ -81,6 +69,7 @@
       textarea.remove();
     }
   };
+
   const cardToText = (card: Element) => `${cardRef(card)}\n${card.querySelector('.serif-verse')?.textContent?.trim() || ''}`.trim();
 
   const updateBulkBar = () => {
@@ -200,54 +189,9 @@
     }
   };
 
-  const bibleNavButton = () => $all<HTMLButtonElement>('nav button').find(button => button.getAttribute('aria-label') === '성경 탭' || buttonText(button) === '성경');
-  const clickNav = (label: string) => $all<HTMLButtonElement>('nav button').find(button => button.getAttribute('aria-label') === `${label} 탭` || buttonText(button) === label)?.click();
-
-  const closeBibleSheet = () => document.querySelector('.sion-bible-nav-backdrop')?.remove();
-  const openBibleSheet = () => {
-    closeBibleSheet();
-    const backdrop = document.createElement('div');
-    backdrop.className = 'sion-bible-nav-backdrop';
-    backdrop.innerHTML = `
-      <section class="sion-bible-nav-sheet" role="dialog" aria-modal="true" aria-label="성경 이동 메뉴">
-        <div class="sion-bible-nav-title">성경 메뉴</div>
-        <div class="sion-bible-nav-desc">성경 아이콘을 눌러도 바로 이동하지 않고, 원하는 동작을 선택하도록 했습니다.</div>
-        <div class="sion-bible-nav-options">
-          <button type="button" class="sion-bible-nav-option primary" data-bible-action="open"><span>마지막 읽은 성경 열기<small>저장된 마지막 권/장으로 이동</small></span><strong>›</strong></button>
-          <button type="button" class="sion-bible-nav-option" data-bible-action="search"><span>성경 검색 열기<small>구절이나 단어로 찾기</small></span><strong>⌕</strong></button>
-          <button type="button" class="sion-bible-nav-option" data-bible-action="plan"><span>통독 메뉴로 가기<small>읽기 계획과 오늘 본문 확인</small></span><strong>›</strong></button>
-        </div>
-        <button type="button" class="sion-bible-nav-close">닫기</button>
-      </section>
-    `;
-    backdrop.addEventListener('click', event => {
-      const target = event.target instanceof Element ? event.target : null;
-      if (target === backdrop || target?.closest('.sion-bible-nav-close')) {
-        closeBibleSheet();
-        return;
-      }
-      const action = target?.closest<HTMLElement>('[data-bible-action]')?.dataset.bibleAction;
-      if (!action) return;
-      closeBibleSheet();
-      if (action === 'plan') {
-        clickNav('통독');
-        return;
-      }
-      allowOneBibleNav = true;
-      bibleNavButton()?.click();
-      if (action === 'search') {
-        window.setTimeout(() => $all<HTMLButtonElement>('button').find(button => button.getAttribute('aria-label') === '성경 검색')?.click(), 180);
-      }
-    });
-    document.body.appendChild(backdrop);
-  };
-
   const applyNavCleanup = () => {
-    installStyle();
-    const buttons = $all<HTMLButtonElement>('nav button');
-    buttons.forEach(button => {
+    $all<HTMLButtonElement>('nav button').forEach(button => {
       button.classList.add('sion-nav-verified');
-      button.classList.toggle('active', button.classList.contains('active'));
       if (!button.getAttribute('aria-label')) button.setAttribute('aria-label', `${buttonText(button)} 탭`);
     });
   };
@@ -255,7 +199,9 @@
   const verifyButtons = () => {
     const missing = ['홈', '성경', '통독', '암송', '저장']
       .filter(label => !$all<HTMLButtonElement>('nav button').some(button => buttonText(button) === label || button.getAttribute('aria-label') === `${label} 탭`));
-    if (missing.length > 0) console.warn('[Sion Bible] Missing nav buttons:', missing.join(', '));
+    if (missing.length > 0 && !location.pathname.startsWith('/reading-room')) {
+      console.warn('[Sion Bible] Missing nav buttons:', missing.join(', '));
+    }
   };
 
   const applyAll = () => {
@@ -286,6 +232,7 @@
     selectedRefs.clear();
     scheduleApply();
   };
+
   const toggleCard = (card: HTMLElement) => {
     const ref = cardRef(card);
     if (!ref) return;
@@ -293,6 +240,7 @@
     else selectedRefs.add(ref);
     scheduleApply();
   };
+
   const handleSelectionButton = (target: Element | null) => {
     const button = target?.closest('button');
     if (!button || !isSavedScreen()) return false;
@@ -303,18 +251,6 @@
     }
     return false;
   };
-  const handleBibleButton = (target: Element | null) => {
-    const button = target?.closest('button');
-    if (!button) return false;
-    const isBible = button.getAttribute('aria-label') === '성경 탭' || buttonText(button) === '성경';
-    if (!isBible) return false;
-    if (allowOneBibleNav) {
-      allowOneBibleNav = false;
-      return false;
-    }
-    openBibleSheet();
-    return true;
-  };
 
   const stop = (event: Event) => {
     event.preventDefault();
@@ -324,7 +260,7 @@
 
   document.addEventListener('pointerup', event => {
     const target = event.target instanceof Element ? event.target : null;
-    if (handleBibleButton(target) || handleSelectionButton(target)) {
+    if (handleSelectionButton(target)) {
       stop(event);
       return;
     }
@@ -341,7 +277,7 @@
 
   document.addEventListener('click', async event => {
     const target = event.target instanceof Element ? event.target : null;
-    if (handleBibleButton(target) || handleSelectionButton(target)) {
+    if (handleSelectionButton(target)) {
       stop(event);
       return;
     }
