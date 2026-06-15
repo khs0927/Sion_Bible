@@ -1,8 +1,7 @@
-import { BarChart3, BookOpen, CalendarCheck, ClipboardList, Gift } from 'lucide-react';
+import { BarChart3, CalendarCheck, ClipboardList, Gift } from 'lucide-react';
 
 const navItems = [
   { label: '오늘', href: '/reading-room', icon: CalendarCheck, section: 'today' },
-  { label: '성경', href: '/bible', icon: BookOpen, section: 'bible' },
   { label: '통독', href: '/reading-room', icon: ClipboardList, section: 'plan', featured: true },
   { label: '기록', href: '/reading-room/records', icon: BarChart3, section: 'records' },
   { label: '보상', href: '/reading-room/rewards', icon: Gift, section: 'rewards' },
@@ -16,10 +15,14 @@ function getCurrentSection() {
   if (typeof window === 'undefined') return 'plan';
   if (window.location.pathname.startsWith('/reading-room/records')) return 'records';
   if (window.location.pathname.startsWith('/reading-room/rewards')) return 'rewards';
+  if (window.location.pathname === '/reading-room') return 'plan';
   return 'plan';
 }
 
 export function ReadingRoomBottomNavigation({ onOpenBible }: ReadingRoomBottomNavigationProps) {
+  // Kept for compatibility with ReadingRoomLayout, but the separate Bible tab was removed
+  // from the reading-room navigation. The main app bottom nav still opens Bible directly.
+  void onOpenBible;
   const currentSection = getCurrentSection();
 
   return (
@@ -27,7 +30,7 @@ export function ReadingRoomBottomNavigation({ onOpenBible }: ReadingRoomBottomNa
       aria-label="통독방 하단 네비게이션"
       className="fixed inset-x-0 bottom-0 z-[120] mx-auto h-[calc(84px+env(safe-area-inset-bottom))] max-w-[430px] border-t border-[#E8DDCD] bg-white/95 px-3 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] backdrop-blur"
     >
-      <div className="grid grid-cols-5 items-end">
+      <div className="grid grid-cols-4 items-end">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = item.section === currentSection;
@@ -61,12 +64,6 @@ export function ReadingRoomBottomNavigation({ onOpenBible }: ReadingRoomBottomNa
               href={item.href}
               aria-label={item.label}
               aria-current={active ? 'page' : undefined}
-              onClick={(event) => {
-                if (item.label === '성경') {
-                  event.preventDefault();
-                  onOpenBible();
-                }
-              }}
               className={[
                 'flex min-h-[66px] flex-col items-center justify-center gap-1 transition active:scale-95',
                 active ? 'text-[#4E7F59]' : 'text-[#8A8175]',
