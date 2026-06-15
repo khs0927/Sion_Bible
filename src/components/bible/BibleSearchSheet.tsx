@@ -28,6 +28,7 @@ interface BibleSearchSession {
 type PersistedBibleSearchState = Pick<BibleSearchSession, 'query' | 'aiMode' | 'scrollTop'>;
 
 const SEARCH_SHEET_STORAGE_KEY = 'sion_bible_search_sheet_state';
+const VERSE_ONLY_SCROLL_TOP = 24;
 
 const readPersistedSearchState = (): Partial<PersistedBibleSearchState> => {
   if (typeof window === 'undefined') return {};
@@ -80,6 +81,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
   const [offset, setOffset] = useState(() => bibleSearchSession.offset);
   const [aiMode, setAiMode] = useState(() => bibleSearchSession.aiMode);
   const [aiMeta, setAiMeta] = useState<AiBibleSearchMeta | null>(() => bibleSearchSession.aiMeta);
+  const [isVerseOnly, setIsVerseOnly] = useState(() => bibleSearchSession.scrollTop > VERSE_ONLY_SCROLL_TOP);
   const inputRef = useRef<HTMLInputElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const didRestoreScrollRef = useRef(false);
@@ -155,6 +157,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
 
     window.requestAnimationFrame(() => {
       mainRef.current?.scrollTo({ top: scrollTop });
+      setIsVerseOnly(scrollTop > VERSE_ONLY_SCROLL_TOP);
       didRestoreScrollRef.current = true;
     });
   }, [results.length]);
@@ -171,6 +174,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
         setHasMore(false);
         setOffset(0);
         setAiMeta(null);
+        setIsVerseOnly(false);
       }
     }, aiMode ? 650 : 400);
 
@@ -229,6 +233,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
   const resetSearchPosition = () => {
     didRestoreScrollRef.current = true;
     mainRef.current?.scrollTo({ top: 0 });
+    setIsVerseOnly(false);
     saveSearchSession({ scrollTop: 0, offset: 0 });
   };
 
@@ -255,7 +260,10 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
 
   const handleResultsScroll = (event: ReactUIEvent<HTMLElement>) => {
     const scrollTop = event.currentTarget.scrollTop;
+    const nextVerseOnly = results.length > 0 && scrollTop > VERSE_ONLY_SCROLL_TOP;
+
     bibleSearchSession.scrollTop = scrollTop;
+    setIsVerseOnly(current => (current === nextVerseOnly ? current : nextVerseOnly));
     writePersistedSearchState({
       query,
       aiMode,
@@ -283,7 +291,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
         transform: 'none',
       }}
     >
-      <header className="flex-shrink-0 px-6 pt-5 pb-4 bg-[#FDF6F0]">
+      <header className={`flex-shrink-0 px-6 bg-[#FDF6F0] overflow-hidden transition-all duration-300 ease-out ${isVerseOnly ? 'max-h-0 pt-0 pb-0 opacity-0 pointer-events-none' : 'max-h-28 pt-5 pb-4 opacity-100'}`}>
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <div className="p-2 rounded-2xl bg-white border shadow-sm" style={{ borderColor: T.line }}>
@@ -300,7 +308,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
         </div>
       </header>
 
-      <section className="flex-shrink-0 px-6 pb-5 bg-[#FDF6F0]">
+      <section className={`flex-shrink-0 px-6 bg-[#FDF6F0] overflow-hidden transition-all duration-300 ease-out ${isVerseOnly ? 'max-h-0 pb-0 opacity-0 pointer-events-none' : 'max-h-[560px] pb-5 opacity-100'}`}>
         <div className="grid grid-cols-2 gap-2 mb-3">
           <button
             type="button"
@@ -391,7 +399,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
       <main
         ref={mainRef}
         onScroll={handleResultsScroll}
-        className="flex-1 overflow-y-auto px-6 pb-10"
+        className={`flex-1 overflow-y-auto pb-10 transition-all duration-300 ease-out ${isVerseOnly ? 'px-4 pt-3' : 'px-6'}`}
         style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
       >
         {results.length > 0 ? (
