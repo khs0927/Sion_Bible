@@ -20,6 +20,7 @@ interface BibleSearchSheetSession {
   hasMore: boolean;
   offset: number;
   isExpanded: boolean;
+  isResultsOnly: boolean;
   aiMode: boolean;
   aiMeta: AiBibleSearchMeta | null;
   scrollTop: number;
@@ -68,6 +69,7 @@ let bibleSearchSheetSession: BibleSearchSheetSession = {
   hasMore: false,
   offset: 0,
   isExpanded: persistedSearchState.isExpanded ?? false,
+  isResultsOnly: false,
   aiMode: persistedSearchState.aiMode ?? false,
   aiMeta: null,
   scrollTop: persistedSearchState.scrollTop ?? 0,
@@ -81,16 +83,21 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
   const [hasMore, setHasMore] = useState(() => bibleSearchSheetSession.hasMore);
   const [offset, setOffset] = useState(() => bibleSearchSheetSession.offset);
   const [isExpanded, setIsExpanded] = useState(() => bibleSearchSheetSession.isExpanded);
+  const [isResultsOnly, setIsResultsOnly] = useState(() => bibleSearchSheetSession.isResultsOnly);
   const [aiMode, setAiMode] = useState(() => bibleSearchSheetSession.aiMode);
   const [aiMeta, setAiMeta] = useState<AiBibleSearchMeta | null>(() => bibleSearchSheetSession.aiMeta);
   const inputRef = useRef<HTMLInputElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const dragStartYRef = useRef<number | null>(null);
   const dragLastYRef = useRef<number | null>(null);
+  const resultsTouchStartYRef = useRef<number | null>(null);
+  const resultsTouchStartScrollTopRef = useRef(0);
   const didRestoreScrollRef = useRef(false);
 
   const LIMIT = 50;
   const DRAG_THRESHOLD = 28;
+  const RESULTS_ONLY_SCROLL_THRESHOLD = 18;
+  const CLOSE_PULL_THRESHOLD = 72;
 
   const saveSearchSession = (overrides: Partial<BibleSearchSheetSession> = {}) => {
     const nextState: BibleSearchSheetSession = {
@@ -101,6 +108,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
       hasMore,
       offset,
       isExpanded,
+      isResultsOnly,
       aiMode,
       aiMeta,
       scrollTop: mainRef.current?.scrollTop ?? bibleSearchSheetSession.scrollTop,
@@ -126,6 +134,17 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
     saveSearchSession({ isExpanded: true });
   };
 
+  const showResultOnlyMode = () => {
+    setIsExpanded(true);
+    setIsResultsOnly(true);
+    saveSearchSession({ isExpanded: true, isResultsOnly: true });
+  };
+
+  const showSearchControls = () => {
+    setIsResultsOnly(false);
+    saveSearchSession({ isResultsOnly: false });
+  };
+
   useEffect(() => {
     const setViewportHeight = () => {
       document.documentElement.style.setProperty('--sion-search-sheet-vh', `${window.innerHeight * 0.01}px`);
@@ -147,7 +166,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
 
   useEffect(() => {
     saveSearchSession();
-  }, [query, results, totalCount, loading, hasMore, offset, isExpanded, aiMode, aiMeta]);
+  }, [query, results, totalCount, loading, hasMore, offset, isExpanded, isResultsOnly, aiMode, aiMeta]);
 
   useEffect(() => {
     if (didRestoreScrollRef.current) return;
@@ -161,6 +180,10 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
 
     window.requestAnimationFrame(() => {
       mainRef.current?.scrollTo({ top: scrollTop });
+      if (scrollTop > RESULTS_ONLY_SCROLL_THRESHOLD) {
+        setIsExpanded(true);
+        setIsResultsOnly(true);
+      }
       didRestoreScrollRef.current = true;
     });
   }, [results.length]);
@@ -177,6 +200,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
         setHasMore(false);
         setOffset(0);
         setAiMeta(null);
+        setIsResultsOnly(false);
       }
     }, aiMode ? 650 : 400);
 
@@ -233,7 +257,8 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
   const resetSearchPosition = () => {
     didRestoreScrollRef.current = true;
     mainRef.current?.scrollTo({ top: 0 });
-    saveSearchSession({ scrollTop: 0, offset: 0 });
+    setIsResultsOnly(false);
+    saveSearchSession({ scrollTop: 0, offset: 0, isResultsOnly: false });
   };
 
   const handleQueryChange = (nextQuery: string) => {
@@ -350,12 +375,52 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
   const handleResultsScroll = (event: ReactUIEvent<HTMLElement>) => {
     const scrollTop = event.currentTarget.scrollTop;
     bibleSearchSheetSession.scrollTop = scrollTop;
+
+    if (results.length > 0 && scrollTop > RESULTS_ONLY_SCROLL_THRESHOLD && !isResultsOnly) {
+      showResultOnlyMode();
+    }
+
+    if (scrollTop <= 0 && isResultsOnly) {
+      showSearchControls();
+    }
+
     writePersistedSearchState({
       query,
-      isExpanded,
+      isExpanded: scrollTop > RESULTS_ONLY_SCROLL_THRESHOLD ? true : isExpanded,
       aiMode,
       scrollTop,
     });
+  };
+
+  const handleResultsTouchStart = (event: ReactTouchEvent<HTMLElement>) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    resultsTouchStartYRef.current = touch.clientY;
+    resultsTouchStartScrollTopRef.current = mainRef.current?.scrollTop ?? 0;
+  };
+
+  const handleResultsTouchEnd = (event: ReactTouchEvent<HTMLElement>) => {
+    const touch = event.changedTouches[0];
+    const startY = resultsTouchStartYRef.current;
+    if (!touch || startY === null) return;
+
+    const deltaY = touch.clientY - startY;
+    const startedAtTop = resultsTouchStartScrollTopRef.current <= 2;
+    resultsTouchStartYRef.current = null;
+
+    if (deltaY < -DRAG_THRESHOLD && results.length > 0) {
+      showResultOnlyMode();
+      return;
+    }
+
+    if (startedAtTop && deltaY > CLOSE_PULL_THRESHOLD) {
+      if (isResultsOnly) {
+        showSearchControls();
+        return;
+      }
+
+      closeSheet();
+    }
   };
 
   const getHighlightTerm = () => {
@@ -377,7 +442,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
           paddingTop: isExpanded ? 'env(safe-area-inset-top)' : 0,
         }}
       >
-        <div className="flex justify-center pt-4 pb-2 flex-shrink-0">
+        <div className={`flex justify-center flex-shrink-0 transition-all duration-300 ${isResultsOnly ? 'pt-1 pb-1' : 'pt-4 pb-2'}`}>
           <div
             role="button"
             tabIndex={0}
@@ -393,14 +458,14 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
             onTouchEnd={handleTouchEnd}
             onTouchCancel={resetDrag}
             onKeyDown={handleDragKeyDown}
-            className="h-10 w-32 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2"
+            className={`flex items-center justify-center cursor-grab active:cursor-grabbing touch-none rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-300 ${isResultsOnly ? 'h-6 w-24' : 'h-10 w-32'}`}
             style={{ '--tw-ring-color': T.accent } as CSSProperties}
           >
-            <span className="block w-14 h-1.5 bg-gray-300/70 rounded-full" />
+            <span className={`block bg-gray-300/70 rounded-full transition-all duration-300 ${isResultsOnly ? 'w-10 h-1' : 'w-14 h-1.5'}`} />
           </div>
         </div>
 
-        <header className="px-7 pb-4 flex items-center justify-between flex-shrink-0">
+        <header className={`px-7 flex items-center justify-between flex-shrink-0 transition-all duration-300 overflow-hidden ${isResultsOnly ? 'max-h-0 pb-0 opacity-0 pointer-events-none' : 'max-h-24 pb-4 opacity-100'}`}>
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-2xl bg-white border shadow-sm" style={{ borderColor: T.line }}>
               {aiMode ? <Sparkles size={20} style={{ color: T.accent }} /> : <Search size={20} style={{ color: T.accent }} />}
@@ -415,7 +480,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
           </button>
         </header>
 
-        <div className="px-7 mb-5 flex-shrink-0">
+        <div className={`px-7 flex-shrink-0 transition-all duration-300 overflow-hidden ${isResultsOnly ? 'max-h-0 mb-0 opacity-0 pointer-events-none' : 'max-h-[520px] mb-5 opacity-100'}`}>
           <div className="grid grid-cols-2 gap-2 mb-3">
             <button
               type="button"
@@ -503,7 +568,29 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
           )}
         </div>
 
-        <main ref={mainRef} onScroll={handleResultsScroll} className="flex-1 overflow-y-auto px-7 pb-10">
+        <main
+          ref={mainRef}
+          onScroll={handleResultsScroll}
+          onTouchStart={handleResultsTouchStart}
+          onTouchEnd={handleResultsTouchEnd}
+          className={`flex-1 overflow-y-auto pb-10 transition-all duration-300 ${isResultsOnly ? 'px-4 pt-1' : 'px-7'}`}
+        >
+          {isResultsOnly && totalCount > 0 && (
+            <div className="sticky top-0 z-10 mb-3 rounded-2xl bg-[#FDF6F0]/95 py-2 backdrop-blur">
+              <button
+                type="button"
+                onClick={() => {
+                  mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                  showSearchControls();
+                }}
+                className="w-full rounded-2xl border bg-white px-4 py-3 text-left text-xs font-black shadow-sm active:scale-[0.99]"
+                style={{ borderColor: T.line, color: T.accent }}
+              >
+                ↑ 검색 메뉴 보기 · {aiMode ? 'AI 검색 결과' : '검색 결과'} {totalCount.toLocaleString()}건
+              </button>
+            </div>
+          )}
+
           {results.length > 0 ? (
             <div className="space-y-3">
               {results.map((v) => (
