@@ -40,6 +40,25 @@ interface BibleVersePickerProps {
   onReadSelectionChange?: (verses: ReadSelectedVerse[]) => void;
 }
 
+function formatVerseRange(numbers: number[]) {
+  const sorted = [...new Set(numbers)].sort((a, b) => a - b);
+  const ranges: string[] = [];
+
+  for (let index = 0; index < sorted.length; index += 1) {
+    const start = sorted[index];
+    let end = start;
+
+    while (sorted[index + 1] === end + 1) {
+      index += 1;
+      end = sorted[index];
+    }
+
+    ranges.push(start === end ? String(start) : `${start}-${end}`);
+  }
+
+  return ranges.join(', ');
+}
+
 export function BibleVersePicker({
   mode,
   initialBook,
@@ -160,25 +179,30 @@ export function BibleVersePicker({
     
     setSelectedVerseNumbers(next);
     
+    const selectedVerses = verses
+      .filter(v => next.includes(v.verse))
+      .sort((a, b) => a.verse - b.verse);
+
     if (mode === 'select' && onSelectVerses) {
       onSelectVerses({
         bookId: selBook.id,
         bookName: selBook.name,
         chapter: selChap,
-        verses: verses
-          .filter(v => next.includes(v.verse))
-          .map(v => ({ verse: v.verse, text: v.text }))
+        verses: selectedVerses.map(v => ({ verse: v.verse, text: v.text }))
       });
     } else if (mode === 'read') {
-      onReadSelectionChange?.(
-        verses
-          .filter(v => next.includes(v.verse))
-          .map(v => ({
-            ref: `${selBook.name} ${selChap}:${v.verse}`,
-            text: v.text,
-            verse: v.verse,
-          }))
-      );
+      if (selectedVerses.length === 0) {
+        onReadSelectionChange?.([]);
+        return;
+      }
+
+      onReadSelectionChange?.([
+        {
+          ref: `${selBook.name} ${selChap}:${formatVerseRange(selectedVerses.map(v => v.verse))}`,
+          text: selectedVerses.map(v => sanitizeScriptureText(v.text)).join('\n'),
+          verse: selectedVerses[0].verse,
+        }
+      ]);
     }
   };
 
