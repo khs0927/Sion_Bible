@@ -44,7 +44,7 @@ export function BibleVerseSelectableList({
             id={`verse-${v.verse}`}
             className={`w-full text-left px-4 py-3.5 transition-all relative ${
               isSelected && showCheckbox
-                ? 'bg-[#8d95d8]/10'
+                ? 'bg-[#6F8F72]/15 ring-2 ring-inset ring-[#6F8F72]/55'
                 : 'bg-white hover:bg-[#FFF8F1]'
             }`}
           >
@@ -52,20 +52,26 @@ export function BibleVerseSelectableList({
               <div className="mt-1 flex w-8 shrink-0 flex-col items-center">
                 {showCheckbox ? (
                   <div className="flex flex-col items-center gap-2">
-                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-[#F7EFE7] text-[10px] font-black leading-none text-[#8C6F55]">
+                    <span className={`inline-flex h-5 min-w-5 items-center justify-center rounded-md text-[10px] font-black leading-none transition-colors ${
+                      isSelected ? 'bg-[#6F8F72] text-white' : 'bg-[#F7EFE7] text-[#8C6F55]'
+                    }`}>
                       {v.verse}
                     </span>
                     <button
                       type="button"
                       aria-label={`${v.verse}절 선택`}
-                      onClick={() => onToggleVerse(v.verse)}
-                      className={`inline-flex h-6 w-6 items-center justify-center rounded-md border transition-all ${
+                      aria-pressed={isSelected}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onToggleVerse(v.verse);
+                      }}
+                      className={`inline-flex h-7 w-7 items-center justify-center rounded-lg border-2 transition-all shadow-sm ${
                         isSelected
-                          ? 'border-[#8d95d8] bg-[#8d95d8] text-white'
-                          : 'border-[#E8D8C8] bg-white text-transparent'
+                          ? 'border-[#6F8F72] bg-[#6F8F72] text-white shadow-[#6F8F72]/20'
+                          : 'border-[#D9CBBE] bg-white text-transparent'
                       }`}
                     >
-                      <Check size={14} strokeWidth={4} />
+                      <Check size={17} strokeWidth={4} />
                     </button>
                   </div>
                 ) : (
