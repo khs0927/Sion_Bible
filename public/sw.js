@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bible-app-v20260615-1318';
+const CACHE_NAME = 'bible-app-v20260615-1324';
 const PRECACHE_ASSETS = [
   '/manifest.json',
   '/icon-512.png'
