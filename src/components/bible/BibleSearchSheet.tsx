@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, type UIEvent as ReactUIEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Search, Loader2, BookOpen, ArrowRight, Sparkles } from 'lucide-react';
 import { searchBibleVerses, highlightKeyword } from '../../services/bibleSearch';
 import { aiSearchBibleVerses, type AiBibleSearchMeta } from '../../services/aiBibleSearch';
@@ -118,14 +119,17 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
     };
 
     const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
 
     setViewportHeight();
     document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
     window.addEventListener('resize', setViewportHeight);
     window.addEventListener('orientationchange', setViewportHeight);
 
     return () => {
       document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
       window.removeEventListener('resize', setViewportHeight);
       window.removeEventListener('orientationchange', setViewportHeight);
     };
@@ -264,14 +268,19 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
     return query;
   };
 
-  return (
+  const searchPage = (
     <div
-      className="fixed inset-0 z-[200] flex flex-col bg-[#FDF6F0]"
+      className="fixed inset-0 z-[9999] flex flex-col bg-[#FDF6F0]"
       style={{
+        width: '100vw',
+        maxWidth: '100vw',
         height: 'calc(var(--sion-search-page-vh, 1vh) * 100)',
+        minHeight: '100dvh',
         paddingTop: 'env(safe-area-inset-top)',
         paddingBottom: 'env(safe-area-inset-bottom)',
         overscrollBehavior: 'contain',
+        borderRadius: 0,
+        transform: 'none',
       }}
     >
       <header className="flex-shrink-0 px-6 pt-5 pb-4 bg-[#FDF6F0]">
@@ -445,4 +454,6 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
       </main>
     </div>
   );
+
+  return typeof document === 'undefined' ? searchPage : createPortal(searchPage, document.body);
 }
