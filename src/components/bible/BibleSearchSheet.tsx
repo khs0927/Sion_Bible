@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type PointerEvent as ReactPointerEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { X, Search, Loader2, BookOpen, ArrowRight } from 'lucide-react';
 import { searchBibleVerses, highlightKeyword } from '../../services/bibleSearch';
 import type { BibleVerseRecord } from '../../types/bible';
@@ -18,9 +18,13 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [offset, setOffset] = useState(0);
+  const [isExpanded, setIsExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dragStartYRef = useRef<number | null>(null);
+  const dragLastYRef = useRef<number | null>(null);
 
   const LIMIT = 50;
+  const DRAG_THRESHOLD = 56;
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -65,11 +69,85 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
     }
   };
 
+  const resetDrag = () => {
+    dragStartYRef.current = null;
+    dragLastYRef.current = null;
+  };
+
+  const handleDragStart = (event: ReactPointerEvent<HTMLDivElement>) => {
+    dragStartYRef.current = event.clientY;
+    dragLastYRef.current = event.clientY;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleDragMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (dragStartYRef.current === null) return;
+    event.preventDefault();
+    dragLastYRef.current = event.clientY;
+  };
+
+  const handleDragEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (dragStartYRef.current === null) return;
+
+    const lastY = dragLastYRef.current ?? event.clientY;
+    const deltaY = lastY - dragStartYRef.current;
+    resetDrag();
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    if (deltaY <= -DRAG_THRESHOLD) {
+      setIsExpanded(true);
+      return;
+    }
+
+    if (deltaY >= DRAG_THRESHOLD) {
+      onClose();
+    }
+  };
+
+  const handleDragKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setIsExpanded(true);
+    }
+
+    if (event.key === 'ArrowDown' || event.key === 'Escape') {
+      event.preventDefault();
+      onClose();
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[200] flex items-end">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full h-[92vh] bg-[#FDF6F0] rounded-t-[40px] flex flex-col shadow-2xl overflow-hidden border-t" style={{ borderColor: T.line }}>
-        <div className="w-10 h-1.5 bg-gray-300/40 rounded-full mx-auto my-4 flex-shrink-0" />
+      <div
+        className="relative w-full bg-[#FDF6F0] flex flex-col shadow-2xl overflow-hidden border-t transition-all duration-300 ease-out"
+        style={{
+          borderColor: T.line,
+          height: isExpanded ? '100dvh' : '92vh',
+          borderTopLeftRadius: isExpanded ? 0 : 40,
+          borderTopRightRadius: isExpanded ? 0 : 40,
+        }}
+      >
+        <div className="flex justify-center pt-4 pb-2 flex-shrink-0">
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label="검색 창 크기 조절"
+            title="위로 드래그하면 전체창, 아래로 드래그하면 닫기"
+            onPointerDown={handleDragStart}
+            onPointerMove={handleDragMove}
+            onPointerUp={handleDragEnd}
+            onPointerCancel={resetDrag}
+            onKeyDown={handleDragKeyDown}
+            className="h-6 w-24 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2"
+            style={{ '--tw-ring-color': T.accent } as React.CSSProperties}
+          >
+            <span className="block w-12 h-1.5 bg-gray-300/60 rounded-full" />
+          </div>
+        </div>
         
         <header className="px-7 pb-4 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -128,7 +206,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
                     <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: T.accent }} />
                   </div>
                   <p 
-                    className="leading-relaxed serif-verse line-clamp-3"
+                    className="leading-relaxed serif-verse whitespace-pre-wrap break-keep"
                     style={{ color: T.text, fontSize }}
                     dangerouslySetInnerHTML={{ __html: highlightKeyword(sanitizeScriptureText(v.text), query) }}
                   />
