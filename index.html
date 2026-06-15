@@ -47,21 +47,9 @@
         color: #342D27;
         font-family: 'S-Core Dream', Pretendard, system-ui, sans-serif;
       }
-      .sion-sort-title {
-        font-weight: 900;
-        font-size: 18px;
-        margin-bottom: 4px;
-      }
-      .sion-sort-subtitle {
-        color: #756B61;
-        font-size: 12px;
-        line-height: 1.55;
-        margin-bottom: 12px;
-      }
-      .sion-sort-grid {
-        display: grid;
-        gap: 8px;
-      }
+      .sion-sort-title { font-weight: 900; font-size: 18px; margin-bottom: 4px; }
+      .sion-sort-subtitle { color: #756B61; font-size: 12px; line-height: 1.55; margin-bottom: 12px; }
+      .sion-sort-grid { display: grid; gap: 8px; }
       .sion-sort-option {
         display: flex;
         align-items: center;
@@ -77,32 +65,51 @@
         font-weight: 850;
         text-align: left;
       }
-      .sion-sort-option small {
-        display: block;
-        margin-top: 3px;
-        color: #756B61;
-        font-size: 11px;
-        font-weight: 700;
-        line-height: 1.4;
-      }
-      .sion-sort-option[data-active="true"] {
-        border-color: rgba(111, 143, 114, 0.42);
-        background: linear-gradient(145deg, #6F8F72, #86B7AD);
-        color: #fff;
-      }
-      .sion-sort-option[data-active="true"] small {
-        color: rgba(255, 255, 255, 0.86);
-      }
-      .sion-sort-close {
-        width: 100%;
-        margin-top: 10px;
+      .sion-sort-option small { display: block; margin-top: 3px; color: #756B61; font-size: 11px; font-weight: 700; line-height: 1.4; }
+      .sion-sort-option[data-active="true"] { border-color: rgba(111, 143, 114, 0.42); background: linear-gradient(145deg, #6F8F72, #86B7AD); color: #fff; }
+      .sion-sort-option[data-active="true"] small { color: rgba(255, 255, 255, 0.86); }
+      .sion-sort-close { width: 100%; margin-top: 10px; border: 1px solid #E4D8CA; border-radius: 15px; background: #fff; color: #756B61; padding: 11px; font: inherit; font-weight: 900; }
+      .sion-inline-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 28px;
+        padding: 6px 9px;
         border: 1px solid #E4D8CA;
-        border-radius: 15px;
+        border-radius: 11px;
         background: #fff;
         color: #756B61;
-        padding: 11px;
-        font: inherit;
+        font-family: inherit;
+        font-size: 11px;
         font-weight: 900;
+        cursor: pointer;
+        box-shadow: 0 6px 12px rgba(52,45,39,0.05);
+      }
+      .sion-inline-action.primary { color: #fff; border-color: transparent; background: linear-gradient(145deg, #6F8F72, #86B7AD); }
+      .sion-card-copy, .sion-card-check { margin-left: 4px; flex: 0 0 auto; }
+      .sion-card-check { width: 24px; height: 24px; border-radius: 8px; padding: 0; font-size: 13px; }
+      .sion-card-check[data-checked="true"] { color: #fff; border-color: transparent; background: linear-gradient(145deg, #9E97C9, #86B7AD); }
+      .sion-bulk-copy-bar {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        bottom: calc(82px + env(safe-area-inset-bottom));
+        z-index: 10001;
+        display: flex;
+        justify-content: center;
+        pointer-events: none;
+      }
+      .sion-bulk-copy-inner {
+        width: min(100%, 420px);
+        display: grid;
+        grid-template-columns: 1fr 92px;
+        gap: 8px;
+        padding: 10px;
+        border: 1px solid #E4D8CA;
+        border-radius: 18px;
+        background: rgba(255,252,247,0.96);
+        box-shadow: 0 14px 34px rgba(52,45,39,0.16);
+        pointer-events: auto;
       }
     </style>
     <script>
@@ -136,22 +143,11 @@
         let isDragging = false;
 
         const createDragEvent = (type) => {
-          try {
-            return new DragEvent(type, { bubbles: true, cancelable: true });
-          } catch {
-            return new Event(type, { bubbles: true, cancelable: true });
-          }
+          try { return new DragEvent(type, { bubbles: true, cancelable: true }); }
+          catch { return new Event(type, { bubbles: true, cancelable: true }); }
         };
-
-        const closestCard = (target) => {
-          if (!(target instanceof Element)) return null;
-          return target.closest(CARD_SELECTOR);
-        };
-
-        const clearTargetStyle = () => {
-          if (targetCard) targetCard.style.outline = '';
-        };
-
+        const closestCard = (target) => target instanceof Element ? target.closest(CARD_SELECTOR) : null;
+        const clearTargetStyle = () => { if (targetCard) targetCard.style.outline = ''; };
         const resetDragState = () => {
           if (sourceCard) sourceCard.style.opacity = '';
           clearTargetStyle();
@@ -160,7 +156,6 @@
           isTracking = false;
           isDragging = false;
         };
-
         const beginSyntheticDrag = () => {
           if (!sourceCard || isDragging) return;
           isDragging = true;
@@ -181,15 +176,12 @@
 
         document.addEventListener('pointermove', (event) => {
           if (!isTracking || !sourceCard) return;
-
           const distance = Math.hypot(event.clientX - startX, event.clientY - startY);
           if (!isDragging && distance > 8) beginSyntheticDrag();
           if (!isDragging) return;
-
           event.preventDefault();
           const hovered = closestCard(document.elementFromPoint(event.clientX, event.clientY));
           if (!hovered || hovered === targetCard) return;
-
           clearTargetStyle();
           targetCard = hovered;
           targetCard.style.outline = '2px dashed rgba(107, 142, 111, 0.55)';
@@ -200,7 +192,6 @@
           if (!isTracking || !sourceCard) return;
           const source = sourceCard;
           const target = targetCard;
-
           if (isDragging && target && target !== source) {
             window.setTimeout(() => {
               target.dispatchEvent(createDragEvent('drop'));
@@ -209,11 +200,9 @@
             }, 0);
             return;
           }
-
           if (isDragging) source.dispatchEvent(createDragEvent('dragend'));
           resetDragState();
         };
-
         document.addEventListener('pointerup', finishSyntheticDrag, { capture: true, passive: true });
         document.addEventListener('pointercancel', finishSyntheticDrag, { capture: true, passive: true });
       })();
@@ -244,14 +233,12 @@
           ['dateDescBible', '날짜 안에서 권별 최신순', '최신 날짜 안에서 성경 순서로 정렬합니다.'],
           ['dateAscBible', '날짜 안에서 권별 오래된순', '오래된 날짜 안에서 성경 순서로 정렬합니다.']
         ];
+        let bulkCopyMode = false;
+        const selectedRefs = new Set();
 
         const readSaved = () => {
-          try {
-            const raw = localStorage.getItem(SAVED_KEY);
-            return raw ? JSON.parse(raw) : [];
-          } catch {
-            return [];
-          }
+          try { const raw = localStorage.getItem(SAVED_KEY); return raw ? JSON.parse(raw) : []; }
+          catch { return []; }
         };
         const writeSaved = (items) => localStorage.setItem(SAVED_KEY, JSON.stringify(items));
         const dayTime = (value) => {
@@ -278,9 +265,7 @@
           const items = readSaved();
           if (!Array.isArray(items) || items.length === 0) return items;
           let changed = false;
-          const existingOrders = items
-            .map(item => Number(item?.originalOrder))
-            .filter(Number.isFinite);
+          const existingOrders = items.map(item => Number(item?.originalOrder)).filter(Number.isFinite);
           let nextFrontOrder = existingOrders.length ? Math.min(...existingOrders) - 1 : 0;
           let nextBackOrder = existingOrders.length ? Math.max(...existingOrders) + 1 : 0;
           const normalized = items.map((item, index) => {
@@ -335,8 +320,8 @@
           backdrop.className = 'sion-sort-backdrop';
           backdrop.innerHTML = `
             <section class="sion-sort-sheet" role="dialog" aria-modal="true" aria-label="저장한 말씀 정렬">
-              <div class="sion-sort-title">저장한 말씀 순서변경</div>
-              <div class="sion-sort-subtitle">텍스트 선택은 막고, 추가 순서·날짜순·권별 순서로 다시 정렬합니다.</div>
+              <div class="sion-sort-title">저장한 말씀 정렬</div>
+              <div class="sion-sort-subtitle">순서변경은 드래그용으로 그대로 두고, 정렬은 이 메뉴에서 선택합니다.</div>
               <div class="sion-sort-grid">
                 ${SORT_OPTIONS.map(([mode, label, help]) => `
                   <button class="sion-sort-option" type="button" data-sort-mode="${mode}" data-active="${activeMode === mode}">
@@ -354,25 +339,139 @@
           });
           document.body.appendChild(backdrop);
         };
+        const writeClipboard = async (value) => {
+          try { await navigator.clipboard.writeText(value); }
+          catch {
+            const textarea = document.createElement('textarea');
+            textarea.value = value;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+          }
+        };
+        const getSavedCards = () => [...document.querySelectorAll('main button')].filter(card => {
+          if (!isSavedScreen()) return false;
+          const ref = card.querySelector('span')?.textContent?.trim() || '';
+          return /\s\d+:\d+/.test(ref) && card.querySelector('.serif-verse');
+        });
+        const cardRef = (card) => card.querySelector('span')?.textContent?.trim() || '';
+        const cardText = (card) => card.querySelector('.serif-verse')?.textContent?.trim() || '';
+        const copyCard = async (card) => {
+          await writeClipboard(`${cardRef(card)}\n${cardText(card)}`.trim());
+          alert('복사되었습니다!');
+        };
+        const updateBulkBar = () => {
+          document.querySelector('.sion-bulk-copy-bar')?.remove();
+          if (!bulkCopyMode) return;
+          const bar = document.createElement('div');
+          bar.className = 'sion-bulk-copy-bar';
+          bar.innerHTML = `<div class="sion-bulk-copy-inner"><span class="sion-inline-action primary" data-sion-copy-selected>선택 ${selectedRefs.size}개 복사</span><span class="sion-inline-action" data-sion-copy-cancel>취소</span></div>`;
+          bar.addEventListener('click', async (event) => {
+            const target = event.target instanceof Element ? event.target : null;
+            if (target?.closest('[data-sion-copy-cancel]')) {
+              bulkCopyMode = false;
+              selectedRefs.clear();
+              decorateSavedCards();
+              updateBulkBar();
+              return;
+            }
+            if (target?.closest('[data-sion-copy-selected]')) {
+              const blocks = getSavedCards()
+                .filter(card => selectedRefs.has(cardRef(card)))
+                .map(card => `${cardRef(card)}\n${cardText(card)}`.trim())
+                .filter(Boolean);
+              if (blocks.length === 0) { alert('복사할 말씀을 선택해주세요.'); return; }
+              await writeClipboard(blocks.join('\n\n'));
+              alert(`${blocks.length}개 말씀이 복사되었습니다!`);
+            }
+          });
+          document.body.appendChild(bar);
+        };
+        const decorateSavedCards = () => {
+          if (!isSavedScreen()) return;
+          getSavedCards().forEach(card => {
+            const topRow = card.firstElementChild;
+            if (!topRow) return;
+            const ref = cardRef(card);
+            if (!topRow.querySelector('.sion-card-copy')) {
+              const copy = document.createElement('span');
+              copy.className = 'sion-card-copy sion-inline-action';
+              copy.textContent = '복사';
+              copy.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); copyCard(card); });
+              topRow.appendChild(copy);
+            }
+            const existingCheck = topRow.querySelector('.sion-card-check');
+            if (bulkCopyMode) {
+              if (!existingCheck) {
+                const check = document.createElement('span');
+                check.className = 'sion-card-check sion-inline-action';
+                check.textContent = '✓';
+                check.addEventListener('click', (event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  if (selectedRefs.has(ref)) selectedRefs.delete(ref);
+                  else selectedRefs.add(ref);
+                  decorateSavedCards();
+                  updateBulkBar();
+                });
+                topRow.insertBefore(check, topRow.firstChild);
+              }
+              topRow.querySelector('.sion-card-check')?.setAttribute('data-checked', String(selectedRefs.has(ref)));
+            } else if (existingCheck) {
+              existingCheck.remove();
+            }
+          });
+        };
+        const decorateSavedToolbar = () => {
+          if (!isSavedScreen()) return;
+          const reorderButton = findButtonByText('순서변경');
+          const parent = reorderButton?.parentElement;
+          if (!parent) return;
+          if (!parent.querySelector('[data-sion-sort-button]')) {
+            const sortButton = document.createElement('button');
+            sortButton.type = 'button';
+            sortButton.dataset.sionSortButton = '1';
+            sortButton.className = 'sion-inline-action primary';
+            sortButton.textContent = '정렬';
+            sortButton.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); openSortSheet(); });
+            parent.appendChild(sortButton);
+          }
+          if (!parent.querySelector('[data-sion-bulk-copy-button]')) {
+            const copyButton = document.createElement('button');
+            copyButton.type = 'button';
+            copyButton.dataset.sionBulkCopyButton = '1';
+            copyButton.className = 'sion-inline-action';
+            copyButton.textContent = '선택복사';
+            copyButton.addEventListener('click', (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              bulkCopyMode = !bulkCopyMode;
+              selectedRefs.clear();
+              decorateSavedCards();
+              updateBulkBar();
+            });
+            parent.appendChild(copyButton);
+          }
+        };
 
         normalizeSavedOrders();
         window.addEventListener('storage', normalizeSavedOrders);
-        document.addEventListener('click', (event) => {
-          const button = event.target instanceof Element ? event.target.closest('button') : null;
-          if (!button || !button.textContent?.includes('순서변경') || !isSavedScreen()) return;
-          event.preventDefault();
-          event.stopPropagation();
-          openSortSheet();
-        }, { capture: true });
-
         const observer = new MutationObserver(() => {
           syncSavedScreenClass();
           reopenSavedTab();
+          decorateSavedToolbar();
+          decorateSavedCards();
         });
         observer.observe(document.body, { childList: true, subtree: true });
         window.addEventListener('load', () => {
           syncSavedScreenClass();
           reopenSavedTab();
+          decorateSavedToolbar();
+          decorateSavedCards();
         });
       })();
     </script>
