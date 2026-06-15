@@ -39,6 +39,11 @@
       body.sion-saved-screen .sion-bulk-copy-bar { display: none !important; }
       .sion-nav-verified { min-height: 60px !important; touch-action: manipulation !important; }
       .sion-nav-verified.active { transform: translateY(-2px) !important; }
+      nav .sion-nav-verified:nth-child(1) { order: 1 !important; }
+      nav .sion-nav-verified:nth-child(2) { order: 3 !important; }
+      nav .sion-nav-verified:nth-child(3) { order: 2 !important; }
+      nav .sion-nav-verified:nth-child(4) { order: 4 !important; }
+      nav .sion-nav-verified:nth-child(5) { order: 5 !important; }
     `;
     document.head.appendChild(style);
   };
