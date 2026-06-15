@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, type UIEvent as ReactUIEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type TouchEvent as ReactTouchEvent, type UIEvent as ReactUIEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Search, Loader2, BookOpen, ArrowRight, Sparkles } from 'lucide-react';
-import { searchBibleVerses, highlightKeyword } from '../../services/bibleSearch';
-import { aiSearchBibleVerses, type AiBibleSearchMeta } from '../../services/aiBibleSearch';
+import { ArrowRight, BookOpen, Loader2, Search, Sparkles, X } from 'lucide-react';
+import { searchBibleVerses } from '../../services/bibleSearch';
+import { aiSearchBibleVerses, type AiBibleSearchMeta, type AiBibleSearchSection } from '../../services/aiBibleSearch';
 import type { BibleVerseRecord } from '../../types/bible';
 import { sanitizeScriptureText } from '../../utils/textUtils';
 
@@ -13,127 +13,64 @@ interface BibleSearchSheetProps {
   fontSize?: string;
 }
 
-interface BibleSearchSession {
-  query: string;
-  results: BibleVerseRecord[];
-  totalCount: number;
-  loading: boolean;
-  hasMore: boolean;
-  offset: number;
-  aiMode: boolean;
-  aiMeta: AiBibleSearchMeta | null;
-  scrollTop: number;
-}
-
-type PersistedBibleSearchState = Pick<BibleSearchSession, 'query' | 'aiMode' | 'scrollTop'>;
-
-const SEARCH_SHEET_STORAGE_KEY = 'sion_bible_search_sheet_state';
+const LIMIT = 50;
 const VERSE_ONLY_SCROLL_TOP = 24;
+const STORAGE_KEY = 'sion_bible_search_sheet_state';
 
-const readPersistedSearchState = (): Partial<PersistedBibleSearchState> => {
+type StoredSearch = {
+  query?: string;
+  aiMode?: boolean;
+  scrollTop?: number;
+};
+
+function readStoredSearch(): StoredSearch {
   if (typeof window === 'undefined') return {};
-
   try {
-    const rawValue = window.localStorage.getItem(SEARCH_SHEET_STORAGE_KEY);
-    if (!rawValue) return {};
-
-    const parsedValue = JSON.parse(rawValue) as Partial<PersistedBibleSearchState> & { isExpanded?: boolean };
-    return {
-      query: typeof parsedValue.query === 'string' ? parsedValue.query : '',
-      aiMode: typeof parsedValue.aiMode === 'boolean' ? parsedValue.aiMode : false,
-      scrollTop: typeof parsedValue.scrollTop === 'number' ? parsedValue.scrollTop : 0,
-    };
+    return JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '{}') as StoredSearch;
   } catch {
     return {};
   }
-};
+}
 
-const writePersistedSearchState = (state: PersistedBibleSearchState) => {
-  if (typeof window === 'undefined') return;
-
+function writeStoredSearch(value: StoredSearch) {
   try {
-    window.localStorage.setItem(SEARCH_SHEET_STORAGE_KEY, JSON.stringify(state));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
   } catch {
-    // 저장 공간 제한 등으로 실패해도 검색 기능은 그대로 동작합니다.
+    // 저장 실패는 검색 동작에 영향을 주지 않습니다.
   }
-};
+}
 
-const persistedSearchState = readPersistedSearchState();
-
-let bibleSearchSession: BibleSearchSession = {
-  query: persistedSearchState.query ?? '',
-  results: [],
-  totalCount: 0,
-  loading: false,
-  hasMore: false,
-  offset: 0,
-  aiMode: persistedSearchState.aiMode ?? false,
-  aiMeta: null,
-  scrollTop: persistedSearchState.scrollTop ?? 0,
-};
+const stored = readStoredSearch();
 
 export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem' }: BibleSearchSheetProps) {
-  const [query, setQuery] = useState(() => bibleSearchSession.query);
-  const [results, setResults] = useState<BibleVerseRecord[]>(() => bibleSearchSession.results);
-  const [totalCount, setTotalCount] = useState(() => bibleSearchSession.totalCount);
+  const [query, setQuery] = useState(stored.query || '');
+  const [aiMode, setAiMode] = useState(Boolean(stored.aiMode));
+  const [results, setResults] = useState<BibleVerseRecord[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(() => bibleSearchSession.hasMore);
-  const [offset, setOffset] = useState(() => bibleSearchSession.offset);
-  const [aiMode, setAiMode] = useState(() => bibleSearchSession.aiMode);
-  const [aiMeta, setAiMeta] = useState<AiBibleSearchMeta | null>(() => bibleSearchSession.aiMeta);
-  const [isVerseOnly, setIsVerseOnly] = useState(() => bibleSearchSession.scrollTop > VERSE_ONLY_SCROLL_TOP);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [aiMeta, setAiMeta] = useState<AiBibleSearchMeta | null>(null);
+  const [verseOnly, setVerseOnly] = useState((stored.scrollTop || 0) > VERSE_ONLY_SCROLL_TOP);
   const mainRef = useRef<HTMLElement>(null);
-  const didRestoreScrollRef = useRef(false);
-
-  const LIMIT = 50;
-
-  const saveSearchSession = (overrides: Partial<BibleSearchSession> = {}) => {
-    const nextState: BibleSearchSession = {
-      query,
-      results,
-      totalCount,
-      loading,
-      hasMore,
-      offset,
-      aiMode,
-      aiMeta,
-      scrollTop: mainRef.current?.scrollTop ?? bibleSearchSession.scrollTop,
-      ...overrides,
-    };
-
-    bibleSearchSession = nextState;
-    writePersistedSearchState({
-      query: nextState.query,
-      aiMode: nextState.aiMode,
-      scrollTop: nextState.scrollTop,
-    });
-  };
-
-  const closeSearchPage = () => {
-    saveSearchSession();
-    onClose();
-  };
+  const inputRef = useRef<HTMLInputElement>(null);
+  const startYRef = useRef<number | null>(null);
+  const startTopRef = useRef(0);
 
   useEffect(() => {
-    const setViewportHeight = () => {
-      document.documentElement.style.setProperty('--sion-search-page-vh', `${window.innerHeight * 0.01}px`);
-    };
-
+    const setVh = () => document.documentElement.style.setProperty('--sion-search-page-vh', `${window.innerHeight * 0.01}px`);
     const previousBodyOverflow = document.body.style.overflow;
     const previousHtmlOverflow = document.documentElement.style.overflow;
-
-    setViewportHeight();
+    setVh();
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
-    window.addEventListener('resize', setViewportHeight);
-    window.addEventListener('orientationchange', setViewportHeight);
-
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', setVh);
     return () => {
       document.body.style.overflow = previousBodyOverflow;
       document.documentElement.style.overflow = previousHtmlOverflow;
-      window.removeEventListener('resize', setViewportHeight);
-      window.removeEventListener('orientationchange', setViewportHeight);
+      window.removeEventListener('resize', setVh);
+      window.removeEventListener('orientationchange', setVh);
     };
   }, []);
 
@@ -142,87 +79,65 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
   }, []);
 
   useEffect(() => {
-    saveSearchSession();
-  }, [query, results, totalCount, loading, hasMore, offset, aiMode, aiMeta]);
-
-  useEffect(() => {
-    if (didRestoreScrollRef.current) return;
-    if (results.length === 0) return;
-
-    const scrollTop = bibleSearchSession.scrollTop;
-    if (scrollTop <= 0) {
-      didRestoreScrollRef.current = true;
-      return;
-    }
-
-    window.requestAnimationFrame(() => {
-      mainRef.current?.scrollTo({ top: scrollTop });
-      setIsVerseOnly(scrollTop > VERSE_ONLY_SCROLL_TOP);
-      didRestoreScrollRef.current = true;
-    });
-  }, [results.length]);
-
-  useEffect(() => {
-    const trimmedQuery = query.trim();
-
     const timer = window.setTimeout(() => {
-      if (trimmedQuery.length >= 2) {
-        handleSearch(true);
-      } else {
+      if (query.trim().length >= 2) searchNow(true);
+      else {
         setResults([]);
         setTotalCount(0);
         setHasMore(false);
-        setOffset(0);
         setAiMeta(null);
-        setIsVerseOnly(false);
+        setOffset(0);
+        setVerseOnly(false);
       }
     }, aiMode ? 650 : 400);
-
     return () => window.clearTimeout(timer);
   }, [query, aiMode]);
 
-  const handleSearch = async (reset = false) => {
-    const trimmedQuery = query.trim();
-    if (trimmedQuery.length < 2) return;
+  const sectionByVerseId = useMemo(() => {
+    const map = new Map<string, AiBibleSearchSection>();
+    if (!aiMode || !aiMeta?.sections) return map;
+    aiMeta.sections.forEach(section => {
+      section.verseIds.forEach(verseId => {
+        if (!map.has(verseId)) map.set(verseId, section);
+      });
+    });
+    return map;
+  }, [aiMode, aiMeta]);
 
+  const persist = (scrollTop = mainRef.current?.scrollTop || 0) => {
+    writeStoredSearch({ query, aiMode, scrollTop });
+  };
+
+  const close = () => {
+    persist();
+    onClose();
+  };
+
+  const searchNow = async (reset = false) => {
+    const trimmed = query.trim();
+    if (trimmed.length < 2) return;
     setLoading(true);
     try {
-      const currentOffset = reset ? 0 : offset + LIMIT;
-
+      const nextOffset = reset ? 0 : offset + LIMIT;
       if (aiMode) {
-        const { items, totalCount: total, hasMore: more, meta } = await aiSearchBibleVerses(trimmedQuery, {
-          limit: LIMIT,
-          offset: currentOffset,
-        });
-
-        if (reset) {
-          setResults(items);
-        } else {
-          setResults(prev => [...prev, ...items]);
-        }
-
-        setAiMeta(meta);
-        setTotalCount(total);
-        setHasMore(more);
-        setOffset(currentOffset);
-        return;
-      }
-
-      const { items, totalCount: total, hasMore: more } = await searchBibleVerses(trimmedQuery, {
-        limit: LIMIT,
-        offset: currentOffset,
-      });
-
-      if (reset) {
-        setResults(items);
+        const response = await aiSearchBibleVerses(trimmed, { limit: LIMIT, offset: nextOffset });
+        setResults(reset ? response.items : prev => [...prev, ...response.items]);
+        setTotalCount(response.totalCount);
+        setHasMore(response.hasMore);
+        setAiMeta(response.meta);
+        setOffset(nextOffset);
       } else {
-        setResults(prev => [...prev, ...items]);
+        const response = await searchBibleVerses(trimmed, { limit: LIMIT, offset: nextOffset });
+        setResults(reset ? response.items : prev => [...prev, ...response.items]);
+        setTotalCount(response.totalCount);
+        setHasMore(response.hasMore);
+        setAiMeta(null);
+        setOffset(nextOffset);
       }
-
-      setAiMeta(null);
-      setTotalCount(total);
-      setHasMore(more);
-      setOffset(currentOffset);
+      if (reset) {
+        mainRef.current?.scrollTo({ top: 0 });
+        setVerseOnly(false);
+      }
     } catch (error) {
       console.error('Search failed:', error);
     } finally {
@@ -230,107 +145,96 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
     }
   };
 
-  const resetSearchPosition = () => {
-    didRestoreScrollRef.current = true;
+  const resetSearch = () => {
+    setResults([]);
+    setTotalCount(0);
+    setHasMore(false);
+    setAiMeta(null);
+    setOffset(0);
+    setVerseOnly(false);
     mainRef.current?.scrollTo({ top: 0 });
-    setIsVerseOnly(false);
-    saveSearchSession({ scrollTop: 0, offset: 0 });
   };
 
-  const handleQueryChange = (nextQuery: string) => {
-    setQuery(nextQuery);
-    setResults([]);
-    setTotalCount(0);
-    setHasMore(false);
-    setOffset(0);
-    setAiMeta(null);
-    resetSearchPosition();
-  };
-
-  const handleModeChange = (nextAiMode: boolean) => {
-    if (nextAiMode === aiMode) return;
-    setAiMode(nextAiMode);
-    setAiMeta(null);
-    setResults([]);
-    setTotalCount(0);
-    setHasMore(false);
-    setOffset(0);
-    resetSearchPosition();
-  };
-
-  const handleResultsScroll = (event: ReactUIEvent<HTMLElement>) => {
+  const onScroll = (event: ReactUIEvent<HTMLElement>) => {
     const scrollTop = event.currentTarget.scrollTop;
-    const nextVerseOnly = results.length > 0 && scrollTop > VERSE_ONLY_SCROLL_TOP;
-
-    bibleSearchSession.scrollTop = scrollTop;
-    setIsVerseOnly(current => (current === nextVerseOnly ? current : nextVerseOnly));
-    writePersistedSearchState({
-      query,
-      aiMode,
-      scrollTop,
-    });
+    setVerseOnly(results.length > 0 && scrollTop > VERSE_ONLY_SCROLL_TOP);
+    persist(scrollTop);
   };
 
-  const getHighlightTerm = () => {
-    if (aiMode) return aiMeta?.terms?.[0] || '';
-    return query;
+  const onTouchStart = (event: ReactTouchEvent<HTMLElement>) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    startYRef.current = touch.clientY;
+    startTopRef.current = mainRef.current?.scrollTop || 0;
   };
 
-  const searchPage = (
+  const onTouchEnd = (event: ReactTouchEvent<HTMLElement>) => {
+    const touch = event.changedTouches[0];
+    const startY = startYRef.current;
+    if (!touch || startY === null) return;
+    const delta = touch.clientY - startY;
+    startYRef.current = null;
+
+    if (delta < -28 && results.length > 0) {
+      setVerseOnly(true);
+      return;
+    }
+
+    if (startTopRef.current <= 2 && delta > 74) {
+      if (verseOnly) setVerseOnly(false);
+      else close();
+    }
+  };
+
+  const page = (
     <div
       className="fixed inset-0 z-[9999] flex flex-col bg-[#FDF6F0]"
       style={{
-        width: '100vw',
-        maxWidth: '100vw',
         height: 'calc(var(--sion-search-page-vh, 1vh) * 100)',
         minHeight: '100dvh',
         paddingTop: 'env(safe-area-inset-top)',
         paddingBottom: 'env(safe-area-inset-bottom)',
         overscrollBehavior: 'contain',
-        borderRadius: 0,
-        transform: 'none',
       }}
     >
-      <header className={`flex-shrink-0 px-6 bg-[#FDF6F0] overflow-hidden transition-all duration-300 ease-out ${isVerseOnly ? 'max-h-0 pt-0 pb-0 opacity-0 pointer-events-none' : 'max-h-28 pt-5 pb-4 opacity-100'}`}>
+      <header className={`flex-shrink-0 bg-[#FDF6F0] px-6 overflow-hidden transition-all duration-300 ${verseOnly ? 'max-h-0 pb-0 pt-0 opacity-0 pointer-events-none' : 'max-h-28 pb-4 pt-5 opacity-100'}`}>
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="p-2 rounded-2xl bg-white border shadow-sm" style={{ borderColor: T.line }}>
+            <div className="rounded-2xl border bg-white p-2 shadow-sm" style={{ borderColor: T.line }}>
               {aiMode ? <Sparkles size={20} style={{ color: T.accent }} /> : <Search size={20} style={{ color: T.accent }} />}
             </div>
             <div className="min-w-0">
               <h2 className="title-font text-2xl font-black leading-tight" style={{ color: T.text }}>성경 검색</h2>
-              {aiMode && <p className="text-[11px] font-black mt-0.5" style={{ color: T.accent }}>AI 질문 검색 모드</p>}
+              {aiMode && <p className="mt-0.5 text-[11px] font-black" style={{ color: T.accent }}>AI 질문 검색 모드</p>}
             </div>
           </div>
-          <button onClick={closeSearchPage} className="p-2 rounded-full hover:bg-black/5 transition-colors flex-shrink-0" aria-label="검색 닫기">
+          <button onClick={close} className="flex-shrink-0 rounded-full p-2 transition-colors hover:bg-black/5" aria-label="검색 닫기">
             <X size={24} style={{ color: T.text }} />
           </button>
         </div>
       </header>
 
-      <section className={`flex-shrink-0 px-6 bg-[#FDF6F0] overflow-hidden transition-all duration-300 ease-out ${isVerseOnly ? 'max-h-0 pb-0 opacity-0 pointer-events-none' : 'max-h-[560px] pb-5 opacity-100'}`}>
-        <div className="grid grid-cols-2 gap-2 mb-3">
+      <section className={`flex-shrink-0 bg-[#FDF6F0] px-6 overflow-hidden transition-all duration-300 ${verseOnly ? 'max-h-0 pb-0 opacity-0 pointer-events-none' : 'max-h-[600px] pb-5 opacity-100'}`}>
+        <div className="mb-3 grid grid-cols-2 gap-2">
           <button
             type="button"
-            onClick={() => handleModeChange(false)}
-            className="h-11 rounded-2xl border-2 text-xs font-black transition-all active:scale-95"
-            style={{
-              borderColor: !aiMode ? 'transparent' : T.line,
-              background: !aiMode ? T.accent : 'white',
-              color: !aiMode ? 'white' : T.sub,
+            onClick={() => {
+              setAiMode(false);
+              resetSearch();
             }}
+            className="h-11 rounded-2xl border-2 text-xs font-black transition-all active:scale-95"
+            style={{ borderColor: !aiMode ? 'transparent' : T.line, background: !aiMode ? T.accent : 'white', color: !aiMode ? 'white' : T.sub }}
           >
             일반 검색
           </button>
           <button
             type="button"
-            onClick={() => handleModeChange(true)}
-            className="h-11 rounded-2xl border-2 text-xs font-black transition-all active:scale-95 flex items-center justify-center gap-1.5"
-            style={{
-              borderColor: aiMode ? 'transparent' : T.line,
-              background: aiMode ? 'linear-gradient(145deg, #6F8F72, #86B7AD)' : 'white',
-              color: aiMode ? 'white' : T.sub,
+            onClick={() => {
+              setAiMode(true);
+              resetSearch();
             }}
+            className="flex h-11 items-center justify-center gap-1.5 rounded-2xl border-2 text-xs font-black transition-all active:scale-95"
+            style={{ borderColor: aiMode ? 'transparent' : T.line, background: aiMode ? 'linear-gradient(145deg, #6F8F72, #86B7AD)' : 'white', color: aiMode ? 'white' : T.sub }}
           >
             <Sparkles size={15} />
             AI 검색
@@ -342,16 +246,15 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
             ref={inputRef}
             type="text"
             value={query}
-            onChange={(e) => handleQueryChange(e.target.value)}
-            placeholder={aiMode ? '질문 검색: 사랑을 문맥적이고 순차적으로 보여줘' : '단어 검색: 사랑, 평안, 요한복음 3:16'}
-            className="w-full h-14 pl-12 pr-4 rounded-2xl border-2 focus:outline-none transition-all text-base font-bold"
-            style={{
-              borderColor: aiMode ? T.accent : T.line,
-              background: 'white',
-              color: T.text,
+            onChange={(event) => {
+              setQuery(event.target.value);
+              resetSearch();
             }}
+            placeholder={aiMode ? '질문 검색: 사랑을 문맥적이고 순차적으로 보여줘' : '단어 검색: 사랑, 평안, 요한복음 3:16'}
+            className="h-14 w-full rounded-2xl border-2 bg-white pl-12 pr-4 text-base font-bold transition-all focus:outline-none"
+            style={{ borderColor: aiMode ? T.accent : T.line, color: T.text }}
             onKeyDown={(event) => {
-              if (event.key === 'Enter') handleSearch(true);
+              if (event.key === 'Enter') searchNow(true);
             }}
           />
           {aiMode ? <Sparkles size={20} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-40" /> : <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30" />}
@@ -361,85 +264,102 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
         {aiMode && (
           <button
             type="button"
-            onClick={() => handleSearch(true)}
+            onClick={() => searchNow(true)}
             disabled={loading || query.trim().length < 2}
-            className="mt-3 w-full h-12 rounded-2xl font-black text-sm transition-all active:scale-95 disabled:opacity-40 flex items-center justify-center gap-2"
-            style={{ background: 'linear-gradient(145deg, #6F8F72, #86B7AD)', color: 'white' }}
+            className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-sm font-black text-white transition-all active:scale-95 disabled:opacity-40"
+            style={{ background: 'linear-gradient(145deg, #6F8F72, #86B7AD)' }}
           >
             {loading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={17} />}
             AI 검색 실행
           </button>
         )}
 
-        {query.trim().length > 0 && query.trim().length < 2 && (
-          <p className="mt-2 text-xs font-bold opacity-40 px-1">두 글자 이상 입력해 주세요.</p>
-        )}
         {aiMode && aiMeta && totalCount > 0 && (
           <div className="mt-3 rounded-2xl border bg-white/80 p-3" style={{ borderColor: T.line }}>
             <p className="text-xs font-black" style={{ color: T.accent }}>{aiMeta.summary}</p>
-            <p className="mt-1 text-[11px] leading-relaxed font-bold" style={{ color: T.sub }}>{aiMeta.guide}</p>
-            {aiMeta.terms.length > 0 && (
+            <p className="mt-1 text-[11px] font-bold leading-relaxed" style={{ color: T.sub }}>{aiMeta.guide}</p>
+            {aiMeta.sections.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {aiMeta.terms.slice(0, 7).map(term => (
-                  <span key={term} className="px-2 py-1 rounded-full bg-[#FDF6F0] text-[10px] font-black" style={{ color: T.sub }}>
-                    {term}
-                  </span>
+                {aiMeta.sections.slice(0, 5).map(section => (
+                  <span key={section.id} className="rounded-full bg-[#EEF6F0] px-2 py-1 text-[10px] font-black" style={{ color: T.accent }}>{section.title}</span>
                 ))}
               </div>
             )}
           </div>
         )}
-        {totalCount > 0 && (
-          <p className="mt-2 text-xs font-black px-1" style={{ color: T.accent }}>
-            {aiMode ? 'AI 검색 결과' : '검색 결과'} {totalCount.toLocaleString()}건
-          </p>
-        )}
+
+        {totalCount > 0 && <p className="mt-2 px-1 text-xs font-black" style={{ color: T.accent }}>{aiMode ? 'AI 검색 결과' : '검색 결과'} {totalCount.toLocaleString()}건</p>}
       </section>
 
       <main
         ref={mainRef}
-        onScroll={handleResultsScroll}
-        className={`flex-1 overflow-y-auto pb-10 transition-all duration-300 ease-out ${isVerseOnly ? 'px-4 pt-3' : 'px-6'}`}
+        onScroll={onScroll}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        className={`flex-1 overflow-y-auto pb-10 transition-all duration-300 ${verseOnly ? 'px-4 pt-3' : 'px-6'}`}
         style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
       >
+        {verseOnly && totalCount > 0 && (
+          <div className="sticky top-0 z-10 mb-3 rounded-2xl bg-[#FDF6F0]/95 py-2 backdrop-blur">
+            <button
+              type="button"
+              onClick={() => {
+                mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                setVerseOnly(false);
+              }}
+              className="w-full rounded-2xl border bg-white px-4 py-3 text-left text-xs font-black shadow-sm active:scale-[0.99]"
+              style={{ borderColor: T.line, color: T.accent }}
+            >
+              ↑ 검색 메뉴 보기 · {aiMode ? 'AI 검색 결과' : '검색 결과'} {totalCount.toLocaleString()}건
+            </button>
+          </div>
+        )}
+
         {results.length > 0 ? (
           <div className="space-y-3">
-            {results.map((v) => (
-              <button
-                key={v.id}
-                onClick={() => {
-                  saveSearchSession();
-                  onNavigate(v);
-                }}
-                className="w-full text-left p-5 rounded-3xl bg-white border border-transparent hover:border-[#E8D8C8] transition-all shadow-sm active:scale-[0.98] group"
-                style={{ borderColor: T.line }}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="title-font text-xs font-black px-2 py-1 rounded-lg bg-[#FDF6F0]" style={{ color: T.accent }}>
-                      {v.bookName} {v.chapter}:{v.verse}
-                    </span>
-                    {aiMode && (
-                      <span className="text-[10px] font-black px-2 py-1 rounded-lg bg-[#EEF6F0]" style={{ color: T.accent }}>
-                        AI 관련
+            {results.map((verse, index) => {
+              const section = sectionByVerseId.get(verse.id);
+              const previousSection = index > 0 ? sectionByVerseId.get(results[index - 1].id) : null;
+              const showSection = aiMode && section && section.id !== previousSection?.id;
+
+              return (
+                <div key={verse.id} className="space-y-3">
+                  {showSection && (
+                    <div className="pt-2 pb-1">
+                      <div className="rounded-2xl border bg-white/80 px-4 py-3 shadow-sm" style={{ borderColor: T.line }}>
+                        <p className="title-font text-sm font-black" style={{ color: T.accent }}>{section.title}</p>
+                        <p className="mt-1 text-[11px] font-bold leading-relaxed" style={{ color: T.sub }}>{section.description}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      persist();
+                      onNavigate(verse);
+                    }}
+                    className="group w-full rounded-3xl border bg-white p-5 text-left shadow-sm transition-all active:scale-[0.98]"
+                    style={{ borderColor: T.line }}
+                  >
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="title-font rounded-lg bg-[#FDF6F0] px-2 py-1 text-xs font-black" style={{ color: T.accent }}>
+                        {verse.bookName} {verse.chapter}:{verse.verse}
                       </span>
-                    )}
-                  </div>
-                  <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: T.accent }} />
+                      <ArrowRight size={14} className="opacity-0 transition-opacity group-hover:opacity-100" style={{ color: T.accent }} />
+                    </div>
+                    <p className="serif-verse whitespace-pre-wrap break-keep leading-relaxed" style={{ color: T.text, fontSize }}>
+                      {sanitizeScriptureText(verse.text)}
+                    </p>
+                  </button>
                 </div>
-                <p
-                  className="leading-relaxed serif-verse whitespace-pre-wrap break-keep"
-                  style={{ color: T.text, fontSize }}
-                  dangerouslySetInnerHTML={{ __html: highlightKeyword(sanitizeScriptureText(v.text), getHighlightTerm()) }}
-                />
-              </button>
-            ))}
+              );
+            })}
 
             {hasMore && (
               <button
-                onClick={() => handleSearch()}
+                onClick={() => searchNow()}
                 disabled={loading}
-                className="w-full py-4 rounded-2xl font-black text-sm bg-white border-2 border-dashed transition-all active:scale-95"
+                className="w-full rounded-2xl border-2 border-dashed bg-white py-4 text-sm font-black transition-all active:scale-95"
                 style={{ borderColor: T.line, color: T.sub }}
               >
                 {loading ? '불러오는 중...' : aiMode ? 'AI 검색 결과 더 보기' : '검색 결과 더 보기'}
@@ -454,14 +374,12 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
         ) : !loading && (
           <div className="flex flex-col items-center justify-center py-20 opacity-40">
             <BookOpen size={48} className="mb-4" />
-            <p className="text-sm font-black">
-              {aiMode ? '질문으로 관련 구절을 찾아보세요.' : '찾고 싶은 단어나 구절을 입력해보세요.'}
-            </p>
+            <p className="text-sm font-black">{aiMode ? '질문으로 관련 구절을 찾아보세요.' : '찾고 싶은 단어나 구절을 입력해보세요.'}</p>
           </div>
         )}
       </main>
     </div>
   );
 
-  return typeof document === 'undefined' ? searchPage : createPortal(searchPage, document.body);
+  return typeof document === 'undefined' ? page : createPortal(page, document.body);
 }
