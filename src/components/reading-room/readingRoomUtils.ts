@@ -69,25 +69,6 @@ export const BOOK_NAME_BY_ID: Record<string, string> = {
   rev: '요한계시록',
 };
 
-const PLAN_LABEL_BY_ID: Record<string, { title: string; description: string }> = {
-  full365: {
-    title: '성경 365',
-    description: '구약과 신약 전체를 매일 부담 없는 분량으로 읽습니다.',
-  },
-  fast180: {
-    title: '성경 180',
-    description: '하루 분량을 조금 늘려 성경 전체 흐름을 빠르게 잡습니다.',
-  },
-  nt100: {
-    title: '신약 100일',
-    description: '마태복음부터 요한계시록까지 신약의 흐름을 차분히 읽습니다.',
-  },
-  gospels30: {
-    title: '사복음서 30일',
-    description: '예수님의 말씀과 사역을 한 달 동안 가까이 따라갑니다.',
-  },
-};
-
 export function formatReadingRoomReference(ref: ReadingReference) {
   const bookName = BOOK_NAME_BY_ID[ref.bookId] ?? ref.bookName ?? '성경';
   if (!ref.endChapter || ref.endChapter === ref.startChapter) {
@@ -104,31 +85,19 @@ export function formatReadingRoomTask(task: ReadingDayTask | null | undefined) {
 export function getReadingRoomPlanLabel(template: ReadingPlanTemplate | null | undefined) {
   if (!template) {
     return {
-      title: '아침 10분 코스',
-      description: '매일 짧은 분량으로 말씀 읽기 리듬을 만듭니다.',
+      title: '성경 365',
+      description: '구약과 신약 전체를 매일 부담 없는 분량으로 읽습니다.',
     };
   }
 
-  if (PLAN_LABEL_BY_ID[template.id]) return PLAN_LABEL_BY_ID[template.id];
+  const title = template.title && !containsBrokenText(template.title) ? template.title : `${template.days}일 통독`;
+  const description = template.description && !containsBrokenText(template.description)
+    ? template.description
+    : '오늘의 분량을 꾸준히 읽어 말씀의 흐름을 따라갑니다.';
 
-  if (template.editable) {
-    return {
-      title: template.title && !containsBrokenText(template.title) ? template.title : '나의 통독 코스',
-      description: '직접 만든 코스를 내 속도에 맞춰 이어갑니다.',
-    };
-  }
-
-  if (template.days >= 300) return PLAN_LABEL_BY_ID.full365;
-  if (template.days >= 150) return PLAN_LABEL_BY_ID.fast180;
-  if (template.tone === 'new-testament') return PLAN_LABEL_BY_ID.nt100;
-  if (template.tone === 'gospels') return PLAN_LABEL_BY_ID.gospels30;
-
-  return {
-    title: `${template.days}일 통독`,
-    description: '오늘의 분량을 꾸준히 읽어 말씀의 흐름을 따라갑니다.',
-  };
+  return { title, description };
 }
 
 function containsBrokenText(value: string) {
-  return /[�?\uFFFD]|[吏뚮쓽꾩젙꽌]/.test(value);
+  return /[�\uFFFD]|[吏뚮쓽꾩젙꽌]/.test(value);
 }
