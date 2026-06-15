@@ -9,7 +9,7 @@ import {
   MoreHorizontal,
   Trophy,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { ALL_READING_PLAN_TEMPLATES } from '../../data/readingPlans';
 import { designDecorations } from '../../assets/design';
 import { getProgressPercent, getTodayReadingDay, isDayCompleted } from '../../services/readingPlanStats';
@@ -29,28 +29,19 @@ type ReadingRoomPageProps = {
   onNavigateToRange?: (task?: import('../../types/readingPlan').ReadingDayTask | null) => void;
 };
 
+type CourseFilter = 'all' | ReadingPlanTemplate['tone'];
+
 const DEFAULT_WEEK_LABELS = ['오늘', '2일', '3일', '4일', '5일', '6일', '7일'];
-const RECOMMENDED_FALLBACK = [
-  {
-    title: '성경 365',
-    desc: '구약과 신약 전체를 매일 부담 없는 분량으로 읽습니다.',
-    day: '365일',
-  },
-  {
-    title: '성경 180',
-    desc: '하루 분량을 조금 늘려 성경 전체 흐름을 빠르게 잡습니다.',
-    day: '180일',
-  },
-  {
-    title: '신약 100일',
-    desc: '신약 전체의 큰 흐름을 차분히 따라갑니다.',
-    day: '100일',
-  },
-  {
-    title: '사복음서 30일',
-    desc: '예수님의 말씀과 사역을 한 달 동안 가까이 읽습니다.',
-    day: '30일',
-  },
+const COURSE_PAGE_SIZE = 8;
+const COURSE_FILTERS: Array<{ key: CourseFilter; label: string }> = [
+  { key: 'all', label: '전체' },
+  { key: 'full', label: '전체성경' },
+  { key: 'fast', label: '집중' },
+  { key: 'new-testament', label: '신약' },
+  { key: 'gospels', label: '복음서' },
+  { key: 'wisdom', label: '지혜서' },
+  { key: 'pentateuch', label: '오경' },
+  { key: 'custom', label: '나만의' },
 ];
 
 export function ReadingRoomPage({
@@ -61,7 +52,9 @@ export function ReadingRoomPage({
   onStartPlanAndRead,
   onNavigateToRange,
 }: ReadingRoomPageProps) {
-  const templates = [...ALL_READING_PLAN_TEMPLATES, ...userTemplates];
+  const [courseFilter, setCourseFilter] = useState<CourseFilter>('all');
+  const [visibleCourseCount, setVisibleCourseCount] = useState(4);
+  const templates = useMemo(() => [...ALL_READING_PLAN_TEMPLATES, ...userTemplates], [userTemplates]);
   const activeTemplate = templates.find((template) => template.id === progress?.templateId) ?? null;
   const displayTemplate = activeTemplate ?? templates[0] ?? null;
   const todayDay = activeTemplate ? getTodayReadingDay(activeTemplate, progress) : 1;
@@ -72,25 +65,32 @@ export function ReadingRoomPage({
   const remainingDays = displayTemplate ? Math.max(0, displayTemplate.days - completedCount) : 21;
   const planLabel = getReadingRoomPlanLabel(displayTemplate);
   const todayTitle = formatReadingRoomTask(todayTask);
-  const recommendedTemplates = templates.slice(0, 4);
-  const courseCards = recommendedTemplates.length
-    ? recommendedTemplates.map((template) => {
-        const label = getReadingRoomPlanLabel(template);
-        return {
-          key: template.id,
-          title: label.title,
-          description: label.description,
-          days: `${template.days}일`,
-          template,
-        };
-      })
-    : RECOMMENDED_FALLBACK.map((course) => ({
-        key: course.title,
-        title: course.title,
-        description: course.desc,
-        days: course.day,
-        template: null,
-      }));
+  const filteredTemplates = useMemo(
+    () => courseFilter === 'all' ? templates : templates.filter((template) => template.tone === courseFilter),
+    [courseFilter, templates],
+  );
+  const visibleTemplates = filteredTemplates.slice(0, visibleCourseCount);
+  const hasMoreCourses = visibleCourseCount < filteredTemplates.length;
+
+  const courseCards = visibleTemplates.map((template) => {
+    const label = getReadingRoomPlanLabel(template);
+    return {
+      key: template.id,
+      title: label.title,
+      description: label.description,
+      days: `${template.days}일`,
+      template,
+    };
+  });
+
+  const changeCourseFilter = (filter: CourseFilter) => {
+    setCourseFilter(filter);
+    setVisibleCourseCount(4);
+  };
+
+  const showMoreCourses = () => {
+    setVisibleCourseCount((count) => Math.min(count + COURSE_PAGE_SIZE, filteredTemplates.length));
+  };
 
   const handleRead = () => {
     if (activeTemplate && progress) {
@@ -114,10 +114,9 @@ export function ReadingRoomPage({
         <div className="relative flex items-center gap-3">
           <div className="grid h-[72px] w-[72px] shrink-0 place-items-center rounded-full bg-[#EEE8DB] shadow-inner">
             <div
+              aria-label={`통독 진행률 ${percent}%`}
               className="grid h-[62px] w-[62px] place-items-center rounded-full bg-white text-[19px] font-extrabold text-[#2B2B2B]"
-              style={{
-                background: `conic-gradient(#4E7F59 ${Math.max(percent, 1)}%, #EFE7DA 0)`,
-              }}
+              style={{ background: `conic-gradient(#4E7F59 ${Math.max(percent, 1) * 3.6}deg, #EFE7DA 0deg)` }}
             >
               <span className="grid h-[48px] w-[48px] place-items-center rounded-full bg-white">{percent}%</span>
             </div>
@@ -199,7 +198,7 @@ export function ReadingRoomPage({
 
         <div className="mt-3 grid grid-cols-7 gap-2">
           {DEFAULT_WEEK_LABELS.map((label, index) => {
-            const day = Math.max(1, todayDay - 0 + index);
+            const day = Math.max(1, todayDay + index);
             const isToday = index === 0;
             const isDone = progress?.completedDays.includes(day) ?? false;
 
@@ -235,7 +234,7 @@ export function ReadingRoomPage({
               <p className="mt-0.5 text-[12px] font-medium text-[#6B6B6B]">오늘 읽으면 +10P · 연속 보너스 +5P</p>
             </div>
           </div>
-          <button className="rounded-full bg-[#4E7F59] px-4 py-2 text-[12px] font-bold text-white shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+          <button type="button" className="rounded-full bg-[#4E7F59] px-4 py-2 text-[12px] font-bold text-white shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
             보상 받기
           </button>
         </div>
@@ -248,54 +247,73 @@ export function ReadingRoomPage({
             <p className="text-[13px] font-medium text-[#6B6B6B]">바로 시작하기 좋은 통독 루틴</p>
           </div>
           <div className="rounded-full border border-[#E8DDCD] bg-white px-3 py-1 text-[12px] font-bold text-[#4E7F59]">
-            추천
+            {filteredTemplates.length}개
           </div>
         </div>
 
+        <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+          {COURSE_FILTERS.map((filter) => (
+            <button
+              key={filter.key}
+              type="button"
+              onClick={() => changeCourseFilter(filter.key)}
+              className={[
+                'shrink-0 rounded-full border px-3 py-1.5 text-[12px] font-bold',
+                courseFilter === filter.key
+                  ? 'border-[#4E7F59] bg-[#F3F7EF] text-[#4E7F59]'
+                  : 'border-[#E8DDCD] bg-white text-[#8A8175]',
+              ].join(' ')}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
-          {courseCards.map((course, index) => {
-            return (
-              <article
-                key={course.key}
-                className="relative overflow-hidden rounded-[22px] border border-[#E8DDCD] bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.05)]"
+          {courseCards.map((course, index) => (
+            <article
+              key={course.key}
+              className="relative overflow-hidden rounded-[22px] border border-[#E8DDCD] bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.05)]"
+            >
+              <div className="pointer-events-none absolute right-1 top-1 opacity-15">
+                <Leaf className="h-12 w-12 text-[#4E7F59]" strokeWidth={1.8} />
+              </div>
+              <div className="relative mb-3 flex items-center justify-between">
+                <span className="rounded-full bg-[#F3F7EF] px-2 py-1 text-[11px] font-bold text-[#4E7F59]">
+                  {index === 0 && courseFilter === 'all' ? '전체' : '추천'}
+                </span>
+                <span className="flex items-center gap-1 text-[12px] font-bold text-[#6B6B6B]">
+                  <Flame className="h-3.5 w-3.5 text-[#FF8A3D]" />
+                  {course.days}
+                </span>
+              </div>
+              <h4 className="relative text-[21px] font-extrabold leading-tight text-[#2B2B2B]">{course.title}</h4>
+              <p className="relative mt-2 min-h-[54px] text-[13px] leading-[1.45] text-[#6B6B6B]">{course.description}</p>
+              <button
+                type="button"
+                aria-label={`${course.title} 시작하기`}
+                onClick={() => course.template && onStartPlan?.(course.template.id, course.template)}
+                className="relative mt-3 flex h-9 w-full items-center justify-center gap-1 rounded-2xl border border-[#E8DDCD] bg-[#FFFDF8] text-[12px] font-bold text-[#4E7F59] active:scale-95"
               >
-                <div className="pointer-events-none absolute right-1 top-1 opacity-15">
-                  <Leaf className="h-12 w-12 text-[#4E7F59]" strokeWidth={1.8} />
-                </div>
-                <div className="relative mb-3 flex items-center justify-between">
-                  <span className="rounded-full bg-[#F3F7EF] px-2 py-1 text-[11px] font-bold text-[#4E7F59]">
-                    {index === 0 ? '전체' : '추천'}
-                  </span>
-                  <span className="flex items-center gap-1 text-[12px] font-bold text-[#6B6B6B]">
-                    <Flame className="h-3.5 w-3.5 text-[#FF8A3D]" />
-                    {course.days}
-                  </span>
-                </div>
-                <h4 className="relative text-[21px] font-extrabold leading-tight text-[#2B2B2B]">{course.title}</h4>
-                <p className="relative mt-2 min-h-[54px] text-[13px] leading-[1.45] text-[#6B6B6B]">{course.description}</p>
-                <button
-                  type="button"
-                  aria-label={`${course.title} 시작하기`}
-                  onClick={() => course.template && onStartPlan?.(course.template.id, course.template)}
-                  className="relative mt-3 flex h-9 w-full items-center justify-center gap-1 rounded-2xl border border-[#E8DDCD] bg-[#FFFDF8] text-[12px] font-bold text-[#4E7F59] active:scale-95"
-                >
-                  <ClipboardList className="h-4 w-4" strokeWidth={2} />
-                  시작하기
-                </button>
-              </article>
-            );
-          })}
+                <ClipboardList className="h-4 w-4" strokeWidth={2} />
+                시작하기
+              </button>
+            </article>
+          ))}
         </div>
       </section>
 
-      <button
-        type="button"
-        aria-label="통독방 더보기"
-        className="mx-auto flex h-10 items-center justify-center gap-1 rounded-full border border-[#E8DDCD] bg-white px-4 text-[12px] font-bold text-[#8A8175]"
-      >
-        <MoreHorizontal className="h-4 w-4" strokeWidth={2} />
-        더보기
-      </button>
+      {hasMoreCourses && (
+        <button
+          type="button"
+          aria-label="통독방 더보기"
+          onClick={showMoreCourses}
+          className="mx-auto flex h-10 items-center justify-center gap-1 rounded-full border border-[#E8DDCD] bg-white px-4 text-[12px] font-bold text-[#8A8175] active:scale-95"
+        >
+          <MoreHorizontal className="h-4 w-4" strokeWidth={2} />
+          더보기 {filteredTemplates.length - visibleCourseCount}개
+        </button>
+      )}
     </div>
   );
 }
