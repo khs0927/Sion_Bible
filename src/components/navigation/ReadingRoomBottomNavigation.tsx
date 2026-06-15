@@ -1,18 +1,27 @@
 import { BarChart3, BookOpen, CalendarCheck, ClipboardList, Gift } from 'lucide-react';
 
+const navItems = [
+  { label: '오늘', href: '/reading-room', icon: CalendarCheck, section: 'today' },
+  { label: '성경', href: '/bible', icon: BookOpen, section: 'bible' },
+  { label: '통독', href: '/reading-room', icon: ClipboardList, section: 'plan', featured: true },
+  { label: '기록', href: '/reading-room/records', icon: BarChart3, section: 'records' },
+  { label: '보상', href: '/reading-room/rewards', icon: Gift, section: 'rewards' },
+] as const;
+
 type ReadingRoomBottomNavigationProps = {
   onOpenBible: () => void;
 };
 
-const navItems = [
-  { label: '오늘', href: '/reading-room', icon: CalendarCheck },
-  { label: '성경', href: '/bible', icon: BookOpen },
-  { label: '통독', href: '/reading-room', icon: ClipboardList, active: true, featured: true },
-  { label: '기록', href: '/reading-room/records', icon: BarChart3 },
-  { label: '보상', href: '/reading-room/rewards', icon: Gift },
-];
+function getCurrentSection() {
+  if (typeof window === 'undefined') return 'plan';
+  if (window.location.pathname.startsWith('/reading-room/records')) return 'records';
+  if (window.location.pathname.startsWith('/reading-room/rewards')) return 'rewards';
+  return 'plan';
+}
 
 export function ReadingRoomBottomNavigation({ onOpenBible }: ReadingRoomBottomNavigationProps) {
+  const currentSection = getCurrentSection();
+
   return (
     <nav
       aria-label="통독방 하단 네비게이션"
@@ -21,6 +30,7 @@ export function ReadingRoomBottomNavigation({ onOpenBible }: ReadingRoomBottomNa
       <div className="grid grid-cols-5 items-end">
         {navItems.map((item) => {
           const Icon = item.icon;
+          const active = item.section === currentSection;
 
           if (item.featured) {
             return (
@@ -28,11 +38,17 @@ export function ReadingRoomBottomNavigation({ onOpenBible }: ReadingRoomBottomNa
                 key={item.label}
                 href={item.href}
                 aria-label={item.label}
-                aria-current="page"
-                className="flex min-h-[66px] flex-col items-center justify-end gap-1 text-[#4E7F59]"
+                aria-current={active ? 'page' : undefined}
+                className={[
+                  'flex min-h-[66px] flex-col items-center justify-end gap-1 transition active:scale-95',
+                  active ? 'text-[#4E7F59]' : 'text-[#8A8175]',
+                ].join(' ')}
               >
-                <div className="-mt-7 flex h-14 w-14 items-center justify-center rounded-[18px] border border-[#E3D8C8] bg-[#FFF7EE] shadow-[0_4px_14px_rgba(0,0,0,0.12)]">
-                  <Icon className="h-7 w-7 text-[#4E7F59]" strokeWidth={2.2} />
+                <div className={[
+                  '-mt-7 flex h-14 w-14 items-center justify-center rounded-[18px] border shadow-[0_4px_14px_rgba(0,0,0,0.12)]',
+                  active ? 'border-[#E3D8C8] bg-[#FFF7EE]' : 'border-[#E8DDCD] bg-white',
+                ].join(' ')}>
+                  <Icon className={['h-7 w-7', active ? 'text-[#4E7F59]' : 'text-[#8A8175]'].join(' ')} strokeWidth={2.2} />
                 </div>
                 <span className="text-[11px] font-bold leading-none">{item.label}</span>
               </a>
@@ -44,20 +60,20 @@ export function ReadingRoomBottomNavigation({ onOpenBible }: ReadingRoomBottomNa
               key={item.label}
               href={item.href}
               aria-label={item.label}
+              aria-current={active ? 'page' : undefined}
               onClick={(event) => {
                 if (item.label === '성경') {
                   event.preventDefault();
                   onOpenBible();
-                  return;
-                }
-                if (item.href.startsWith('/reading-room')) {
-                  event.preventDefault();
                 }
               }}
-              className="flex min-h-[66px] flex-col items-center justify-center gap-1 text-[#8A8175] transition active:scale-95"
+              className={[
+                'flex min-h-[66px] flex-col items-center justify-center gap-1 transition active:scale-95',
+                active ? 'text-[#4E7F59]' : 'text-[#8A8175]',
+              ].join(' ')}
             >
-              <Icon className="h-5 w-5" strokeWidth={1.9} />
-              <span className="text-[11px] font-medium leading-none">{item.label}</span>
+              <Icon className="h-5 w-5" strokeWidth={active ? 2.3 : 1.9} />
+              <span className={['text-[11px] leading-none', active ? 'font-bold' : 'font-medium'].join(' ')}>{item.label}</span>
             </a>
           );
         })}
