@@ -86,9 +86,33 @@
         box-shadow: 0 6px 12px rgba(52,45,39,0.05);
       }
       .sion-inline-action.primary { color: #fff; border-color: transparent; background: linear-gradient(145deg, #6F8F72, #86B7AD); }
-      .sion-card-copy, .sion-card-check { margin-left: 4px; flex: 0 0 auto; }
-      .sion-card-check { width: 24px; height: 24px; border-radius: 8px; padding: 0; font-size: 13px; }
-      .sion-card-check[data-checked="true"] { color: #fff; border-color: transparent; background: linear-gradient(145deg, #9E97C9, #86B7AD); }
+      .sion-card-actions {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 6px;
+        flex: 0 0 auto;
+      }
+      .sion-card-copy,
+      .sion-card-check {
+        width: 30px;
+        height: 30px;
+        min-height: 30px;
+        padding: 0;
+        border-radius: 11px;
+        flex: 0 0 auto;
+        line-height: 1;
+      }
+      .sion-card-copy svg,
+      .sion-card-check svg { width: 15px; height: 15px; display: block; }
+      .sion-card-check[data-checked="false"] { background: #fff; color: transparent; border-color: #E4D8CA; }
+      .sion-card-check[data-checked="true"] { color: #fff; border-color: transparent; background: linear-gradient(145deg, #6F8F72, #86B7AD); }
+      .sion-saved-card-selected {
+        background: rgba(111, 143, 114, 0.12) !important;
+        border-color: rgba(111, 143, 114, 0.72) !important;
+        box-shadow: 0 10px 22px rgba(111, 143, 114, 0.14) !important;
+      }
       .sion-bulk-copy-bar {
         position: fixed;
         left: 12px;
@@ -233,6 +257,8 @@
           ['dateDescBible', '날짜 안에서 권별 최신순', '최신 날짜 안에서 성경 순서로 정렬합니다.'],
           ['dateAscBible', '날짜 안에서 권별 오래된순', '오래된 날짜 안에서 성경 순서로 정렬합니다.']
         ];
+        const COPY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+        const CHECK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>';
         let bulkCopyMode = false;
         const selectedRefs = new Set();
 
@@ -353,12 +379,12 @@
             document.body.removeChild(textarea);
           }
         };
+        const refSpanForCard = (card) => [...card.querySelectorAll('span')].find(span => /\s\d+:\d+/.test(span.textContent?.trim() || ''));
         const getSavedCards = () => [...document.querySelectorAll('main button')].filter(card => {
           if (!isSavedScreen()) return false;
-          const ref = card.querySelector('span')?.textContent?.trim() || '';
-          return /\s\d+:\d+/.test(ref) && card.querySelector('.serif-verse');
+          return Boolean(refSpanForCard(card) && card.querySelector('.serif-verse'));
         });
-        const cardRef = (card) => card.querySelector('span')?.textContent?.trim() || '';
+        const cardRef = (card) => refSpanForCard(card)?.textContent?.trim() || '';
         const cardText = (card) => card.querySelector('.serif-verse')?.textContent?.trim() || '';
         const copyCard = async (card) => {
           await writeClipboard(`${cardRef(card)}\n${cardText(card)}`.trim());
@@ -391,38 +417,68 @@
           });
           document.body.appendChild(bar);
         };
+        const moveNativeActionsToGroup = (topRow, actions, refSpan) => {
+          [...topRow.children].forEach(child => {
+            if (child === refSpan || child === actions || child.classList?.contains('sion-card-copy') || child.classList?.contains('sion-card-check')) return;
+            if (child.tagName === 'SPAN' && child.querySelector('svg')) actions.appendChild(child);
+          });
+        };
         const decorateSavedCards = () => {
           if (!isSavedScreen()) return;
           getSavedCards().forEach(card => {
             const topRow = card.firstElementChild;
-            if (!topRow) return;
+            const refSpan = refSpanForCard(card);
+            if (!topRow || !refSpan) return;
             const ref = cardRef(card);
-            if (!topRow.querySelector('.sion-card-copy')) {
-              const copy = document.createElement('span');
-              copy.className = 'sion-card-copy sion-inline-action';
-              copy.textContent = '복사';
-              copy.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); copyCard(card); });
-              topRow.appendChild(copy);
+            topRow.style.display = 'flex';
+            topRow.style.alignItems = 'center';
+            topRow.style.gap = '8px';
+            refSpan.style.flex = '1 1 auto';
+            refSpan.style.minWidth = '0';
+            refSpan.style.textAlign = 'left';
+            let actions = topRow.querySelector('.sion-card-actions');
+            if (!actions) {
+              actions = document.createElement('span');
+              actions.className = 'sion-card-actions';
+              topRow.appendChild(actions);
             }
-            const existingCheck = topRow.querySelector('.sion-card-check');
+            moveNativeActionsToGroup(topRow, actions, refSpan);
+            let copy = actions.querySelector('.sion-card-copy');
+            if (!copy) {
+              copy = document.createElement('span');
+              copy.className = 'sion-card-copy sion-inline-action';
+              copy.setAttribute('role', 'button');
+              copy.setAttribute('aria-label', '복사');
+              copy.innerHTML = COPY_ICON;
+              copy.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); copyCard(card); });
+              actions.insertBefore(copy, actions.firstChild);
+            }
+            let check = actions.querySelector('.sion-card-check');
+            const selected = bulkCopyMode && selectedRefs.has(ref);
             if (bulkCopyMode) {
-              if (!existingCheck) {
-                const check = document.createElement('span');
+              if (!check) {
+                check = document.createElement('span');
                 check.className = 'sion-card-check sion-inline-action';
-                check.textContent = '✓';
+                check.setAttribute('role', 'checkbox');
+                check.setAttribute('aria-label', '복사할 말씀 선택');
                 check.addEventListener('click', (event) => {
                   event.preventDefault();
                   event.stopPropagation();
-                  if (selectedRefs.has(ref)) selectedRefs.delete(ref);
-                  else selectedRefs.add(ref);
+                  const currentRef = cardRef(card);
+                  if (selectedRefs.has(currentRef)) selectedRefs.delete(currentRef);
+                  else selectedRefs.add(currentRef);
                   decorateSavedCards();
                   updateBulkBar();
                 });
-                topRow.insertBefore(check, topRow.firstChild);
+                actions.insertBefore(check, actions.firstChild);
               }
-              topRow.querySelector('.sion-card-check')?.setAttribute('data-checked', String(selectedRefs.has(ref)));
-            } else if (existingCheck) {
-              existingCheck.remove();
+              check.dataset.checked = String(selected);
+              check.setAttribute('aria-checked', String(selected));
+              check.innerHTML = selected ? CHECK_ICON : '';
+              card.classList.toggle('sion-saved-card-selected', selected);
+            } else {
+              check?.remove();
+              card.classList.remove('sion-saved-card-selected');
             }
           });
         };
