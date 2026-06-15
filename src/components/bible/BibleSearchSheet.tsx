@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type PointerEvent as ReactPointerEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useState, useEffect, useRef, type CSSProperties, type PointerEvent as ReactPointerEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { X, Search, Loader2, BookOpen, ArrowRight } from 'lucide-react';
 import { searchBibleVerses, highlightKeyword } from '../../services/bibleSearch';
 import type { BibleVerseRecord } from '../../types/bible';
@@ -143,7 +143,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
             onPointerCancel={resetDrag}
             onKeyDown={handleDragKeyDown}
             className="h-6 w-24 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2"
-            style={{ '--tw-ring-color': T.accent } as React.CSSProperties}
+            style={{ '--tw-ring-color': T.accent } as CSSProperties}
           >
             <span className="block w-12 h-1.5 bg-gray-300/60 rounded-full" />
           </div>
