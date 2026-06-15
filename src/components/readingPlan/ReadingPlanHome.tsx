@@ -10,6 +10,10 @@ import { TodayReadingCard } from './TodayReadingCard';
 import { WeeklyProgressBar } from './WeeklyProgressBar';
 
 type ThemeTokens = Record<string, string>;
+type CourseTab = 'recommended' | 'custom';
+type RecommendedFilter = 'all' | ReadingPlanTemplate['tone'];
+
+const RECOMMENDED_PAGE_SIZE = 8;
 
 const DURATION_PRESETS = [
   { label: '직접', value: 0 },
@@ -18,6 +22,16 @@ const DURATION_PRESETS = [
   { label: '한주', value: 7 },
   { label: '한달', value: 30 },
   { label: '세달', value: 90 },
+];
+
+const RECOMMENDED_FILTERS: Array<{ key: RecommendedFilter; label: string }> = [
+  { key: 'all', label: '전체' },
+  { key: 'full', label: '전체성경' },
+  { key: 'fast', label: '집중' },
+  { key: 'new-testament', label: '신약' },
+  { key: 'gospels', label: '복음서' },
+  { key: 'wisdom', label: '지혜서' },
+  { key: 'pentateuch', label: '오경' },
 ];
 
 const BOOK_GROUPS: Array<{ title: string; ids: string[] }> = [
@@ -60,12 +74,12 @@ function daysFromDateValue(value: string) {
   return Math.min(365, Math.max(1, diff));
 }
 
-export function ReadingPlanHome({ 
-  T, 
+export function ReadingPlanHome({
+  T,
   progress,
   userTemplates = [],
   onToggleDay,
-  onSaveJournal, 
+  onSaveJournal,
   onNavigateToBible,
   onNavigateToRange,
   onTodayTaskLoaded,
@@ -74,8 +88,8 @@ export function ReadingPlanHome({
   onSaveCustomPlan,
   onUpdateCustomPlan,
   onDeleteCustomPlan,
-}: { 
-  T: ThemeTokens; 
+}: {
+  T: ThemeTokens;
   progress: ReadingPlanProgress | null;
   userTemplates?: ReadingPlanTemplate[];
   onToggleDay?: (day: number) => void;
@@ -90,7 +104,9 @@ export function ReadingPlanHome({
   onDeleteCustomPlan?: (templateId: string) => void;
 }) {
   const [meditationTask, setMeditationTask] = useState<ReadingDayTask | null>(null);
-  const [courseTab, setCourseTab] = useState<'recommended' | 'custom'>('recommended');
+  const [courseTab, setCourseTab] = useState<CourseTab>('recommended');
+  const [recommendedFilter, setRecommendedFilter] = useState<RecommendedFilter>('all');
+  const [visibleRecommendedCount, setVisibleRecommendedCount] = useState(4);
   const [selectedBookIds, setSelectedBookIds] = useState<string[]>(['jhn']);
   const [durationPreset, setDurationPreset] = useState(10);
   const [manualDays, setManualDays] = useState(14);
@@ -116,13 +132,24 @@ export function ReadingPlanHome({
   const isOldSelected = sameIds(selectedBookIds, OLD_TESTAMENT_BOOK_IDS);
   const isNewSelected = sameIds(selectedBookIds, NEW_TESTAMENT_BOOK_IDS);
 
+  const recommendedTemplates = useMemo(
+    () => recommendedFilter === 'all'
+      ? READING_PLAN_TEMPLATES
+      : READING_PLAN_TEMPLATES.filter((template) => template.tone === recommendedFilter),
+    [recommendedFilter],
+  );
+  const visibleRecommendedTemplates = recommendedTemplates.slice(0, visibleRecommendedCount);
+  const hasMoreRecommended = visibleRecommendedCount < recommendedTemplates.length;
+
   useEffect(() => {
     onTodayTaskLoaded?.(todayTask);
   }, [todayTask, onTodayTaskLoaded]);
 
-  const beginPlan = (template: ReadingPlanTemplate) => {
-    setPendingTemplate(template);
-  };
+  useEffect(() => {
+    setVisibleRecommendedCount(4);
+  }, [recommendedFilter]);
+
+  const beginPlan = (template: ReadingPlanTemplate) => setPendingTemplate(template);
 
   const startLater = () => {
     if (!pendingTemplate) return;
@@ -137,39 +164,27 @@ export function ReadingPlanHome({
     setPendingTemplate(null);
   };
 
-  const toggleToday = () => {
-    onToggleDay?.(todayDay);
+  const toggleToday = () => onToggleDay?.(todayDay);
+  const meditateToday = () => {
+    if (todayTask) setMeditationTask(todayTask);
   };
 
-  const meditateToday = () => {
-    if (!todayTask) return;
-    setMeditationTask(todayTask);
+  const showMoreRecommended = () => {
+    setVisibleRecommendedCount((count) => Math.min(count + RECOMMENDED_PAGE_SIZE, recommendedTemplates.length));
   };
 
   const toggleBook = (bookId: string) => {
-    setSelectedBookIds((current) => {
-      if (current.includes(bookId)) return current.filter((id) => id !== bookId);
-      return [...current, bookId];
-    });
+    setSelectedBookIds((current) => current.includes(bookId) ? current.filter((id) => id !== bookId) : [...current, bookId]);
   };
 
   const selectBookGroup = (group: 'gospels' | 'new' | 'old' | 'all') => {
-    const ids =
-      group === 'gospels'
-        ? GOSPEL_BOOK_IDS
-        : group === 'new'
-          ? NEW_TESTAMENT_BOOK_IDS
-          : group === 'old'
-            ? OLD_TESTAMENT_BOOK_IDS
-            : ALL_BOOK_IDS;
+    const ids = group === 'gospels' ? GOSPEL_BOOK_IDS : group === 'new' ? NEW_TESTAMENT_BOOK_IDS : group === 'old' ? OLD_TESTAMENT_BOOK_IDS : ALL_BOOK_IDS;
     setSelectedBookIds((current) => sameIds(current, ids) ? [] : ids);
   };
 
   const selectDurationPreset = (value: number) => {
     setDurationPreset(value);
-    if (value === 0 && !manualEndDate) {
-      setManualEndDate(dateValueFromDays(manualDays));
-    }
+    if (value === 0 && !manualEndDate) setManualEndDate(dateValueFromDays(manualDays));
   };
 
   const selectManualDate = (value: string) => {
@@ -231,11 +246,8 @@ export function ReadingPlanHome({
               onToggleComplete={toggleToday}
               onMeditate={meditateToday}
               onGoToRead={() => {
-                if (onNavigateToRange) {
-                  onNavigateToRange();
-                } else if (todayTask && onNavigateToBible) {
-                  onNavigateToBible(todayTask.references[0].bookId, todayTask.references[0].startChapter);
-                }
+                if (onNavigateToRange) onNavigateToRange();
+                else if (todayTask && onNavigateToBible) onNavigateToBible(todayTask.references[0].bookId, todayTask.references[0].startChapter);
               }}
             />
           )}
@@ -263,23 +275,34 @@ export function ReadingPlanHome({
         </div>
 
         {courseTab === 'recommended' ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 10 }} className="reading-plan-grid">
-            {READING_PLAN_TEMPLATES.map((template) => (
-              <ReadingPlanCard
-                key={template.id}
-                template={template}
-                active={template.id === progress?.templateId}
-                T={T}
-                onStart={() => beginPlan(template)}
-              />
-            ))}
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {RECOMMENDED_FILTERS.map((filter) => (
+                <button key={filter.key} onClick={() => setRecommendedFilter(filter.key)} style={chip(T, recommendedFilter === filter.key)}>
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 10 }} className="reading-plan-grid">
+              {visibleRecommendedTemplates.map((template) => (
+                <ReadingPlanCard
+                  key={template.id}
+                  template={template}
+                  active={template.id === progress?.templateId}
+                  T={T}
+                  onStart={() => beginPlan(template)}
+                />
+              ))}
+            </div>
+            {hasMoreRecommended && (
+              <button type="button" onClick={showMoreRecommended} style={{ ...secondaryButton(T), justifyContent: 'center', justifySelf: 'center', minHeight: 44, borderRadius: 18, padding: '10px 18px' }}>
+                ··· 더보기 {recommendedTemplates.length - visibleRecommendedCount}개
+              </button>
+            )}
           </div>
         ) : (
           <div style={{ display: 'grid', gap: 10 }}>
-            <button
-              onClick={() => setIsCustomBuilderOpen((open) => !open)}
-              style={{ ...secondaryButton(T), justifyContent: 'space-between', borderRadius: 20, minHeight: 52, padding: '12px 14px' }}
-            >
+            <button onClick={() => setIsCustomBuilderOpen((open) => !open)} style={{ ...secondaryButton(T), justifyContent: 'space-between', borderRadius: 20, minHeight: 52, padding: '12px 14px' }}>
               <span className="title-font" style={{ fontSize: 18, fontWeight: 800 }}>나만의 코스 만들기</span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: T.accent }}>
                 <SlidersHorizontal size={16} />
@@ -288,155 +311,73 @@ export function ReadingPlanHome({
             </button>
 
             {isCustomBuilderOpen && (
-            <section style={{ borderRadius: 22, background: T.panel, border: `1px solid ${T.line}`, boxShadow: T.soft, padding: 13, display: 'grid', gap: 10 }}>
-              <div style={{ position: 'sticky', top: 116, zIndex: 25, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 8, padding: '0 0 8px', background: T.panel }}>
-                <input
-                  value={courseTitle}
-                  onChange={(event) => setCourseTitle(event.target.value)}
-                  placeholder="코스 이름을 입력하세요"
-                  style={{ width: '100%', borderRadius: 14, border: `1px solid ${T.line}`, background: T.solid, color: T.text, padding: '11px 12px', fontFamily: 'inherit', fontWeight: 800, outline: 'none' }}
-                />
-                <button
-                  onClick={createPlan}
-                  disabled={selectedBookIds.length === 0}
-                  style={{ ...primaryButton(T), minHeight: 42, opacity: selectedBookIds.length === 0 ? 0.42 : 1, cursor: selectedBookIds.length === 0 ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}
-                >
-                  만들기
-                </button>
-              </div>
-              <div>
-                <div className="title-font" style={{ fontWeight: 900, fontSize: 16, marginBottom: 7 }}>통독기간</div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {DURATION_PRESETS.map((preset) => (
-                  <button key={preset.label} onClick={() => selectDurationPreset(preset.value)} style={chip(T, durationPreset === preset.value)}>
-                    {preset.label}
-                  </button>
-                ))}
-                {durationPreset === 0 && (
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, borderRadius: 999, border: `1px solid ${T.line}`, background: T.card, minHeight: 32, padding: '4px 8px', flexWrap: 'wrap' }}>
-                    <button
-                      onClick={() => setManualDays((days) => Math.max(1, days - 1))}
-                      style={{ ...primaryIconButton(T), width: 24, height: 24, borderRadius: 10 }}
-                      aria-label="기간 하루 줄이기"
-                    >
-                      <ChevronDown size={14} />
-                    </button>
-                    <span style={{ minWidth: 46, textAlign: 'center', fontWeight: 900, fontSize: 12, color: T.text }}>{manualDays}일</span>
-                    <button
-                      onClick={() => setManualDays((days) => Math.min(365, days + 1))}
-                      style={{ ...primaryIconButton(T), width: 24, height: 24, borderRadius: 10 }}
-                      aria-label="기간 하루 늘리기"
-                    >
-                      <ChevronUp size={14} />
-                    </button>
-                    <button
-                      onClick={() => setShowManualCalendar((open) => !open)}
-                      style={{ ...primaryIconButton(T), width: 26, height: 26, borderRadius: 10 }}
-                      aria-label="달력으로 기간 선택"
-                    >
-                      <Calendar size={14} />
-                    </button>
-                    {showManualCalendar && (
-                      <input
-                        type="date"
-                        value={manualEndDate}
-                        min={new Date().toISOString().slice(0, 10)}
-                        onChange={(event) => selectManualDate(event.target.value)}
-                        style={{ border: `1px solid ${T.line}`, background: T.solid, color: T.text, borderRadius: 11, minHeight: 28, padding: '3px 7px', fontFamily: 'inherit', fontWeight: 800, fontSize: 11, outline: 'none' }}
-                      />
+              <section style={{ borderRadius: 22, background: T.panel, border: `1px solid ${T.line}`, boxShadow: T.soft, padding: 13, display: 'grid', gap: 10 }}>
+                <div style={{ position: 'sticky', top: 116, zIndex: 25, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 8, padding: '0 0 8px', background: T.panel }}>
+                  <input value={courseTitle} onChange={(event) => setCourseTitle(event.target.value)} placeholder="코스 이름을 입력하세요" style={{ width: '100%', borderRadius: 14, border: `1px solid ${T.line}`, background: T.solid, color: T.text, padding: '11px 12px', fontFamily: 'inherit', fontWeight: 800, outline: 'none' }} />
+                  <button onClick={createPlan} disabled={selectedBookIds.length === 0} style={{ ...primaryButton(T), minHeight: 42, opacity: selectedBookIds.length === 0 ? 0.42 : 1, cursor: selectedBookIds.length === 0 ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>만들기</button>
+                </div>
+                <div>
+                  <div className="title-font" style={{ fontWeight: 900, fontSize: 16, marginBottom: 7 }}>통독기간</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {DURATION_PRESETS.map((preset) => <button key={preset.label} onClick={() => selectDurationPreset(preset.value)} style={chip(T, durationPreset === preset.value)}>{preset.label}</button>)}
+                    {durationPreset === 0 && (
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, borderRadius: 999, border: `1px solid ${T.line}`, background: T.card, minHeight: 32, padding: '4px 8px', flexWrap: 'wrap' }}>
+                        <button onClick={() => setManualDays((days) => Math.max(1, days - 1))} style={{ ...primaryIconButton(T), width: 24, height: 24, borderRadius: 10 }} aria-label="기간 하루 줄이기"><ChevronDown size={14} /></button>
+                        <span style={{ minWidth: 46, textAlign: 'center', fontWeight: 900, fontSize: 12, color: T.text }}>{manualDays}일</span>
+                        <button onClick={() => setManualDays((days) => Math.min(365, days + 1))} style={{ ...primaryIconButton(T), width: 24, height: 24, borderRadius: 10 }} aria-label="기간 하루 늘리기"><ChevronUp size={14} /></button>
+                        <button onClick={() => setShowManualCalendar((open) => !open)} style={{ ...primaryIconButton(T), width: 26, height: 26, borderRadius: 10 }} aria-label="달력으로 기간 선택"><Calendar size={14} /></button>
+                        {showManualCalendar && <input type="date" value={manualEndDate} min={new Date().toISOString().slice(0, 10)} onChange={(event) => selectManualDate(event.target.value)} style={{ border: `1px solid ${T.line}`, background: T.solid, color: T.text, borderRadius: 11, minHeight: 28, padding: '3px 7px', fontFamily: 'inherit', fontWeight: 800, fontSize: 11, outline: 'none' }} />}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
-              </div>
-              <div>
-                <div className="title-font" style={{ fontWeight: 900, fontSize: 16, marginBottom: 7 }}>통독구간</div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                <button onClick={() => selectBookGroup('all')} style={chip(T, isAllSelected)}>성경 전체</button>
-                <button onClick={() => selectBookGroup('old')} style={chip(T, isOldSelected)}>구약 전체</button>
-                <button onClick={() => selectBookGroup('new')} style={chip(T, isNewSelected)}>신약 전체</button>
-              </div>
-              </div>
-              <div style={{ maxHeight: 320, overflowY: 'auto', display: 'grid', gap: 10, paddingRight: 2 }}>
-                {BOOK_GROUPS.map((group) => (
-                  <section key={group.title} style={{ display: 'grid', gap: 6 }}>
-                    <div style={{ fontWeight: 900, fontSize: 12, color: T.sub }}>{group.title}</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }} className="book-grid">
-                      {READING_PLAN_BOOK_OPTIONS.filter((book) => group.ids.includes(book.id)).map((book) => {
-                        const selected = selectedBookIds.includes(book.id);
-                        return (
-                          <button key={book.id} onClick={() => toggleBook(book.id)} style={{ ...chip(T, selected), borderRadius: 12, justifyContent: 'space-between', padding: '8px 9px' }}>
-                            <span>{book.name}</span>
-                            {selected && <Check size={13} />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </section>
-                ))}
-              </div>
-            </section>
+                </div>
+                <div>
+                  <div className="title-font" style={{ fontWeight: 900, fontSize: 16, marginBottom: 7 }}>통독구간</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <button onClick={() => selectBookGroup('all')} style={chip(T, isAllSelected)}>성경 전체</button>
+                    <button onClick={() => selectBookGroup('old')} style={chip(T, isOldSelected)}>구약 전체</button>
+                    <button onClick={() => selectBookGroup('new')} style={chip(T, isNewSelected)}>신약 전체</button>
+                  </div>
+                </div>
+                <div style={{ maxHeight: 320, overflowY: 'auto', display: 'grid', gap: 10, paddingRight: 2 }}>
+                  {BOOK_GROUPS.map((group) => (
+                    <section key={group.title} style={{ display: 'grid', gap: 6 }}>
+                      <div style={{ fontWeight: 900, fontSize: 12, color: T.sub }}>{group.title}</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }} className="book-grid">
+                        {READING_PLAN_BOOK_OPTIONS.filter((book) => group.ids.includes(book.id)).map((book) => {
+                          const selected = selectedBookIds.includes(book.id);
+                          return <button key={book.id} onClick={() => toggleBook(book.id)} style={{ ...chip(T, selected), borderRadius: 12, justifyContent: 'space-between', padding: '8px 9px' }}><span>{book.name}</span>{selected && <Check size={13} />}</button>;
+                        })}
+                      </div>
+                    </section>
+                  ))}
+                </div>
+              </section>
             )}
 
             <section style={{ display: 'grid', gap: 9 }}>
-                <div style={{ ...secondaryButton(T), justifyContent: 'space-between', borderRadius: 20, minHeight: 52, padding: '12px 14px', cursor: 'default' }}>
-                  <span className="title-font" style={{ fontSize: 18, fontWeight: 800 }}>내가 만든 코스</span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: T.accent, fontSize: 12, fontWeight: 900 }}>
-                    <BookOpen size={16} />
-                    {userTemplates.length}개
-                  </span>
-                </div>
-                {userTemplates.length === 0 && (
-                  <div style={{ borderRadius: 18, border: `1px dashed ${T.line}`, background: T.solid, color: T.sub, padding: 14, fontSize: 13, lineHeight: 1.6 }}>
-                    아직 만든 코스가 없습니다. 위의 만들기 창을 열어 원하는 성경과 기간을 골라보세요.
+              <div style={{ ...secondaryButton(T), justifyContent: 'space-between', borderRadius: 20, minHeight: 52, padding: '12px 14px', cursor: 'default' }}>
+                <span className="title-font" style={{ fontSize: 18, fontWeight: 800 }}>내가 만든 코스</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: T.accent, fontSize: 12, fontWeight: 900 }}><BookOpen size={16} />{userTemplates.length}개</span>
+              </div>
+              {userTemplates.length === 0 && <div style={{ borderRadius: 18, border: `1px dashed ${T.line}`, background: T.solid, color: T.sub, padding: 14, fontSize: 13, lineHeight: 1.6 }}>아직 만든 코스가 없습니다. 위의 만들기 창을 열어 원하는 성경과 기간을 골라보세요.</div>}
+              {userTemplates.map((template) => (
+                <article key={template.id} style={{ borderRadius: 20, background: T.panel, border: `1px solid ${template.id === progress?.templateId ? T.accent : T.line}`, padding: 12, boxShadow: T.soft, display: 'grid', gap: 10 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                    <div><div className="title-font" style={{ fontSize: 18, fontWeight: 800 }}>{template.title}</div><div style={{ color: T.sub, fontSize: 12, fontWeight: 800, marginTop: 3 }}>{template.description}</div></div>
+                    <div style={{ display: 'inline-flex', alignItems: 'flex-start', gap: 6 }}>
+                      <button onClick={() => onDeleteCustomPlan?.(template.id)} style={{ ...primaryIconButton(T), width: 34, height: 34, borderRadius: 12 }} aria-label={`${template.title} 삭제`}><X size={14} /></button>
+                      <button onClick={() => onStartPlanAndRead?.(template)} style={{ ...primaryButton(T), minHeight: 38, padding: '8px 10px', flex: '0 0 auto' }} aria-label={`${template.title} 읽으러 가기`}>읽으러 가기</button>
+                    </div>
                   </div>
-                )}
-                {userTemplates.map((template) => (
-                  <article key={template.id} style={{ borderRadius: 20, background: T.panel, border: `1px solid ${template.id === progress?.templateId ? T.accent : T.line}`, padding: 12, boxShadow: T.soft, display: 'grid', gap: 10 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                      <div>
-                        <div className="title-font" style={{ fontSize: 18, fontWeight: 800 }}>{template.title}</div>
-                        <div style={{ color: T.sub, fontSize: 12, fontWeight: 800, marginTop: 3 }}>{template.description}</div>
-                      </div>
-                      <div style={{ display: 'inline-flex', alignItems: 'flex-start', gap: 6 }}>
-                        <button onClick={() => onDeleteCustomPlan?.(template.id)} style={{ ...primaryIconButton(T), width: 34, height: 34, borderRadius: 12 }} aria-label={`${template.title} 삭제`}>
-                          <X size={14} />
-                        </button>
-                        <button onClick={() => onStartPlanAndRead?.(template)} style={{ ...primaryButton(T), minHeight: 38, padding: '8px 10px', flex: '0 0 auto' }} aria-label={`${template.title} 읽으러 가기`}>
-                          읽으러 가기
-                        </button>
-                      </div>
-                    </div>
-                    <div style={{ display: 'grid', gap: 8 }}>
-                      <button onClick={() => setEditingTemplateId((current) => (current === template.id ? null : template.id))} style={secondaryButton(T)}>기간 수정</button>
-                      {editingTemplateId === template.id && (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0,1fr) auto', gap: 8, alignItems: 'center' }}>
-                          <button
-                            onClick={() => setEditDays((current) => ({ ...current, [template.id]: Math.max(1, (current[template.id] ?? template.days) - 1) }))}
-                            style={primaryIconButton(T)}
-                            aria-label={`${template.title} 기간 줄이기`}
-                          >
-                            <ChevronDown size={16} />
-                          </button>
-                          <div style={{ textAlign: 'center', fontWeight: 900, fontSize: 14, color: T.text }}>
-                            {(editDays[template.id] ?? template.days)}일
-                          </div>
-                          <button
-                            onClick={() => setEditDays((current) => ({ ...current, [template.id]: Math.min(365, (current[template.id] ?? template.days) + 1) }))}
-                            style={primaryIconButton(T)}
-                            aria-label={`${template.title} 기간 늘리기`}
-                          >
-                            <ChevronUp size={16} />
-                          </button>
-                        </div>
-                      )}
-                      {editingTemplateId === template.id && (
-                        <button onClick={() => updateCustomDays(template)} style={primaryButton(T)}>확인</button>
-                      )}
-                    </div>
-                  </article>
-                ))}
-              </section>
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    <button onClick={() => setEditingTemplateId((current) => current === template.id ? null : template.id)} style={secondaryButton(T)}>기간 수정</button>
+                    {editingTemplateId === template.id && <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0,1fr) auto', gap: 8, alignItems: 'center' }}><button onClick={() => setEditDays((current) => ({ ...current, [template.id]: Math.max(1, (current[template.id] ?? template.days) - 1) }))} style={primaryIconButton(T)} aria-label={`${template.title} 기간 줄이기`}><ChevronDown size={16} /></button><div style={{ textAlign: 'center', fontWeight: 900, fontSize: 14, color: T.text }}>{editDays[template.id] ?? template.days}일</div><button onClick={() => setEditDays((current) => ({ ...current, [template.id]: Math.min(365, (current[template.id] ?? template.days) + 1) }))} style={primaryIconButton(T)} aria-label={`${template.title} 기간 늘리기`}><ChevronUp size={16} /></button></div>}
+                    {editingTemplateId === template.id && <button onClick={() => updateCustomDays(template)} style={primaryButton(T)}>확인</button>}
+                  </div>
+                </article>
+              ))}
+            </section>
           </div>
         )}
       </section>
@@ -446,17 +387,11 @@ export function ReadingPlanHome({
           <div onClick={() => setPendingTemplate(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.38)', backdropFilter: 'blur(4px)' }} />
           <section style={{ position: 'relative', width: '100%', maxWidth: 480, borderTopLeftRadius: 26, borderTopRightRadius: 26, background: T.panel, border: `1px solid ${T.line}`, boxShadow: T.shadow, padding: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-              <div>
-                <div style={{ color: T.accent, fontSize: 12, fontWeight: 900 }}>코스를 시작할까요?</div>
-                <h3 className="title-font" style={{ margin: '4px 0 0', fontSize: 22, fontWeight: 800 }}>{pendingTemplate.title}</h3>
-              </div>
+              <div><div style={{ color: T.accent, fontSize: 12, fontWeight: 900 }}>코스를 시작할까요?</div><h3 className="title-font" style={{ margin: '4px 0 0', fontSize: 22, fontWeight: 800 }}>{pendingTemplate.title}</h3></div>
               <button onClick={() => setPendingTemplate(null)} style={primaryIconButton(T)} aria-label="닫기"><X size={16} /></button>
             </div>
             <p style={{ color: T.sub, fontSize: 13, lineHeight: 1.6, margin: '10px 0 14px' }}>{pendingTemplate.description}</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <button onClick={startAndRead} style={primaryButton(T)}>읽으러 가기</button>
-              <button onClick={startLater} style={secondaryButton(T)}>나중에 읽기</button>
-            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}><button onClick={startAndRead} style={primaryButton(T)}>읽으러 가기</button><button onClick={startLater} style={secondaryButton(T)}>나중에 읽기</button></div>
           </section>
         </div>
       )}
@@ -465,95 +400,21 @@ export function ReadingPlanHome({
 }
 
 function tabButton(T: ThemeTokens, active: boolean): CSSProperties {
-  return {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    borderRadius: 12,
-    border: 'none',
-    background: active ? T.card : 'transparent',
-    color: active ? T.text : T.sub,
-    minHeight: 32,
-    padding: '7px 9px',
-    fontFamily: 'inherit',
-    fontWeight: 900,
-    fontSize: 11,
-    boxShadow: active ? T.soft : 'none',
-    cursor: 'pointer',
-  };
+  return { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, borderRadius: 12, border: 'none', background: active ? T.card : 'transparent', color: active ? T.text : T.sub, minHeight: 32, padding: '7px 9px', fontFamily: 'inherit', fontWeight: 900, fontSize: 11, boxShadow: active ? T.soft : 'none', cursor: 'pointer' };
 }
 
 function chip(T: ThemeTokens, active: boolean): CSSProperties {
-  return {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    borderRadius: 999,
-    border: `1px solid ${active ? 'transparent' : T.line}`,
-    background: active ? `linear-gradient(145deg, ${T.accent}, ${T.mint})` : T.solid,
-    color: active ? '#fff' : T.sub,
-    minHeight: 32,
-    padding: '7px 10px',
-    fontFamily: 'inherit',
-    fontWeight: 900,
-    fontSize: 11,
-    cursor: 'pointer',
-  };
+  return { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, borderRadius: 999, border: `1px solid ${active ? 'transparent' : T.line}`, background: active ? `linear-gradient(145deg, ${T.accent}, ${T.mint})` : T.solid, color: active ? '#fff' : T.sub, minHeight: 32, padding: '7px 10px', fontFamily: 'inherit', fontWeight: 900, fontSize: 11, cursor: 'pointer' };
 }
 
 function primaryButton(T: ThemeTokens): CSSProperties {
-  return {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    borderRadius: 16,
-    border: 'none',
-    background: `linear-gradient(145deg, ${T.butter}, ${T.peach})`,
-    color: T.text,
-    minHeight: 44,
-    padding: '10px 13px',
-    fontFamily: 'inherit',
-    fontWeight: 900,
-    fontSize: 12,
-    boxShadow: T.soft,
-    cursor: 'pointer',
-  };
+  return { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: 16, border: 'none', background: `linear-gradient(145deg, ${T.accent}, ${T.mint})`, color: '#fff', minHeight: 42, padding: '9px 12px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 900, fontSize: 12, boxShadow: T.soft };
 }
 
 function secondaryButton(T: ThemeTokens): CSSProperties {
-  return {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 16,
-    border: `1px solid ${T.line}`,
-    background: T.solid,
-    color: T.text,
-    minHeight: 44,
-    padding: '10px 13px',
-    fontFamily: 'inherit',
-    fontWeight: 900,
-    fontSize: 12,
-    boxShadow: T.soft,
-    cursor: 'pointer',
-  };
+  return { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: 16, border: `1px solid ${T.line}`, background: T.solid, color: T.text, minHeight: 42, padding: '9px 12px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 900, fontSize: 12, boxShadow: T.soft };
 }
 
 function primaryIconButton(T: ThemeTokens): CSSProperties {
-  return {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    border: `1px solid ${T.line}`,
-    background: T.solid,
-    color: T.text,
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: T.soft,
-    cursor: 'pointer',
-  };
+  return { width: 38, height: 38, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 14, border: `1px solid ${T.line}`, background: T.solid, color: T.text, boxShadow: T.soft, cursor: 'pointer' };
 }
