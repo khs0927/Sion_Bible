@@ -14,6 +14,97 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/icon-512.png" />
     <link rel="apple-touch-icon" sizes="167x167" href="/icon-512.png" />
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <style>
+      body.sion-saved-screen main,
+      body.sion-saved-screen main * {
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+      }
+      body.sion-saved-screen input,
+      body.sion-saved-screen textarea {
+        -webkit-user-select: text;
+        user-select: text;
+      }
+      .sion-sort-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        padding: 16px;
+        background: rgba(35, 29, 24, 0.34);
+        backdrop-filter: blur(4px);
+      }
+      .sion-sort-sheet {
+        width: min(100%, 430px);
+        border: 1px solid #E4D8CA;
+        border-radius: 24px;
+        background: #FFFCF7;
+        box-shadow: 0 18px 44px rgba(52, 45, 39, 0.18);
+        padding: 16px;
+        color: #342D27;
+        font-family: 'S-Core Dream', Pretendard, system-ui, sans-serif;
+      }
+      .sion-sort-title {
+        font-weight: 900;
+        font-size: 18px;
+        margin-bottom: 4px;
+      }
+      .sion-sort-subtitle {
+        color: #756B61;
+        font-size: 12px;
+        line-height: 1.55;
+        margin-bottom: 12px;
+      }
+      .sion-sort-grid {
+        display: grid;
+        gap: 8px;
+      }
+      .sion-sort-option {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        width: 100%;
+        border: 1px solid #E4D8CA;
+        border-radius: 16px;
+        background: #F8F3EC;
+        color: #342D27;
+        padding: 12px 13px;
+        font: inherit;
+        font-weight: 850;
+        text-align: left;
+      }
+      .sion-sort-option small {
+        display: block;
+        margin-top: 3px;
+        color: #756B61;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.4;
+      }
+      .sion-sort-option[data-active="true"] {
+        border-color: rgba(111, 143, 114, 0.42);
+        background: linear-gradient(145deg, #6F8F72, #86B7AD);
+        color: #fff;
+      }
+      .sion-sort-option[data-active="true"] small {
+        color: rgba(255, 255, 255, 0.86);
+      }
+      .sion-sort-close {
+        width: 100%;
+        margin-top: 10px;
+        border: 1px solid #E4D8CA;
+        border-radius: 15px;
+        background: #fff;
+        color: #756B61;
+        padding: 11px;
+        font: inherit;
+        font-weight: 900;
+      }
+    </style>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -125,6 +216,164 @@
 
         document.addEventListener('pointerup', finishSyntheticDrag, { capture: true, passive: true });
         document.addEventListener('pointercancel', finishSyntheticDrag, { capture: true, passive: true });
+      })();
+    </script>
+    <script>
+      (() => {
+        const SAVED_KEY = 'gb_saved';
+        const SORT_KEY = 'savedVerseSortMode';
+        const REOPEN_KEY = 'sion_saved_reopen';
+        const MODE_KEY = 'sion_saved_group_mode';
+        const BOOK_ORDER = [
+          '창세기', '출애굽기', '레위기', '민수기', '신명기', '여호수아', '사사기', '룻기', '사무엘상', '사무엘하',
+          '열왕기상', '열왕기하', '역대상', '역대하', '에스라', '느헤미야', '에스더', '욥기', '시편', '잠언',
+          '전도서', '아가', '이사야', '예레미야', '예레미야애가', '에스겔', '다니엘', '호세아', '요엘', '아모스',
+          '오바댜', '요나', '미가', '나훔', '하박국', '스바냐', '학개', '스가랴', '말라기',
+          '마태복음', '마가복음', '누가복음', '요한복음', '사도행전', '로마서', '고린도전서', '고린도후서', '갈라디아서', '에베소서',
+          '빌립보서', '골로새서', '데살로니가전서', '데살로니가후서', '디모데전서', '디모데후서', '디도서', '빌레몬서',
+          '히브리서', '야고보서', '베드로전서', '베드로후서', '요한일서', '요한이서', '요한삼서', '유다서', '요한계시록'
+        ];
+        const SORT_OPTIONS = [
+          ['manual', '현재 수동 순서', '화면에 저장된 지금 순서를 유지합니다.'],
+          ['originalAsc', '원래 추가한 순서', '처음 저장했던 순서로 되돌립니다.'],
+          ['addedNewest', '추가한 순서 최신순', '최근 추가한 말씀이 위로 옵니다.'],
+          ['addedOldest', '추가한 순서 오래된순', '처음 추가한 말씀이 위로 옵니다.'],
+          ['dateDesc', '날짜순 내림차순', '최신 날짜부터 보여줍니다.'],
+          ['dateAsc', '날짜순 오름차순', '오래된 날짜부터 보여줍니다.'],
+          ['bibleOrder', '권별 순서', '성경 66권, 장, 절 순서로 정렬합니다.'],
+          ['dateDescBible', '날짜 안에서 권별 최신순', '최신 날짜 안에서 성경 순서로 정렬합니다.'],
+          ['dateAscBible', '날짜 안에서 권별 오래된순', '오래된 날짜 안에서 성경 순서로 정렬합니다.']
+        ];
+
+        const readSaved = () => {
+          try {
+            const raw = localStorage.getItem(SAVED_KEY);
+            return raw ? JSON.parse(raw) : [];
+          } catch {
+            return [];
+          }
+        };
+        const writeSaved = (items) => localStorage.setItem(SAVED_KEY, JSON.stringify(items));
+        const dayTime = (value) => {
+          const date = value ? new Date(value) : new Date(0);
+          if (Number.isNaN(date.getTime())) return 0;
+          date.setHours(0, 0, 0, 0);
+          return date.getTime();
+        };
+        const savedTime = (item) => {
+          const time = item?.date ? new Date(item.date).getTime() : 0;
+          return Number.isNaN(time) ? 0 : time;
+        };
+        const parseRef = (ref = '') => {
+          const match = String(ref).match(/^(.+?)\s+(\d+):(\d+)/);
+          if (!match) return { book: '', chapter: 0, verse: 0 };
+          return { book: match[1], chapter: Number(match[2]) || 0, verse: Number(match[3]) || 0 };
+        };
+        const bibleOrderValue = (item) => {
+          const parsed = parseRef(item?.ref);
+          const bookIndex = BOOK_ORDER.indexOf(parsed.book);
+          return (bookIndex < 0 ? 999 : bookIndex) * 1000000 + parsed.chapter * 1000 + parsed.verse;
+        };
+        const normalizeSavedOrders = () => {
+          const items = readSaved();
+          if (!Array.isArray(items) || items.length === 0) return items;
+          let changed = false;
+          const existingOrders = items
+            .map(item => Number(item?.originalOrder))
+            .filter(Number.isFinite);
+          let nextFrontOrder = existingOrders.length ? Math.min(...existingOrders) - 1 : 0;
+          let nextBackOrder = existingOrders.length ? Math.max(...existingOrders) + 1 : 0;
+          const normalized = items.map((item, index) => {
+            if (Number.isFinite(Number(item?.originalOrder))) return item;
+            changed = true;
+            const inferredOrder = index === 0 && existingOrders.length ? nextFrontOrder-- : nextBackOrder++;
+            return { ...item, originalOrder: inferredOrder };
+          });
+          if (changed) writeSaved(normalized);
+          return normalized;
+        };
+        const sortSaved = (mode) => {
+          const items = normalizeSavedOrders();
+          if (!Array.isArray(items)) return [];
+          const sorted = [...items];
+          if (mode === 'originalAsc') sorted.sort((a, b) => (Number(a.originalOrder) || 0) - (Number(b.originalOrder) || 0));
+          if (mode === 'addedNewest' || mode === 'dateDesc') sorted.sort((a, b) => savedTime(b) - savedTime(a));
+          if (mode === 'addedOldest' || mode === 'dateAsc') sorted.sort((a, b) => savedTime(a) - savedTime(b));
+          if (mode === 'bibleOrder') sorted.sort((a, b) => bibleOrderValue(a) - bibleOrderValue(b));
+          if (mode === 'dateDescBible') sorted.sort((a, b) => (dayTime(b.date) - dayTime(a.date)) || (bibleOrderValue(a) - bibleOrderValue(b)) || (savedTime(a) - savedTime(b)));
+          if (mode === 'dateAscBible') sorted.sort((a, b) => (dayTime(a.date) - dayTime(b.date)) || (bibleOrderValue(a) - bibleOrderValue(b)) || (savedTime(a) - savedTime(b)));
+          writeSaved(sorted);
+          localStorage.setItem(SORT_KEY, mode);
+          sessionStorage.setItem(REOPEN_KEY, '1');
+          sessionStorage.setItem(MODE_KEY, mode === 'bibleOrder' ? '권별' : '일별');
+          window.location.reload();
+          return sorted;
+        };
+        const isSavedScreen = () => document.body.innerText.includes('저장한 말씀') || document.body.innerText.includes('다시 읽는 말씀');
+        const findButtonByText = (text) => [...document.querySelectorAll('button')].find(button => button.textContent?.trim().includes(text));
+        const syncSavedScreenClass = () => document.body.classList.toggle('sion-saved-screen', isSavedScreen());
+        const reopenSavedTab = () => {
+          if (sessionStorage.getItem(REOPEN_KEY) !== '1') return;
+          const savedNav = [...document.querySelectorAll('button')].reverse().find(button => button.textContent?.trim() === '저장');
+          if (savedNav) savedNav.click();
+          const targetMode = sessionStorage.getItem(MODE_KEY);
+          if (targetMode) {
+            window.setTimeout(() => {
+              const modeButton = findButtonByText(targetMode);
+              if (modeButton) modeButton.click();
+              sessionStorage.removeItem(REOPEN_KEY);
+              sessionStorage.removeItem(MODE_KEY);
+            }, 260);
+          }
+        };
+        const closeSortSheet = () => document.querySelector('.sion-sort-backdrop')?.remove();
+        const openSortSheet = () => {
+          closeSortSheet();
+          normalizeSavedOrders();
+          const activeMode = localStorage.getItem(SORT_KEY) || 'manual';
+          const backdrop = document.createElement('div');
+          backdrop.className = 'sion-sort-backdrop';
+          backdrop.innerHTML = `
+            <section class="sion-sort-sheet" role="dialog" aria-modal="true" aria-label="저장한 말씀 정렬">
+              <div class="sion-sort-title">저장한 말씀 순서변경</div>
+              <div class="sion-sort-subtitle">텍스트 선택은 막고, 추가 순서·날짜순·권별 순서로 다시 정렬합니다.</div>
+              <div class="sion-sort-grid">
+                ${SORT_OPTIONS.map(([mode, label, help]) => `
+                  <button class="sion-sort-option" type="button" data-sort-mode="${mode}" data-active="${activeMode === mode}">
+                    <span>${label}<small>${help}</small></span><strong>${activeMode === mode ? '✓' : ''}</strong>
+                  </button>
+                `).join('')}
+              </div>
+              <button class="sion-sort-close" type="button">닫기</button>
+            </section>
+          `;
+          backdrop.addEventListener('click', (event) => {
+            if (event.target === backdrop || event.target.closest('.sion-sort-close')) closeSortSheet();
+            const option = event.target.closest('[data-sort-mode]');
+            if (option) sortSaved(option.getAttribute('data-sort-mode'));
+          });
+          document.body.appendChild(backdrop);
+        };
+
+        normalizeSavedOrders();
+        window.addEventListener('storage', normalizeSavedOrders);
+        document.addEventListener('click', (event) => {
+          const button = event.target instanceof Element ? event.target.closest('button') : null;
+          if (!button || !button.textContent?.includes('순서변경') || !isSavedScreen()) return;
+          event.preventDefault();
+          event.stopPropagation();
+          openSortSheet();
+        }, { capture: true });
+
+        const observer = new MutationObserver(() => {
+          syncSavedScreenClass();
+          reopenSavedTab();
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        window.addEventListener('load', () => {
+          syncSavedScreenClass();
+          reopenSavedTab();
+        });
       })();
     </script>
   </body>
