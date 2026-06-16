@@ -9,6 +9,14 @@ function normalize(progress: ReadingPlanProgress): ReadingPlanProgress {
   };
 }
 
+function notifyReadingPlanStarted(progress: ReadingPlanProgress, template: ReadingPlanTemplate) {
+  if (typeof window === 'undefined') return;
+
+  window.dispatchEvent(new CustomEvent('sion-reading-plan-started', {
+    detail: { progress: normalize(progress), template },
+  }));
+}
+
 export function getActiveReadingPlan(): ReadingPlanProgress | null {
   try {
     const raw = localStorage.getItem(ACTIVE_PLAN_KEY);
@@ -32,6 +40,7 @@ export function startReadingPlan(template: ReadingPlanTemplate) {
     completedDays: [],
   };
   saveActiveReadingPlan(progress);
+  notifyReadingPlanStarted(progress, template);
   return progress;
 }
 
