@@ -1,5 +1,7 @@
-const CACHE_NAME = 'bible-app-v20260615-1308';
+const CACHE_NAME = 'sion-bible-shell-v20260711-01';
 const PRECACHE_ASSETS = [
+  '/',
+  '/index.html',
   '/manifest.json',
   '/icon-512.png'
 ];
@@ -20,9 +22,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('message', (event) => {
-  if (event.data?.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('fetch', (event) => {
@@ -31,10 +31,15 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
+  // Serverless APIs and the Bible index must always use the latest network response.
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/bible/')) {
+    event.respondWith(fetch(event.request, { cache: 'no-store' }));
+    return;
+  }
+
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request, { cache: 'no-store' })
-        .then((response) => response)
         .catch(() => caches.match('/index.html'))
     );
     return;
@@ -49,7 +54,6 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     fetch(event.request, { cache: 'no-store' })
-      .then((response) => response)
       .catch(() => caches.match(event.request))
   );
 });
