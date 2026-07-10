@@ -1,5 +1,6 @@
 import { callGeminiChat } from './_lib/gemini.js';
 import { hedgedNvidiaRace } from './_lib/hedgedAiRace.js';
+import { guardAiRequest } from './_lib/httpGuard.js';
 import { getRecommendedNvidiaModels } from './_lib/modelSelector.js';
 import { getNvidiaApiKey, parseJsonLoose, sendJson } from './_lib/nvidia.js';
 
@@ -42,12 +43,7 @@ function validateIntent(parsed, query) {
   const queryTerms = fallbackTerms(query);
   const finalTerms = terms.length > 0 ? terms : queryTerms;
   if (finalTerms.length === 0) return null;
-
-  return {
-    terms: finalTerms,
-    topics,
-    sections,
-  };
+  return { terms: finalTerms, topics, sections };
 }
 
 function buildMessages(query) {
@@ -113,11 +109,19 @@ function debugPayload(value) {
   return { debug: value };
 }
 
+function rejectGuard(res, guard) {
+  if (guard.retryAfterSeconds) res.setHeader('Retry-After', String(guard.retryAfterSeconds));
+  return sendJson(res, guard.status, guard.body);
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return sendJson(res, 405, { ok: false, error: 'Method not allowed', errorCode: 'INVALID_METHOD' });
   }
+
+  const guard = guardAiRequest(req, { limit: 30, maxBodyBytes: 4000 });
+  if (!guard.ok) return rejectGuard(res, guard);
 
   const query = cleanText(req.body?.query, 600);
   if (query.length < 2) {
