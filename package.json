@@ -1,7 +1,7 @@
 {
   "name": "bible-verse-pwa",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 3000",
@@ -9,6 +9,9 @@
     "dev:vercel": "npx vercel dev --listen 3000",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
+    "audit:bible": "node scripts/audit-bible-index.mjs",
+    "test:api": "node scripts/test-verse-devotion.mjs",
+    "verify": "npm run audit:bible && npm run typecheck && npm run build",
     "ai:list-nvidia-models": "node scripts/benchmark-nvidia-models.mjs --list",
     "ai:benchmark-nvidia": "node scripts/benchmark-nvidia-models.mjs --benchmark",
     "generate:devotions": "node scripts/generate-daily-devotions-parallel.mjs",
