@@ -1,4 +1,4 @@
-﻿import { BIBLE_VERSES } from '../data/verses';
+import { BIBLE_VERSES } from '../data/verses';
 
 export interface VerseDevotionResult {
   reference?: string;
@@ -13,13 +13,16 @@ export interface VerseDevotionResult {
   question?: string;
   reflectionQuestion?: string;
   model?: string;
+  provider?: string;
   fallback?: boolean;
   errorCode?: string;
   savedAt?: number;
 }
 
-const CACHE_PREFIX = 'sion_verse_devotion_v12_';
+const CACHE_PREFIX = 'sion_verse_devotion_v13_';
+const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const REQUIRED_PRAYER_ENDING = '아버지, 감사합니다. 예수 그리스도의 이름으로 기도드립니다. 아멘.';
+
 function normalizeRef(ref: string) {
   return String(ref || '').replace(/\s+(?=\d)/g, '').replace(/\s/g, '');
 }
@@ -67,9 +70,7 @@ function stripPrayerEnding(value: string) {
   ];
   while (previous !== next) {
     previous = next;
-    for (const pattern of endingPatterns) {
-      next = next.replace(pattern, '').trim();
-    }
+    for (const pattern of endingPatterns) next = next.replace(pattern, '').trim();
   }
   return next.replace(/[.!?。．…]+$/, '').trim();
 }
@@ -119,7 +120,7 @@ export function createContextualFallback(ref: string, _verseText: string, errorC
     keyPhrase: '말씀 앞에 머무르기',
     explanation: '이 말씀을 잠시 멈추어 다시 읽어보세요. 본문 안에서 마음에 남는 단어와 표현이 무엇인지 천천히 살펴보면 좋겠습니다. 하나님은 짧은 말씀 속에서도 우리의 마음을 비추시고, 예수 그리스도의 은혜 안에서 오늘 걸어갈 방향을 보여주십니다.',
     meditation: curated?.meditation || '말씀 앞에 조용히 머물며 지금 내 마음을 주님께 올려드릴 수 있습니다. 답을 급히 찾기보다, 하나님이 이 말씀을 통해 내게 보여주시는 작은 빛을 기다려보세요. 오늘은 큰 결심보다 마음에 남은 한 문장을 붙들고 주님과 동행해볼 수 있습니다.',
-    prayer: ensurePrayerEnding(curated?.prayer || `하나님, 이 말씀 앞에 제 마음을 조용히 내려놓습니다. 제 생각과 감정보다 주님의 뜻을 먼저 듣습니다. 예수 그리스도의 은혜 안에서 오늘 작은 순종을 걷습니다. 성령님께서 제 마음을 비추시고 주님을 신뢰할 힘을 주심을 믿습니다.`),
+    prayer: ensurePrayerEnding(curated?.prayer || '하나님, 이 말씀 앞에 제 마음을 조용히 내려놓습니다. 제 생각과 감정보다 주님의 뜻을 먼저 듣습니다. 예수 그리스도의 은혜 안에서 오늘 작은 순종을 걷습니다. 성령님께서 제 마음을 비추시고 주님을 신뢰할 힘을 주심을 믿습니다.'),
     application: fallbackApplication,
     question: '오늘 이 말씀 앞에서 주님께 맡겨야 할 마음은 무엇일까?',
     reflectionQuestion: '오늘 이 말씀 앞에서 주님께 맡겨야 할 마음은 무엇일까?',
@@ -162,11 +163,11 @@ export function readCachedVerseDevotion(ref: string, verseText: string): VerseDe
     if (!raw) return null;
 
     const cached = JSON.parse(raw) as VerseDevotionResult;
-    if (cached.fallback) {
+    const expired = !cached.savedAt || Date.now() - cached.savedAt > CACHE_TTL_MS;
+    if (cached.fallback || expired) {
       localStorage.removeItem(key);
       return null;
     }
-
     return cached;
   } catch {
     return null;
@@ -175,7 +176,15 @@ export function readCachedVerseDevotion(ref: string, verseText: string): VerseDe
 
 export function saveCachedVerseDevotion(ref: string, verseText: string, result: VerseDevotionResult) {
   if (result.fallback) return;
-  localStorage.setItem(getVerseDevotionCacheKey(ref, verseText), JSON.stringify({ ...result, savedAt: Date.now() }));
+  try {
+    localStorage.setItem(getVerseDevotionCacheKey(ref, verseText), JSON.stringify({ ...result, savedAt: Date.now() }));
+  } catch {
+    // 저장 공간이 부족해도 묵상 기능은 계속 동작합니다.
+  }
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
 }
 
 export async function getOrGenerateVerseDevotion({
@@ -187,34 +196,61 @@ export async function getOrGenerateVerseDevotion({
   verseText: string;
   mode?: 'fast' | 'deep';
 }) {
-  if (!ref || !verseText) throw new Error('구절 정보와 본문이 필요합니다.');
+  const normalizedRef = ref.trim();
+  const normalizedText = verseText.trim();
+  if (!normalizedRef || !normalizedText) throw new Error('구절 정보와 본문이 필요합니다.');
 
-  const cached = readCachedVerseDevotion(ref, verseText);
+  const cached = readCachedVerseDevotion(normalizedRef, normalizedText);
   if (cached) return { result: cached, fromCache: true };
+
+  const controller = new AbortController();
+  const timeoutMs = mode === 'deep' ? 34_000 : 22_000;
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch('/api/verse-devotion', {
       method: 'POST',
+      signal: controller.signal,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ref, verseText, mode }),
+      body: JSON.stringify({ ref: normalizedRef, verseText: normalizedText, mode }),
     });
 
-    if (!response.ok) throw new Error(`HTTP_${response.status}`);
+    const raw = await response.text();
+    let data: unknown;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      throw new Error('INVALID_API_JSON');
+    }
 
-    const data = await response.json();
-    const result = buildLocalDevotionFromVerse(ref, verseText, data?.result || data);
-    saveCachedVerseDevotion(ref, verseText, result);
+    if (!response.ok) {
+      const errorCode = isObject(data) && typeof data.errorCode === 'string'
+        ? data.errorCode
+        : `HTTP_${response.status}`;
+      throw new Error(errorCode);
+    }
+    if (!isObject(data)) throw new Error('INVALID_API_RESPONSE');
+
+    const payload = isObject(data.result) ? data.result : data;
+    const result = buildLocalDevotionFromVerse(normalizedRef, normalizedText, payload as Partial<VerseDevotionResult>);
+    saveCachedVerseDevotion(normalizedRef, normalizedText, result);
     return { result, fromCache: false };
   } catch (error) {
-    const errorCode = error instanceof Error ? error.message : 'UNKNOWN_ERROR';
-    return { result: createContextualFallback(ref, verseText, errorCode), fromCache: false };
+    const errorCode = error instanceof DOMException && error.name === 'AbortError'
+      ? 'REQUEST_TIMEOUT'
+      : error instanceof Error
+        ? error.message
+        : 'UNKNOWN_ERROR';
+    return { result: createContextualFallback(normalizedRef, normalizedText, errorCode), fromCache: false };
+  } finally {
+    window.clearTimeout(timeout);
   }
 }
 
 function hashString(value: string) {
   let hash = 0;
-  for (let i = 0; i < value.length; i += 1) {
-    hash = ((hash << 5) - hash) + value.charCodeAt(i);
+  for (let index = 0; index < value.length; index += 1) {
+    hash = ((hash << 5) - hash) + value.charCodeAt(index);
     hash |= 0;
   }
   return Math.abs(hash).toString(36);
