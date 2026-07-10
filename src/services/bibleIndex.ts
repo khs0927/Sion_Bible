@@ -32,7 +32,7 @@ function findInternalGaps(index: BibleVerseRecord[]) {
   const gaps: string[] = [];
   chapters.forEach((numbers, key) => {
     const unique = [...new Set(numbers)].sort((left, right) => left - right);
-    const maximum = unique.at(-1) || 0;
+    const maximum = unique.length > 0 ? unique[unique.length - 1] : 0;
     const present = new Set(unique);
     for (let verse = 1; verse <= maximum; verse += 1) {
       if (!present.has(verse)) gaps.push(`${key}-${verse}`);
