@@ -117,6 +117,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
 
   const resetResults = () => {
     requestIdRef.current += 1;
+    setLoading(false);
     setResults([]);
     setTotalCount(0);
     setHasMore(false);
@@ -129,7 +130,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
 
   const searchNow = async (reset = false) => {
     const trimmed = query.trim();
-    if (trimmed.length < 2 || loading) return;
+    if (trimmed.length < 2) return;
 
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
