@@ -1,5 +1,6 @@
 import { callGeminiChat } from './_lib/gemini.js';
 import { hedgedNvidiaRace } from './_lib/hedgedAiRace.js';
+import { guardAiRequest } from './_lib/httpGuard.js';
 import { resolveNvidiaModelsForVerseDevotion } from './_lib/modelSelector.js';
 import {
   getNvidiaApiKey,
@@ -134,10 +135,7 @@ async function callNvidiaVerseDevotion({ apiKey, messages, ref, verseText, mode 
   return {
     ...raceResult,
     result: withPreferredPrayerEnding(raceResult.result),
-    modelConfig: {
-      ...modelConfig,
-      modelsForRace: models,
-    },
+    modelConfig: { ...modelConfig, modelsForRace: models },
     mode,
   };
 }
@@ -153,14 +151,16 @@ async function callGeminiVerseDevotion({ messages, ref, verseText, mode }) {
   const parsed = parseJsonLoose(response.content);
   const validated = validateVerseDevotion(parsed, { ref, verseText });
   if (!validated) throw new Error('Gemini returned an invalid devotion payload');
-  return {
-    result: withPreferredPrayerEnding(validated),
-    model: response.model,
-  };
+  return { result: withPreferredPrayerEnding(validated), model: response.model };
 }
 
 function debugPayload(value) {
   return shouldIncludeDebug() ? { debug: value } : {};
+}
+
+function rejectGuard(res, guard) {
+  if (guard.retryAfterSeconds) res.setHeader('Retry-After', String(guard.retryAfterSeconds));
+  return sendJson(res, guard.status, guard.body);
 }
 
 export default async function handler(req, res) {
@@ -173,6 +173,9 @@ export default async function handler(req, res) {
         errorCode: 'INVALID_METHOD',
       });
     }
+
+    const guard = guardAiRequest(req, { limit: 14, maxBodyBytes: 14_000 });
+    if (!guard.ok) return rejectGuard(res, guard);
 
     const ref = text(req.body?.ref, 120);
     const verseText = text(req.body?.verseText, 5000);
@@ -192,14 +195,7 @@ export default async function handler(req, res) {
 
     if (apiKey) {
       try {
-        const raceResult = await callNvidiaVerseDevotion({
-          apiKey,
-          messages,
-          ref,
-          verseText,
-          mode: requestMode,
-        });
-
+        const raceResult = await callNvidiaVerseDevotion({ apiKey, messages, ref, verseText, mode: requestMode });
         return sendJson(res, 200, {
           ok: true,
           ...raceResult.result,
