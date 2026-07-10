@@ -1,168 +1,193 @@
-import { BibleSearchResult, BibleVerseRecord } from '../types/bible';
+import type { BibleSearchResult, BibleVerseRecord } from '../types/bible';
 import { BIBLE_BOOKS } from '../data/bibleBooks';
 
 export function normalizeKoreanSearchText(text: string): string {
-  return text
+  return String(text || '')
+    .normalize('NFC')
     .replace(/\s+/g, '')
-    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()\[\]]/g, '')
-    .trim();
+    .replace(/[.,/#!$%^&*;:{}=\-_`~()[\]<>?"'“”‘’·…]/g, '')
+    .trim()
+    .toLowerCase();
 }
 
-/**
- * Note: Full Bible search usually requires a pre-built index.
- * For now, we provide the logic to search through a provided array of verses.
- */
 export function searchInVerses(
   verses: { bookId: string; bookName: string; chapter: number; verse: number; text: string }[],
-  query: string
+  query: string,
 ): BibleSearchResult[] {
   const normalizedQuery = normalizeKoreanSearchText(query);
   if (!normalizedQuery) return [];
 
   return verses
-    .filter((v) => normalizeKoreanSearchText(v.text).includes(normalizedQuery))
-    .map((v) => ({
-      ref: `${v.bookName} ${v.chapter}:${v.verse}`,
-      text: v.text,
-      bookId: v.bookId,
-      bookName: v.bookName,
-      chapter: v.chapter,
-      verse: v.verse,
+    .filter((verse) => normalizeKoreanSearchText(verse.text).includes(normalizedQuery))
+    .map((verse) => ({
+      ref: `${verse.bookName} ${verse.chapter}:${verse.verse}`,
+      text: verse.text,
+      bookId: verse.bookId,
+      bookName: verse.bookName,
+      chapter: verse.chapter,
+      verse: verse.verse,
     }));
 }
 
-export function highlightKeyword(text: string, keyword: string): string {
-  if (!keyword.trim()) return text;
-  // If it's a reference search, keyword might be a reference string, which we don't want to highlight in the text
-  // unless the text actually contains it. But usually keyword search highlights the keyword.
-  // For reference searches, we might not highlight anything or highlight the whole text.
-  // Let's check if the keyword is likely a reference.
-  const isRef = /^[가-힣a-zA-Z\s]*\s*\d+\s*(?:장|[:：])\s*\d+/.test(keyword);
-  if (isRef) return text;
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
-  const parts = text.split(new RegExp(`(${keyword})`, 'gi'));
-  return parts
-    .map((part) =>
-      part.toLowerCase() === keyword.toLowerCase()
-        ? `<mark style="background-color: #ffe082; color: #3d3129; padding: 0 2px; border-radius: 4px;">${part}</mark>`
-        : part
-    )
-    .join('');
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+export function highlightKeyword(text: string, keyword: string): string {
+  const safeText = escapeHtml(text);
+  const trimmedKeyword = keyword.trim();
+  if (!trimmedKeyword) return safeText;
+
+  const isReference = /^[가-힣a-zA-Z\s]*\s*\d+\s*(?:장|[:：])\s*\d+/.test(trimmedKeyword);
+  if (isReference) return safeText;
+
+  const pattern = escapeRegExp(trimmedKeyword);
+  if (!pattern) return safeText;
+  return safeText.replace(
+    new RegExp(`(${pattern})`, 'gi'),
+    '<mark style="background-color:#ffe082;color:#3d3129;padding:0 2px;border-radius:4px">$1</mark>',
+  );
+}
+
+function resolveBook(input: string) {
+  const normalized = input.trim().toLowerCase();
+  return BIBLE_BOOKS.find((book) =>
+    book.name === input.trim()
+    || book.abbr === input.trim()
+    || book.id.toLowerCase() === normalized,
+  );
+}
+
+function uniqueVerses(verses: BibleVerseRecord[]) {
+  const seen = new Set<string>();
+  return verses.filter((verse) => {
+    if (seen.has(verse.id)) return false;
+    seen.add(verse.id);
+    return true;
+  });
 }
 
 export async function searchBibleVerses(
-  query: string, 
-  options: { limit?: number; offset?: number } = {}
+  query: string,
+  options: { limit?: number; offset?: number } = {},
 ): Promise<{ items: BibleVerseRecord[]; totalCount: number; hasMore: boolean }> {
   const { loadBibleVerseIndex } = await import('./bibleIndex');
   const index = await loadBibleVerseIndex();
-  
   const trimmedQuery = query.trim();
   if (!trimmedQuery) return { items: [], totalCount: 0, hasMore: false };
 
-  const limit = options.limit || 100;
-  const offset = options.offset || 0;
+  const limit = Math.max(1, Math.min(options.limit || 100, 500));
+  const offset = Math.max(0, options.offset || 0);
+  const referenceRanges = parseMultiReferenceQuery(trimmedQuery);
 
-  // 1. Check for complex reference search (e.g., "요 1:1-2, 막 1:2-5", "레 3:2-4, 7-9")
-  const refRanges = parseMultiReferenceQuery(trimmedQuery);
-  if (refRanges) {
-    let allMatches: BibleVerseRecord[] = [];
-    
-    for (const ref of refRanges) {
-      const book = BIBLE_BOOKS.find(b => 
-        b.name === ref.bookName || b.abbr === ref.bookName || b.id === ref.bookName.toLowerCase()
-      );
-      
-      if (book) {
-        const filtered = index.filter(v => 
-          v.bookId === book.id && 
-          v.chapter === ref.chapter && 
-          v.verse >= ref.startVerse && 
-          v.verse <= ref.endVerse
-        );
-        allMatches = [...allMatches, ...filtered];
-      }
+  if (referenceRanges) {
+    const matches: BibleVerseRecord[] = [];
+    for (const reference of referenceRanges) {
+      const book = resolveBook(reference.bookName);
+      if (!book || reference.chapter < 1 || reference.chapter > book.chapters) continue;
+      matches.push(...index.filter((verse) =>
+        verse.bookId === book.id
+        && verse.chapter === reference.chapter
+        && verse.verse >= reference.startVerse
+        && verse.verse <= reference.endVerse,
+      ));
     }
 
-    if (allMatches.length > 0) {
-      // Aggregate results from multiple ranges
-      const items = allMatches.slice(offset, offset + limit);
-      return { items, totalCount: allMatches.length, hasMore: offset + limit < allMatches.length };
+    const uniqueMatches = uniqueVerses(matches);
+    if (uniqueMatches.length > 0) {
+      return {
+        items: uniqueMatches.slice(offset, offset + limit),
+        totalCount: uniqueMatches.length,
+        hasMore: offset + limit < uniqueMatches.length,
+      };
     }
   }
 
-  // 2. Fallback to keyword search
   const normalizedQuery = normalizeKoreanSearchText(trimmedQuery);
   if (!normalizedQuery) return { items: [], totalCount: 0, hasMore: false };
 
-  const filtered = index.filter(v => v.searchText.includes(normalizedQuery));
-  
-  filtered.sort((a, b) => {
-    if (a.bookOrder !== b.bookOrder) return a.bookOrder - b.bookOrder;
-    if (a.chapter !== b.chapter) return a.chapter - b.chapter;
-    return a.verse - b.verse;
-  });
+  const filtered = index
+    .filter((verse) => normalizeKoreanSearchText(verse.searchText || verse.text).includes(normalizedQuery))
+    .sort((left, right) => {
+      if (left.bookOrder !== right.bookOrder) return left.bookOrder - right.bookOrder;
+      if (left.chapter !== right.chapter) return left.chapter - right.chapter;
+      return left.verse - right.verse;
+    });
 
-  const items = filtered.slice(offset, offset + limit);
-  const totalCount = filtered.length;
-  const hasMore = offset + limit < totalCount;
-
-  return { items, totalCount, hasMore };
+  return {
+    items: filtered.slice(offset, offset + limit),
+    totalCount: filtered.length,
+    hasMore: offset + limit < filtered.length,
+  };
 }
 
-/**
- * Parses complex reference queries like "요 1:2-4, 7-9" or "요 1:1, 막 1:2"
- */
 export function parseMultiReferenceQuery(query: string) {
   const parts = query.split(/[,，]/);
   const results: { bookName: string; chapter: number; startVerse: number; endVerse: number }[] = [];
   let lastBook = '';
   let lastChapter = 0;
 
-  for (let part of parts) {
-    part = part.trim();
+  for (const rawPart of parts) {
+    const part = rawPart.trim();
     if (!part) continue;
 
-    // 1. Full pattern: "Book Chapter:Verse-Verse"
-    const fullPattern = /^([가-힣a-zA-Z\s]+?)\s*(\d+)\s*(?:장|[:：])\s*(\d+)\s*(?:절)?(?:\s*-\s*(\d+)(?:절)?)?$/;
+    const fullPattern = /^([가-힣a-zA-Z\s]+?)\s*(\d+)\s*(?:장|[:：])\s*(\d+)\s*(?:절)?(?:\s*[-~–]\s*(\d+)(?:절)?)?$/;
     const fullMatch = part.replace(/\s+/g, ' ').match(fullPattern);
     if (fullMatch) {
       lastBook = fullMatch[1].trim();
-      lastChapter = parseInt(fullMatch[2]);
-      const start = parseInt(fullMatch[3]);
-      const end = fullMatch[4] ? parseInt(fullMatch[4]) : start;
-      results.push({ bookName: lastBook, chapter: lastChapter, startVerse: start, endVerse: end });
+      lastChapter = Number.parseInt(fullMatch[2], 10);
+      const first = Number.parseInt(fullMatch[3], 10);
+      const second = fullMatch[4] ? Number.parseInt(fullMatch[4], 10) : first;
+      results.push({
+        bookName: lastBook,
+        chapter: lastChapter,
+        startVerse: Math.min(first, second),
+        endVerse: Math.max(first, second),
+      });
       continue;
     }
 
-    // 2. Partial pattern: "Verse-Verse" (inherits book and chapter)
-    const versePattern = /^(\d+)\s*(?:절)?(?:\s*-\s*(\d+)(?:절)?)?$/;
+    const versePattern = /^(\d+)\s*(?:절)?(?:\s*[-~–]\s*(\d+)(?:절)?)?$/;
     const verseMatch = part.match(versePattern);
     if (verseMatch && lastBook && lastChapter) {
-      const start = parseInt(verseMatch[1]);
-      const end = verseMatch[2] ? parseInt(verseMatch[2]) : start;
-      results.push({ bookName: lastBook, chapter: lastChapter, startVerse: start, endVerse: end });
+      const first = Number.parseInt(verseMatch[1], 10);
+      const second = verseMatch[2] ? Number.parseInt(verseMatch[2], 10) : first;
+      results.push({
+        bookName: lastBook,
+        chapter: lastChapter,
+        startVerse: Math.min(first, second),
+        endVerse: Math.max(first, second),
+      });
       continue;
     }
 
-    // 3. Chapter:Verse pattern within multi-parts (optional enhancement)
-    const chapVersePattern = /^(\d+)\s*(?:장|[:：])\s*(\d+)\s*(?:절)?(?:\s*-\s*(\d+)(?:절)?)?$/;
-    const cvMatch = part.match(chapVersePattern);
-    if (cvMatch && lastBook) {
-      lastChapter = parseInt(cvMatch[1]);
-      const start = parseInt(cvMatch[2]);
-      const end = cvMatch[3] ? parseInt(cvMatch[3]) : start;
-      results.push({ bookName: lastBook, chapter: lastChapter, startVerse: start, endVerse: end });
-      continue;
+    const chapterVersePattern = /^(\d+)\s*(?:장|[:：])\s*(\d+)\s*(?:절)?(?:\s*[-~–]\s*(\d+)(?:절)?)?$/;
+    const chapterVerseMatch = part.match(chapterVersePattern);
+    if (chapterVerseMatch && lastBook) {
+      lastChapter = Number.parseInt(chapterVerseMatch[1], 10);
+      const first = Number.parseInt(chapterVerseMatch[2], 10);
+      const second = chapterVerseMatch[3] ? Number.parseInt(chapterVerseMatch[3], 10) : first;
+      results.push({
+        bookName: lastBook,
+        chapter: lastChapter,
+        startVerse: Math.min(first, second),
+        endVerse: Math.max(first, second),
+      });
     }
   }
 
   return results.length > 0 ? results : null;
 }
 
-/**
- * Kept for backward compatibility if needed, though parseMultiReferenceQuery is more powerful.
- */
 export function parseReferenceQuery(query: string) {
   const multi = parseMultiReferenceQuery(query);
   return multi ? multi[0] : null;
@@ -170,28 +195,22 @@ export function parseReferenceQuery(query: string) {
 
 export function formatReference(bookName: string, chapter: number, verseNumbers: number[]): string {
   if (verseNumbers.length === 0) return `${bookName} ${chapter}`;
-  if (verseNumbers.length === 1) return `${bookName} ${chapter}:${verseNumbers[0]}`;
+  const sorted = [...new Set(verseNumbers)].sort((left, right) => left - right);
+  if (sorted.length === 1) return `${bookName} ${chapter}:${sorted[0]}`;
 
-  const sorted = [...verseNumbers].sort((a, b) => a - b);
   const ranges: string[] = [];
   let start = sorted[0];
   let end = sorted[0];
-
-  for (let i = 1; i <= sorted.length; i++) {
-    if (i < sorted.length && sorted[i] === end + 1) {
-      end = sorted[i];
-    } else {
-      if (start === end) {
-        ranges.push(`${start}`);
-      } else {
-        ranges.push(`${start}-${end}`);
-      }
-      if (i < sorted.length) {
-        start = sorted[i];
-        end = sorted[i];
-      }
+  for (let index = 1; index <= sorted.length; index += 1) {
+    if (index < sorted.length && sorted[index] === end + 1) {
+      end = sorted[index];
+      continue;
+    }
+    ranges.push(start === end ? `${start}` : `${start}-${end}`);
+    if (index < sorted.length) {
+      start = sorted[index];
+      end = sorted[index];
     }
   }
-
   return `${bookName} ${chapter}:${ranges.join(',')}`;
 }
