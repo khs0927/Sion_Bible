@@ -1,16 +1,22 @@
+import { callGeminiChat } from './_lib/gemini.js';
+import { hedgedNvidiaRace } from './_lib/hedgedAiRace.js';
+import { resolveNvidiaModelsForVerseDevotion } from './_lib/modelSelector.js';
 import {
   getNvidiaApiKey,
+  parseJsonLoose,
   sendJson,
   validateVerseDevotion,
 } from './_lib/nvidia.js';
-import { hedgedNvidiaRace } from './_lib/hedgedAiRace.js';
-import { resolveNvidiaModelsForVerseDevotion } from './_lib/modelSelector.js';
 import { buildVerseDevotionReferenceMessages } from './_lib/verseDevotionReferencePrompt.js';
 
 const GPT_OSS_120B_MODEL = 'openai/gpt-oss-120b';
 const GPT_OSS_20B_MODEL = 'openai/gpt-oss-20b';
 const LLAMA_3_1_8B_MODEL = 'meta/llama-3.1-8b-instruct';
 const PRAYER_ENDING = '아버지, 감사합니다. 예수 그리스도의 이름으로 기도드립니다. 아멘.';
+
+function text(value, maxLength) {
+  return String(value || '').replace(/\u0000/g, '').trim().slice(0, maxLength);
+}
 
 function numberEnv(name, fallback) {
   const value = Number(process.env[name]);
@@ -26,21 +32,21 @@ function uniqueModels(models) {
 }
 
 function stripPrayerEndings(value) {
-  let text = String(value || '').trim();
+  let valueText = String(value || '').trim();
   let previous = '';
   const patterns = [
-    /아버지,\s*감사합니다[.!?。．…]*\s*예수\s+그리스도의\s+이름으로\s+기도드립니다[.!?。．…]*\s*아멘[.!?。．…]*$/i,
+    /아버지,?\s*감사합니다[.!?。．…]*\s*예수\s+그리스도의\s+이름으로\s+기도드립니다[.!?。．…]*\s*아멘[.!?。．…]*$/i,
     /우리\s+주\s+예수\s+그리스도의\s+이름으로\s+기도드립니다[.!?。．…]*\s*아멘[.!?。．…]*$/i,
     /우리\s+주\s+예수\s+그리스도의\s+이름으로\s+기도드립니다[.!?。．…]*$/i,
     /예수\s+그리스도의\s+이름으로\s+기도(?:드립니|합니)다[.!?。．…]*\s*아멘[.!?。．…]*$/i,
     /예수님의\s+이름으로\s+기도(?:드립니|합니)다[.!?。．…]*\s*아멘[.!?。．…]*$/i,
     /아멘[.!?。．…]*$/i,
   ];
-  while (previous !== text) {
-    previous = text;
-    for (const pattern of patterns) text = text.replace(pattern, '').trim();
+  while (previous !== valueText) {
+    previous = valueText;
+    for (const pattern of patterns) valueText = valueText.replace(pattern, '').trim();
   }
-  return text.replace(/[.!?。．…]+$/, '').trim();
+  return valueText.replace(/[.!?。．…]+$/, '').trim();
 }
 
 function withPreferredPrayerEnding(devotion) {
@@ -51,7 +57,7 @@ function withPreferredPrayerEnding(devotion) {
   };
 }
 
-function buildFallbackDevotion(ref) {
+function buildFallbackDevotion(ref, errorCode) {
   const normalizedRef = String(ref || '').trim() || '선택한 말씀';
   const question = '오늘 이 말씀 앞에서 하나님께 맡기고 순종해야 할 한 가지는 무엇일까?';
   return {
@@ -72,20 +78,22 @@ function buildFallbackDevotion(ref) {
     question,
     reflectionQuestion: question,
     fallback: true,
+    errorCode,
   };
 }
 
 function buildFastModels(modelConfig) {
   return uniqueModels([
     process.env.NVIDIA_PRIMARY_MODEL,
+    process.env.NVIDIA_FAST_MODEL_1,
     modelConfig?.primaryFastModel,
+    GPT_OSS_20B_MODEL,
     LLAMA_3_1_8B_MODEL,
     process.env.NVIDIA_SECONDARY_MODEL,
+    process.env.NVIDIA_FAST_MODEL_2,
     modelConfig?.secondaryFastModel,
-    GPT_OSS_20B_MODEL,
     process.env.NVIDIA_QUALITY_MODEL,
     modelConfig?.qualityModel,
-    GPT_OSS_120B_MODEL,
   ]);
 }
 
@@ -115,8 +123,8 @@ async function callNvidiaVerseDevotion({ apiKey, messages, ref, verseText, mode 
     delaysMs,
     messages,
     timeoutMs: mode === 'deep'
-      ? numberEnv('NVIDIA_DEEP_TOTAL_TIMEOUT_MS', 26000)
-      : numberEnv('NVIDIA_TOTAL_TIMEOUT_MS', 15000),
+      ? numberEnv('NVIDIA_DEEP_TOTAL_TIMEOUT_MS', 26_000)
+      : numberEnv('NVIDIA_TOTAL_TIMEOUT_MS', 15_000),
     temperature: mode === 'deep' ? 0.25 : 0.22,
     maxTokens: mode === 'deep' ? 2800 : 2300,
     responseFormat: { type: 'json_object' },
@@ -134,6 +142,27 @@ async function callNvidiaVerseDevotion({ apiKey, messages, ref, verseText, mode 
   };
 }
 
+async function callGeminiVerseDevotion({ messages, ref, verseText, mode }) {
+  const response = await callGeminiChat({
+    messages,
+    temperature: mode === 'deep' ? 0.25 : 0.22,
+    maxTokens: mode === 'deep' ? 2800 : 2300,
+    timeoutMs: mode === 'deep' ? 20_000 : 13_000,
+  });
+  if (!response) throw new Error('GEMINI_API_KEY is not configured');
+  const parsed = parseJsonLoose(response.content);
+  const validated = validateVerseDevotion(parsed, { ref, verseText });
+  if (!validated) throw new Error('Gemini returned an invalid devotion payload');
+  return {
+    result: withPreferredPrayerEnding(validated),
+    model: response.model,
+  };
+}
+
+function debugPayload(value) {
+  return shouldIncludeDebug() ? { debug: value } : {};
+}
+
 export default async function handler(req, res) {
   try {
     if (req.method !== 'POST') {
@@ -145,7 +174,9 @@ export default async function handler(req, res) {
       });
     }
 
-    const { ref, verseText, mode } = req.body ?? {};
+    const ref = text(req.body?.ref, 120);
+    const verseText = text(req.body?.verseText, 5000);
+    const requestMode = req.body?.mode === 'deep' ? 'deep' : 'fast';
     if (!ref || !verseText) {
       return sendJson(res, 400, {
         ok: false,
@@ -154,38 +185,28 @@ export default async function handler(req, res) {
       });
     }
 
-    const requestMode = mode === 'deep' ? 'deep' : 'fast';
-    const messages = buildVerseDevotionReferenceMessages({
-      ref,
-      verseText,
-      mode: requestMode,
-    });
-
+    res.setHeader('Cache-Control', 'no-store, max-age=0');
+    const messages = buildVerseDevotionReferenceMessages({ ref, verseText, mode: requestMode });
+    const failures = [];
     const apiKey = getNvidiaApiKey();
-    if (!apiKey) {
-      return sendJson(res, 200, {
-        ...buildFallbackDevotion(ref),
-        errorCode: 'MISSING_NVIDIA_API_KEY',
-      });
-    }
 
-    try {
-      const raceResult = await callNvidiaVerseDevotion({
-        apiKey,
-        messages,
-        ref,
-        verseText,
-        mode: requestMode,
-      });
+    if (apiKey) {
+      try {
+        const raceResult = await callNvidiaVerseDevotion({
+          apiKey,
+          messages,
+          ref,
+          verseText,
+          mode: requestMode,
+        });
 
-      return sendJson(res, 200, {
-        ok: true,
-        ...raceResult.result,
-        fallback: false,
-        provider: 'nvidia',
-        model: raceResult.model,
-        ...(shouldIncludeDebug() ? {
-          debug: {
+        return sendJson(res, 200, {
+          ok: true,
+          ...raceResult.result,
+          fallback: false,
+          provider: 'nvidia',
+          model: raceResult.model,
+          ...debugPayload({
             provider: 'nvidia',
             prompt: 'verseDevotionReferencePrompt',
             selectedModels: raceResult.modelConfig?.modelsForRace || [],
@@ -194,35 +215,39 @@ export default async function handler(req, res) {
             attempts: raceResult.attempts,
             modelSource: raceResult.modelConfig?.source,
             mode: requestMode,
-          },
-        } : {}),
-      });
-    } catch (nvidiaError) {
-      const message = nvidiaError instanceof Error ? nvidiaError.message : String(nvidiaError);
-      let errorCode = 'ALL_MODELS_FAILED';
-      if (message.includes('Timeout') || message.includes('timeout')) errorCode = 'NVIDIA_TIMEOUT';
-      if (nvidiaError.statusCode === 401) errorCode = 'NVIDIA_UNAUTHORIZED';
-      if (nvidiaError.statusCode === 429) errorCode = 'NVIDIA_RATE_LIMITED';
-      if (nvidiaError.statusCode === 404) errorCode = 'NVIDIA_MODEL_NOT_FOUND';
-
-      return sendJson(res, 200, {
-        ...buildFallbackDevotion(ref),
-        errorCode,
-        ...(shouldIncludeDebug() ? {
-          debug: {
-            provider: 'nvidia',
-            prompt: 'verseDevotionReferencePrompt',
-            error: message,
-            attempts: nvidiaError?.attempts || [],
-          },
-        } : {}),
-      });
+          }),
+        });
+      } catch (error) {
+        failures.push({ provider: 'nvidia', message: error instanceof Error ? error.message : String(error) });
+      }
+    } else {
+      failures.push({ provider: 'nvidia', message: 'NVIDIA_API_KEY is not configured' });
     }
+
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        const geminiResult = await callGeminiVerseDevotion({ messages, ref, verseText, mode: requestMode });
+        return sendJson(res, 200, {
+          ok: true,
+          ...geminiResult.result,
+          fallback: false,
+          provider: 'gemini',
+          model: geminiResult.model,
+          ...debugPayload({ failures, mode: requestMode }),
+        });
+      } catch (error) {
+        failures.push({ provider: 'gemini', message: error instanceof Error ? error.message : String(error) });
+      }
+    }
+
+    return sendJson(res, 200, {
+      ...buildFallbackDevotion(ref, apiKey || process.env.GEMINI_API_KEY ? 'AI_PROVIDERS_FAILED' : 'AI_NOT_CONFIGURED'),
+      ...debugPayload({ failures, mode: requestMode }),
+    });
   } catch (fatalError) {
     return sendJson(res, 200, {
-      ...buildFallbackDevotion(req.body?.ref),
-      error: fatalError instanceof Error ? fatalError.message : String(fatalError),
-      errorCode: 'UNKNOWN_ERROR',
+      ...buildFallbackDevotion(req.body?.ref, 'UNKNOWN_ERROR'),
+      ...debugPayload({ error: fatalError instanceof Error ? fatalError.message : String(fatalError) }),
     });
   }
 }
