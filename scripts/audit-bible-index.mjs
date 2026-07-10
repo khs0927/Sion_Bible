@@ -35,6 +35,7 @@ const warnings = [];
 const chapterMap = new Map();
 const duplicateBaseKeys = new Set();
 const seenBaseKeys = new Set();
+const internalGaps = [];
 
 for (const verse of base) {
   const key = keyOf(verse);
@@ -69,7 +70,7 @@ for (const book of books) {
     const maximum = numbers.at(-1);
     const present = new Set(numbers);
     for (let verse = 1; verse <= maximum; verse += 1) {
-      if (!present.has(verse)) errors.push(`Internal verse gap: ${book.name} ${chapter}:${verse}`);
+      if (!present.has(verse)) internalGaps.push(`${book.name} ${chapter}:${verse}`);
     }
   }
 }
@@ -77,11 +78,15 @@ for (const book of books) {
 if (verses.length < 30_000) errors.push(`Verse count is unexpectedly low: ${verses.length}`);
 if (patches.length > 0) warnings.push(`Applied ${patches.length} explicit repair record(s).`);
 if (base.length !== verses.length) warnings.push(`Base count ${base.length}; merged count ${verses.length}.`);
+if (internalGaps.length > 0) {
+  warnings.push(`Found ${internalGaps.length} internal verse-number gap(s). Translation numbering can omit some numbers; review: ${internalGaps.slice(0, 30).join(', ')}`);
+}
 
 console.log(`Bible books: ${books.length}`);
 console.log(`Base verses: ${base.length.toLocaleString()}`);
 console.log(`Patch verses: ${patches.length.toLocaleString()}`);
 console.log(`Merged verses: ${verses.length.toLocaleString()}`);
+console.log(`Internal verse-number gaps: ${internalGaps.length}`);
 
 warnings.forEach((warning) => console.warn(`WARN: ${warning}`));
 if (errors.length > 0) {
@@ -89,5 +94,5 @@ if (errors.length > 0) {
   if (errors.length > 100) console.error(`...and ${errors.length - 100} more errors.`);
   process.exitCode = 1;
 } else {
-  console.log('Bible index integrity audit passed.');
+  console.log('Bible index structural audit passed.');
 }
