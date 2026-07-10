@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, Check, Cross, Heart, Send, Sparkles } from 'lucide-react';
+import { BookOpen, Check, Cross, Heart, RefreshCw, Send, Sparkles } from 'lucide-react';
 import { askVerseQuestion, type VerseQuestionAnswer } from '../../services/verseQuestionApi';
 import type { VerseDevotionResult } from '../../services/verseDevotionApi';
 
@@ -54,6 +54,7 @@ export function VerseQuestionPanel({ verse, devotion }: VerseQuestionPanelProps)
   const [selectedQuestion, setSelectedQuestion] = useState('');
   const [answer, setAnswer] = useState<VerseQuestionAnswer | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   async function handleAsk(nextQuestion: string) {
     const trimmed = nextQuestion.trim();
@@ -63,6 +64,7 @@ export function VerseQuestionPanel({ verse, devotion }: VerseQuestionPanelProps)
     setSelectedQuestion(trimmed);
     setLoading(true);
     setAnswer(null);
+    setError('');
 
     try {
       const result = await askVerseQuestion({
@@ -72,13 +74,11 @@ export function VerseQuestionPanel({ verse, devotion }: VerseQuestionPanelProps)
         prayer: devotion.prayer,
         question: trimmed,
       });
-
-      if (result.answer) {
-        result.answer = result.answer.replace(/\*\*/g, '');
-      }
-      setAnswer(result);
-    } catch {
-      alert('질문 답변을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+      setAnswer({ ...result, answer: result.answer.replace(/\*\*/g, '') });
+    } catch (askError) {
+      setError(askError instanceof Error
+        ? askError.message
+        : '질문 답변을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
       setLoading(false);
     }
@@ -89,7 +89,7 @@ export function VerseQuestionPanel({ verse, devotion }: VerseQuestionPanelProps)
       <div className="meditation-question-title">
         <div className="meditation-question-leaf" aria-hidden="true">⌁</div>
         <h2>묵상 질문하기</h2>
-        <p>하나님의 말씀을 더 깊이 묵상해보세요</p>
+        <p>본문을 중심으로 말씀을 더 깊이 살펴보세요</p>
       </div>
 
       <div className="meditation-question-input">
@@ -97,20 +97,34 @@ export function VerseQuestionPanel({ verse, devotion }: VerseQuestionPanelProps)
           value={question}
           onChange={(event) => setQuestion(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === 'Enter') handleAsk(question);
+            if (event.key === 'Enter') void handleAsk(question);
           }}
           placeholder="본문이나 묵상에서 궁금한 점을 적어보세요."
+          aria-label="묵상 질문 입력"
         />
-        <button type="button" disabled={!question.trim() || loading} onClick={() => handleAsk(question)}>
-          <span>{loading ? '...' : '질문'}</span>
+        <button type="button" disabled={!question.trim() || loading} onClick={() => void handleAsk(question)}>
+          <span>{loading ? '준비 중' : '질문'}</span>
           <Send size={16} />
         </button>
       </div>
 
       {loading && (
-        <div className="meditation-question-loading">
+        <div className="meditation-question-loading" role="status">
           <div />
-          <p>답변을 준비하고 있어요</p>
+          <p>본문과 질문을 함께 살펴보고 있어요</p>
+        </div>
+      )}
+
+      {error && !loading && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold leading-6 text-red-700" role="alert">
+          <p>{error}</p>
+          <button
+            type="button"
+            onClick={() => void handleAsk(question)}
+            className="mt-3 inline-flex items-center gap-1 rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-black text-red-700"
+          >
+            <RefreshCw size={14} />다시 시도
+          </button>
         </div>
       )}
 
@@ -149,7 +163,8 @@ export function VerseQuestionPanel({ verse, devotion }: VerseQuestionPanelProps)
                   key={item}
                   type="button"
                   className={`meditation-question-chip ${selectedQuestion === item ? 'active' : ''}`}
-                  onClick={() => handleAsk(item)}
+                  onClick={() => void handleAsk(item)}
+                  disabled={loading}
                 >
                   {item}
                 </button>
