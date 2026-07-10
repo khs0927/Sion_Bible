@@ -1,5 +1,6 @@
 import { callGeminiChat } from './_lib/gemini.js';
 import { hedgedNvidiaRace } from './_lib/hedgedAiRace.js';
+import { guardAiRequest } from './_lib/httpGuard.js';
 import { getRecommendedNvidiaModels } from './_lib/modelSelector.js';
 import { getNvidiaApiKey, parseJsonLoose, sendJson } from './_lib/nvidia.js';
 
@@ -26,12 +27,7 @@ function validateAnswer(parsed, originalQuestion) {
 
   const question = sanitizeAnswer(parsed.question) || originalQuestion;
   const followUpQuestion = sanitizeAnswer(parsed.followUpQuestion || parsed.reflectionQuestion).slice(0, 240);
-
-  return {
-    question,
-    answer,
-    followUpQuestion,
-  };
+  return { question, answer, followUpQuestion };
 }
 
 function buildMessages({ ref, verseText, meditation, prayer, question }) {
@@ -85,11 +81,19 @@ function debugPayload(value) {
   return { debug: value };
 }
 
+function rejectGuard(res, guard) {
+  if (guard.retryAfterSeconds) res.setHeader('Retry-After', String(guard.retryAfterSeconds));
+  return sendJson(res, guard.status, guard.body);
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return sendJson(res, 405, { ok: false, error: 'Method not allowed', errorCode: 'INVALID_METHOD' });
   }
+
+  const guard = guardAiRequest(req, { limit: 18, maxBodyBytes: 18_000 });
+  if (!guard.ok) return rejectGuard(res, guard);
 
   const input = {
     ref: text(req.body?.ref, 120),
@@ -107,6 +111,7 @@ export default async function handler(req, res) {
     });
   }
 
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
   const messages = buildMessages(input);
   const failures = [];
   const apiKey = getNvidiaApiKey();
@@ -144,11 +149,7 @@ export default async function handler(req, res) {
 
   if (process.env.GEMINI_API_KEY) {
     try {
-      const response = await callGeminiChat({
-        messages,
-        temperature: 0.3,
-        maxTokens: 1200,
-      });
+      const response = await callGeminiChat({ messages, temperature: 0.3, maxTokens: 1200 });
       const parsed = response ? parseJsonLoose(response.content) : null;
       const result = validateAnswer(parsed, input.question);
       if (!result) throw new Error('Gemini returned an invalid answer payload');
@@ -167,7 +168,7 @@ export default async function handler(req, res) {
   }
 
   return sendJson(res, 200, {
-    ...buildFallback(input, apiKey ? 'AI_PROVIDERS_FAILED' : 'AI_NOT_CONFIGURED'),
+    ...buildFallback(input, apiKey || process.env.GEMINI_API_KEY ? 'AI_PROVIDERS_FAILED' : 'AI_NOT_CONFIGURED'),
     ...debugPayload({ failures }),
   });
 }
