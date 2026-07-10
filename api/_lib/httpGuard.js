@@ -15,13 +15,23 @@ function cleanup(now) {
   }
 }
 
+function isLoopback(hostname) {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+}
+
 function sameOrigin(req) {
   const origin = String(req.headers?.origin || '').trim();
   if (!origin) return true;
   const host = String(req.headers?.['x-forwarded-host'] || req.headers?.host || '').trim();
   if (!host) return false;
+
   try {
-    return new URL(origin).host === host;
+    const originUrl = new URL(origin);
+    if (originUrl.host === host) return true;
+    const hostUrl = new URL(`http://${host}`);
+    return process.env.NODE_ENV !== 'production'
+      && isLoopback(originUrl.hostname)
+      && isLoopback(hostUrl.hostname);
   } catch {
     return false;
   }
