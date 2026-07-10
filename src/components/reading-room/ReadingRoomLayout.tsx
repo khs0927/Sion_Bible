@@ -12,7 +12,7 @@ export function ReadingRoomLayout({ children, onExit, onOpenBible }: ReadingRoom
   return (
     <div className="min-h-screen bg-[#FAF5EC] text-[#2B2B2B]">
       <div className="relative mx-auto min-h-screen max-w-[430px] bg-[#FAF5EC]">
-        <ReadingRoomHeader onExit={onExit} />
+        <ReadingRoomHeader onExit={onExit} onOpenBible={onOpenBible} />
         <main className="px-4 pb-[calc(124px+env(safe-area-inset-bottom))] pt-3">{children}</main>
         <ReadingRoomBottomNavigation onOpenBible={onOpenBible} />
       </div>
