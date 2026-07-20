@@ -1,0 +1,65 @@
+name: Temporary reading and memory patch
+
+on:
+  push:
+    branches:
+      - fix/complete-reading-memory-ai
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, 'fix: finalize reading and memory source') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: fix/complete-reading-memory-ai
+
+      - name: Patch exact source lines
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          search = Path('src/components/bible/BibleSearchSheet.tsx')
+          text = search.read_text(encoding='utf-8')
+          text = text.replace(
+              "      setSearchMeta(questionMode && 'meta' in response ? response.meta : null);",
+              "      const nextMeta = questionMode && 'meta' in response\n        ? response.meta as AiBibleSearchMeta\n        : null;\n      setSearchMeta(nextMeta);",
+          )
+          search.write_text(text, encoding='utf-8')
+
+          memory = Path('src/components/memory/MemoryHome.tsx')
+          text = memory.read_text(encoding='utf-8')
+          text = text.replace(
+              "import { useEffect, useMemo, useState } from 'react';",
+              "import { useEffect, useMemo, useState, type ReactNode } from 'react';",
+          )
+          text = text.replace(
+              "function MemoryStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string })",
+              "function MemoryStat({ icon, label, value }: { icon: ReactNode; label: string; value: string })",
+          )
+          memory.write_text(text, encoding='utf-8')
+
+          picker = Path('src/components/bible/BibleVersePicker.tsx')
+          text = picker.read_text(encoding='utf-8')
+          text = text.replace(
+              "  const cancelReadingRange = () => {\n    setRangeChapters([]);\n    onExitRange?.();\n    openReadingRoomToday();\n  };",
+              "  const cancelReadingRange = () => {\n    setRangeChapters([]);\n    openReadingRoomToday();\n  };",
+          )
+          picker.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit patch
+        run: |
+          if git diff --quiet; then
+            echo "No patch required"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/bible/BibleSearchSheet.tsx src/components/bible/BibleVersePicker.tsx src/components/memory/MemoryHome.tsx
+          git commit -m "fix: finalize reading and memory source"
+          git push origin HEAD:fix/complete-reading-memory-ai
