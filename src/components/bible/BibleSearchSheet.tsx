@@ -148,7 +148,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
       setTotalCount(response.totalCount);
       setHasMore(response.hasMore);
       setOffset(nextOffset);
-      setSearchMeta(questionMode && 'meta' in response ? response.meta : null);
+      setSearchMeta(questionMode && 'meta' in response ? response.meta as AiBibleSearchMeta : null);
 
       if (reset) {
         mainRef.current?.scrollTo({ top: 0 });

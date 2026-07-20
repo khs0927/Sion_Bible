@@ -1,15 +1,29 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { MemoryVerse, ReviewGrade, MemoryAutoReminder } from '../../types/memory';
-import { deleteMemoryVerse, getDueMemoryVerses, getMemoryVerses, saveMemoryReviewResult, moveMemoryVerseLevel, getMemoryReminderSettings } from '../../services/memoryStorage';
+import { BellRing, BookOpen, Brain, CalendarClock, CheckCircle2, Plus, Settings2, Sparkles, X } from 'lucide-react';
+import { designDecorations } from '../../assets/design';
+import type { MemoryAutoReminder, MemoryVerse, ReviewGrade } from '../../types/memory';
+import {
+  deleteMemoryVerse,
+  getDueMemoryVerses,
+  getMemoryReminderSettings,
+  getMemoryVerses,
+  moveMemoryVerseLevel,
+  saveMemoryReviewResult,
+} from '../../services/memoryStorage';
+import {
+  createAutoReminderSchedule,
+  getDueAutoReminders,
+  markAutoReminderCompleted,
+  scheduleNextInAppReminder,
+} from '../../services/memoryReminder';
 import { MemoryPracticePage } from './MemoryPracticePage';
 import { MemoryReminderSettings } from './MemoryReminderSettings';
 import { MemoryVerseCard } from './MemoryVerseCard';
 import { MemoryAddVerseSheet } from './MemoryAddVerseSheet';
-import { Plus, BellRing, Settings2, X } from 'lucide-react';
-import { createAutoReminderSchedule, scheduleNextInAppReminder, getDueAutoReminders, markAutoReminderCompleted } from '../../services/memoryReminder';
 
 type ThemeTokens = Record<string, string>;
 type SavedVerseLike = { ref: string; text: string };
+type MemoryFilter = 'all' | 'due' | 'learning' | 'mastered';
 
 export function MemoryHome({ T, savedVerses }: { T: ThemeTokens; savedVerses: SavedVerseLike[] }) {
   const [verses, setVerses] = useState<MemoryVerse[]>([]);
@@ -17,8 +31,21 @@ export function MemoryHome({ T, savedVerses }: { T: ThemeTokens; savedVerses: Sa
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [showReminderSheet, setShowReminderSheet] = useState(false);
   const [dueAutoReminders, setDueAutoReminders] = useState<MemoryAutoReminder[]>([]);
-  
+  const [filter, setFilter] = useState<MemoryFilter>('all');
+
   const due = useMemo(() => getDueMemoryVerses(), [verses]);
+  const masteredCount = useMemo(() => verses.filter((verse) => Number(verse.level || 0) >= 4).length, [verses]);
+  const learningCount = Math.max(0, verses.length - masteredCount);
+
+  const filteredVerses = useMemo(() => {
+    if (filter === 'due') {
+      const dueIds = new Set(due.map((verse) => verse.id));
+      return verses.filter((verse) => dueIds.has(verse.id));
+    }
+    if (filter === 'mastered') return verses.filter((verse) => Number(verse.level || 0) >= 4);
+    if (filter === 'learning') return verses.filter((verse) => Number(verse.level || 0) < 4);
+    return verses;
+  }, [due, filter, verses]);
 
   const refresh = () => {
     setVerses(getMemoryVerses());
@@ -30,20 +57,14 @@ export function MemoryHome({ T, savedVerses }: { T: ThemeTokens; savedVerses: Sa
     scheduleNextInAppReminder();
   }, []);
 
-  const practiceVerse = useMemo(() => 
-    verses.find(v => v.id === practiceVerseId) || null, 
-    [verses, practiceVerseId]
-  );
+  const practiceVerse = useMemo(() => verses.find((verse) => verse.id === practiceVerseId) || null, [verses, practiceVerseId]);
 
   const review = (grade: ReviewGrade) => {
     if (!practiceVerseId) return;
-    
-    // 알림 스케줄링
     const settings = getMemoryReminderSettings();
     if (settings.enabled && settings.mode === 'auto') {
       createAutoReminderSchedule(practiceVerseId, settings.auto.preset);
     }
-    
     saveMemoryReviewResult(practiceVerseId, grade);
     refresh();
     setPracticeVerseId(null);
@@ -55,18 +76,12 @@ export function MemoryHome({ T, savedVerses }: { T: ThemeTokens; savedVerses: Sa
     refresh();
   };
 
-
-  const handleCompleteAutoReminder = (reminderId: string) => {
-    markAutoReminderCompleted(reminderId);
-    refresh();
-  };
-
   if (practiceVerse) {
     return (
-      <MemoryPracticePage 
-        verse={practiceVerse} 
-        T={T} 
-        onBack={() => setPracticeVerseId(null)} 
+      <MemoryPracticePage
+        verse={practiceVerse}
+        T={T}
+        onBack={() => setPracticeVerseId(null)}
         onMoveStage={moveStage}
         onFinish={() => review('good')}
       />
@@ -74,134 +89,75 @@ export function MemoryHome({ T, savedVerses }: { T: ThemeTokens; savedVerses: Sa
   }
 
   return (
-    <div className="space-y-6 pb-24">
-      {/* 0. 자동 복습 알림 대기 (지나간 알림) */}
+    <div className="space-y-4 pb-24">
+      <section className="relative overflow-hidden rounded-[28px] border border-[#DFE7D9] bg-[linear-gradient(135deg,#FFF9E8,#EEF7EB)] p-5 shadow-[0_12px_28px_rgba(70,58,39,.08)]">
+        <img src={designDecorations.sunriseHills} alt="" className="pointer-events-none absolute inset-x-0 bottom-0 h-28 w-full object-cover object-bottom opacity-30" />
+        <img src={designDecorations.childBible} alt="성경을 읽는 아이" className="pointer-events-none absolute -bottom-5 right-0 h-40 w-32 object-contain" />
+        <div className="relative max-w-[67%]">
+          <p className="flex items-center gap-1 text-[11px] font-black text-[#4E7F59]"><Sparkles className="h-4 w-4" />말씀 암송</p>
+          <h2 className="mt-2 text-[28px] font-black tracking-[-0.045em] text-[#2F2923]">말씀을 마음에 새겨요</h2>
+          <p className="mt-2 text-[12px] font-semibold leading-5 text-[#756D64]">짧게 자주 복습하며 말씀을 오래 기억할 수 있도록 도와드려요.</p>
+          <button type="button" onClick={() => due[0] ? setPracticeVerseId(due[0].id) : setShowAddSheet(true)} className="mt-4 flex h-11 items-center gap-2 rounded-full bg-[#4E7F59] px-5 text-[13px] font-black text-white shadow-lg active:scale-95"><Brain className="h-5 w-5" />{due.length > 0 ? '오늘 복습 시작' : '첫 구절 추가하기'}</button>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-3 gap-2.5">
+        <MemoryStat icon={<BookOpen className="h-5 w-5 text-[#4E7F59]" />} value={`${verses.length}`} label="전체 구절" tone="green" />
+        <MemoryStat icon={<CalendarClock className="h-5 w-5 text-[#E39A2B]" />} value={`${due.length}`} label="오늘 복습" tone="gold" />
+        <MemoryStat icon={<CheckCircle2 className="h-5 w-5 text-[#6C63A5]" />} value={`${masteredCount}`} label="암송 완료" tone="purple" />
+      </section>
+
       {dueAutoReminders.length > 0 && (
-        <section className="animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="p-5 rounded-[20px] border flex items-center justify-between gap-4 shadow-lg" style={{ background: T.card, borderColor: T.peach }}>
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-2xl bg-[#FFF8F1]">
-                <BellRing size={22} className="animate-bounce" style={{ color: T.accent }} />
-              </div>
-              <div>
-                <div className="title-font text-sm font-black" style={{ color: T.text }}>잊으신 말씀이 있어요!</div>
-                <div className="text-[10px] opacity-60" style={{ color: T.text }}>{dueAutoReminders.length}개의 복습 알림이 도착했습니다</div>
-              </div>
-            </div>
-            <button 
-              onClick={() => handleCompleteAutoReminder(dueAutoReminders[0].id)}
-              className="px-4 py-2.5 rounded-xl font-black text-xs shadow-sm transition-all active:scale-95"
-              style={{ background: T.accent, color: 'white' }}
-            >
-              확인하기
-            </button>
+        <section className="rounded-[22px] border border-[#F0D6B6] bg-[#FFF5DF] p-4 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-[#E58E28]"><BellRing className="h-5 w-5 animate-bounce" /></span><div><h3 className="text-[13px] font-black">복습 알림이 도착했어요</h3><p className="mt-1 text-[10px] font-semibold text-[#7D7163]">{dueAutoReminders.length}개의 말씀을 다시 떠올려보세요.</p></div></div>
+            <button type="button" onClick={() => { markAutoReminderCompleted(dueAutoReminders[0].id); refresh(); }} className="rounded-full bg-[#E99B31] px-4 py-2 text-[11px] font-black text-white">확인</button>
           </div>
         </section>
       )}
 
-      {/* 1. 오늘 복습 카드 */}
-      <section 
-        className="p-6 rounded-[22px] border transition-all shadow-sm"
-        style={{ background: T.panel, borderColor: T.line }}
-      >
-        <div className="text-[10px] font-black uppercase tracking-widest mb-3" style={{ color: T.accent }}>
-          오늘 복습할 말씀
+      <section className="relative overflow-hidden rounded-[25px] border border-[#E6DCCE] bg-white/95 p-4 shadow-sm">
+        <img src={designDecorations.bookmarks} alt="" className="pointer-events-none absolute -right-2 -top-1 h-20 w-20 object-contain opacity-55" />
+        <div className="relative flex items-start justify-between gap-3">
+          <div><p className="text-[11px] font-black text-[#4E7F59]">오늘 복습할 말씀</p><h3 className="mt-1 text-[22px] font-black">{due.length > 0 ? `${due.length}개의 말씀이 기다려요` : '오늘 복습을 모두 마쳤어요'}</h3><p className="mt-1 text-[11px] font-semibold text-[#81786E]">학습 중 {learningCount}개 · 암송 완료 {masteredCount}개</p></div>
         </div>
-        <h2 className="title-font text-3xl mb-6" style={{ color: T.text }}>
-          {due.length > 0 ? `${due.length}개의 말씀이 기다려요` : '오늘은 복습할 말씀이 없습니다'}
-        </h2>
-        {due[0] && (
-          <button 
-            onClick={() => setPracticeVerseId(due[0].id)} 
-            className="w-full py-4 rounded-2xl font-black text-sm shadow-md transition-all active:scale-[0.98]"
-            style={{ background: T.peach, color: T.text }}
-          >
-            오늘 복습 시작
-          </button>
+        <div className="relative mt-4 h-2 overflow-hidden rounded-full bg-[#ECE7DE]"><div className="h-full rounded-full bg-[linear-gradient(90deg,#75A969,#4E7F59)]" style={{ width: `${verses.length ? Math.max(4, (masteredCount / verses.length) * 100) : 4}%` }} /></div>
+        <div className="relative mt-4 grid grid-cols-2 gap-2.5"><button type="button" onClick={() => setShowAddSheet(true)} className="flex h-11 items-center justify-center gap-2 rounded-full border border-[#DDE4D7] bg-[#F4F8F1] text-[12px] font-black text-[#4E7F59]"><Plus className="h-4 w-4" />구절 추가</button><button type="button" onClick={() => setShowReminderSheet(true)} className="flex h-11 items-center justify-center gap-2 rounded-full border border-[#E7DDCF] bg-[#FFF9EF] text-[12px] font-black text-[#766A5C]"><Settings2 className="h-4 w-4" />알림 설정</button></div>
+      </section>
+
+      <section>
+        <div className="flex items-center justify-between px-1"><div><h3 className="text-[21px] font-black">암송 목록</h3><p className="mt-1 text-[10px] font-semibold text-[#8B8278]">말씀 카드를 눌러 복습을 시작하세요.</p></div><span className="rounded-full bg-[#EEF5EB] px-3 py-1 text-[10px] font-black text-[#4E7F59]">총 {verses.length}개</span></div>
+        <div className="mt-3 grid grid-cols-4 rounded-full border border-[#E4D8CA] bg-[#F8F1E7] p-1">{([
+          ['all', '전체'],
+          ['due', '오늘'],
+          ['learning', '학습 중'],
+          ['mastered', '완료'],
+        ] as Array<[MemoryFilter, string]>).map(([value, label]) => <button type="button" key={value} onClick={() => setFilter(value)} className={['h-9 rounded-full text-[10px] font-black', filter === value ? 'bg-[#4E7F59] text-white shadow-sm' : 'text-[#746B62]'].join(' ')}>{label}</button>)}</div>
+
+        {filteredVerses.length === 0 ? (
+          <div className="mt-3 rounded-[24px] border-2 border-dashed border-[#E2D8CA] bg-white/70 px-5 py-10 text-center"><img src={designDecorations.childResting} alt="" className="mx-auto h-28 w-28 object-contain" /><h4 className="mt-3 text-[17px] font-black">표시할 암송 구절이 없습니다</h4><p className="mt-1 text-[11px] font-semibold text-[#81786E]">저장한 말씀이나 직접 찾은 말씀을 추가해보세요.</p><button type="button" onClick={() => setShowAddSheet(true)} className="mt-4 rounded-full bg-[#F4A23A] px-5 py-2.5 text-[12px] font-black text-white">구절 추가하기</button></div>
+        ) : (
+          <div className="mt-3 grid gap-3">{filteredVerses.map((verse, index) => <MemoryVerseCard key={verse.id} verse={verse} T={T} index={index} onPractice={() => setPracticeVerseId(verse.id)} onDelete={() => { deleteMemoryVerse(verse.id); refresh(); }} />)}</div>
         )}
       </section>
 
-      {/* 2. 관리 버튼 (암송 구절 추가 + 알림 설정) */}
-      <section className="grid grid-cols-2 gap-3">
-        <button 
-          onClick={() => setShowAddSheet(true)}
-          className="h-14 rounded-[16px] border flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all"
-          style={{ borderColor: T.line, color: T.text, background: T.card }}
-        >
-          <Plus size={18} strokeWidth={3} style={{ color: T.accent }} />
-          <span className="title-font text-sm font-black">구절 추가</span>
-        </button>
-        <button 
-          onClick={() => setShowReminderSheet(true)}
-          className="h-14 rounded-[16px] border flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all"
-          style={{ borderColor: T.line, color: T.text, background: T.card }}
-        >
-          <Settings2 size={18} strokeWidth={2} style={{ color: T.sub }} />
-          <span className="title-font text-sm font-black">알림 설정</span>
-        </button>
-      </section>
-
-      {/* 3. 암송 목록 섹션 */}
-
-      {/* 3. 암송 목록 섹션 */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between px-1">
-          <h3 className="title-font text-xl font-black" style={{ color: T.text }}>암송 목록</h3>
-          <span className="text-[10px] font-bold opacity-40" style={{ color: T.text }}>총 {verses.length}개</span>
-        </div>
-        
-        {verses.length === 0 && (
-          <div className="py-12 text-center rounded-[20px] border-2 border-dashed" style={{ borderColor: T.line, color: T.sub }}>
-            <p className="text-sm font-bold">아직 암송 구절이 없습니다.</p>
-          </div>
-        )}
-
-        <div className="grid gap-3">
-          {verses.map(verse => (
-            <MemoryVerseCard 
-              key={verse.id} 
-              verse={verse} 
-              T={T} 
-              onPractice={() => setPracticeVerseId(verse.id)} 
-              onDelete={() => { deleteMemoryVerse(verse.id); refresh(); }} 
-            />
-          ))}
-        </div>
-      </section>
+      <section className="relative overflow-hidden rounded-[23px] border border-[#DFE8D8] bg-[#F1F7EE] p-4"><h3 className="text-[18px] font-black text-[#4E7F59]">주의 말씀을 내 마음에 두었나이다</h3><p className="mt-1 max-w-[68%] text-[11px] font-semibold text-[#756D64]">매일 한 구절씩 천천히 마음에 새겨보세요.</p><img src={designDecorations.homeCross} alt="성경과 십자가" className="absolute -bottom-3 right-2 h-24 w-24 object-contain" /></section>
 
       {showReminderSheet && (
-        <div className="fixed inset-0 z-[100] flex flex-col animate-in fade-in slide-in-from-bottom-10 duration-500" style={{ background: T.panel }}>
-          <header className="p-6 flex items-center justify-between border-b" style={{ borderColor: T.line }}>
-            <div className="flex items-center gap-3">
-              <Settings2 size={20} style={{ color: T.accent }} />
-              <h2 className="title-font text-xl font-black" style={{ color: T.text }}>알림 설정</h2>
-            </div>
-            <button 
-              onClick={() => { setShowReminderSheet(false); refresh(); }}
-              aria-label="알림 설정 닫기"
-              className="w-10 h-10 rounded-2xl border flex items-center justify-center transition-all active:scale-90"
-              style={{ borderColor: T.line, background: T.solid, color: T.sub }}
-            >
-              <X size={20} />
-            </button>
-          </header>
-          <div className="flex-1 overflow-y-auto p-6 pb-12">
-            <MemoryReminderSettings T={T} />
-          </div>
+        <div className="fixed inset-0 z-[220] flex items-end justify-center bg-black/30 p-3 backdrop-blur-sm">
+          <section className="max-h-[90vh] w-full max-w-[430px] overflow-y-auto rounded-[30px] border border-[#E7DDCF] bg-[#FFFDF8] shadow-2xl">
+            <header className="sticky top-0 z-10 flex items-center justify-between border-b border-[#E7DDCF] bg-[#FFFDF8]/95 p-5 backdrop-blur-xl"><div className="flex items-center gap-3"><Settings2 className="h-5 w-5 text-[#4E7F59]" /><h2 className="text-[20px] font-black">암송 알림 설정</h2></div><button type="button" onClick={() => { setShowReminderSheet(false); refresh(); }} className="grid h-10 w-10 place-items-center rounded-full bg-[#F3EEE6]"><X className="h-5 w-5" /></button></header>
+            <div className="p-5 pb-10"><MemoryReminderSettings T={T} /></div>
+          </section>
         </div>
       )}
 
-      {showAddSheet && (
-        <MemoryAddVerseSheet
-          onClose={() => {
-            setShowAddSheet(false);
-            refresh();
-          }}
-          savedVerses={savedVerses}
-          theme={T}
-          fontSize="1rem"
-        />
-      )}
+      {showAddSheet && <MemoryAddVerseSheet onClose={() => { setShowAddSheet(false); refresh(); }} savedVerses={savedVerses} theme={T} fontSize="1rem" />}
     </div>
   );
+}
+
+function MemoryStat({ icon, value, label, tone }: { icon: React.ReactNode; value: string; label: string; tone: 'green' | 'gold' | 'purple' }) {
+  const backgrounds = { green: '#EEF6EB', gold: '#FFF5DD', purple: '#F3EFFA' };
+  return <section className="rounded-[20px] border border-[#E7DDCF] p-3 text-center shadow-sm" style={{ background: backgrounds[tone] }}><span className="mx-auto grid h-9 w-9 place-items-center rounded-full bg-white/80">{icon}</span><b className="mt-2 block text-[19px]">{value}</b><small className="mt-0.5 block text-[9px] font-bold text-[#81786E]">{label}</small></section>;
 }
