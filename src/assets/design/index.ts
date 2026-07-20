@@ -20,14 +20,22 @@ import bookmarks from './decorations/bookmarks.png';
 import pottedSprout from './decorations/potted-sprout.png';
 import crossClouds from './decorations/cross-clouds.png';
 import openBibleLarge from './decorations/open-bible-large.png';
+import courseLandscape from './reading-room/course-landscape.svg';
+import rewardBible from './reading-room/reward-bible.svg';
+import prayerGirl from './memory/prayer-girl.svg';
+import memoryEmpty from './memory/memory-empty.svg';
 
 export const verseBackgrounds = [verseBg01, verseBg02, verseBg03, verseBg04, verseBg05, verseBg06, verseBg07, verseBg08, verseBg09, verseBg10, verseBg11, verseBg12];
 export { appBookBackground, continueCardBackground, moodCardBackground };
 
 export const designDecorations = {
-  openBibleFlowers: openBibleFlowers,
-  bookmarks: bookmarks,
-  pottedSprout: pottedSprout,
-  crossClouds: crossClouds,
-  openBibleLarge: openBibleLarge,
+  openBibleFlowers,
+  bookmarks,
+  pottedSprout,
+  crossClouds,
+  openBibleLarge,
+  courseLandscape,
+  rewardBible,
+  prayerGirl,
+  memoryEmpty,
 };
