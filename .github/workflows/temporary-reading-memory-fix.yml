@@ -20,6 +20,7 @@ jobs:
 
       - name: Patch exact source lines
         run: |
+          # This temporary workflow applies exact source-only replacements.
           python - <<'PY'
           from pathlib import Path
 
