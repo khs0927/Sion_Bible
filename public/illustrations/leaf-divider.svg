@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2008 136" role="img" aria-labelledby="t d">
+<title id="t">잎사귀와 열린 성경 장식선</title><desc id="d">카드 사이와 화면 하단에 사용하는 수채화풍 구분 장식</desc>
+<defs><linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#AEC879"/><stop offset="1" stop-color="#6D9558"/></linearGradient><linearGradient id="paper" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#FFF7D9"/><stop offset="1" stop-color="#EBD9A8"/></linearGradient></defs>
+<path d="M20 95Q270 35 520 88T1020 75T1510 89T1988 66" fill="none" stroke="#B4C68E" stroke-width="8" opacity=".55"/>
+<g fill="url(#leaf)" opacity=".88">
+  <ellipse cx="120" cy="71" rx="42" ry="14" transform="rotate(-25 120 71)"/><ellipse cx="184" cy="89" rx="38" ry="13" transform="rotate(18 184 89)"/>
+  <ellipse cx="330" cy="54" rx="40" ry="14" transform="rotate(23 330 54)"/><ellipse cx="407" cy="77" rx="44" ry="15" transform="rotate(-20 407 77)"/>
+  <ellipse cx="645" cy="85" rx="45" ry="15" transform="rotate(-18 645 85)"/><ellipse cx="741" cy="59" rx="39" ry="13" transform="rotate(22 741 59)"/>
+  <ellipse cx="1260" cy="62" rx="41" ry="14" transform="rotate(-24 1260 62)"/><ellipse cx="1345" cy="89" rx="45" ry="15" transform="rotate(19 1345 89)"/>
+  <ellipse cx="1598" cy="56" rx="40" ry="14" transform="rotate(23 1598 56)"/><ellipse cx="1705" cy="83" rx="44" ry="15" transform="rotate(-19 1705 83)"/>
+  <ellipse cx="1880" cy="70" rx="41" ry="14" transform="rotate(20 1880 70)"/>
+</g>
+<g transform="translate(890 16)">
+  <path d="M0 22q60-29 114 6v87q-55-24-114 0Z" fill="url(#paper)" stroke="#6C8F59" stroke-width="5"/>
+  <path d="M114 28q54-35 114-6v93q-59-24-114 0Z" fill="url(#paper)" stroke="#6C8F59" stroke-width="5"/>
+  <path d="M114 29v85" stroke="#6C8F59" stroke-width="4"/>
+  <path d="M32 53h55M32 70h63M141 52h58M141 70h47" stroke="#D3BD84" stroke-width="4" stroke-linecap="round"/>
+</g>
+<g fill="#EBA93A"><circle cx="556" cy="45" r="6"/><circle cx="1465" cy="48" r="6"/><path d="M818 41l5 13 13 5-13 5-5 13-5-13-13-5 13-5Z"/><path d="M1182 36l5 13 13 5-13 5-5 13-5-13-13-5 13-5Z"/></g>
+</svg>
