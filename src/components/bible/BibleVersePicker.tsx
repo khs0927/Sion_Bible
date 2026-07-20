@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { type BibleBook } from '../../data/bibleBooks';
 import { loadBibleVerseIndex } from '../../services/bibleIndex';
 import { sanitizeScriptureText } from '../../utils/textUtils';
@@ -68,7 +68,7 @@ function rangeVerseKey(bookName: string, chapter: number, verse: number) {
 
 function openReadingRoomToday() {
   if (typeof window === 'undefined') return;
-  const path = '/reading-room/today';
+  const path = '/reading-room';
   if (window.location.pathname !== path) window.history.pushState({}, '', path);
   window.dispatchEvent(new PopStateEvent('popstate'));
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -247,12 +247,15 @@ export function BibleVersePicker({
   };
 
   const cancelReadingRange = () => {
+    setRangeChapters([]);
+    onExitRange?.();
     openReadingRoomToday();
   };
 
   const completeReadingRange = () => {
-    openReadingRoomToday();
+    setRangeChapters([]);
     onExitRange?.();
+    openReadingRoomToday();
   };
 
   return (
@@ -345,7 +348,7 @@ export function BibleVersePicker({
           />
         )}
 
-        {readingRange && !loading && !err && (
+        {readingRange && !loading && !err && rangeChapters.length > 0 && (
           <div className="flex justify-center pb-12 pt-8">
             <button
               type="button"
