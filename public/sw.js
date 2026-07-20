@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sion-bible-shell-v20260720-02';
+const CACHE_NAME = 'sion-bible-shell-v20260720-03';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
