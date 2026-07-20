@@ -67,7 +67,10 @@
   --sion-scripture-font: 'GounBatang', 'Nanum Myeongjo', serif;
 }
 
+html,
 body,
+#root,
+#root > div,
 button,
 input,
 textarea,
