@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - ops/production-ai-smoke-20260720
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
