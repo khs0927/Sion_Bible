@@ -148,7 +148,10 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
       setTotalCount(response.totalCount);
       setHasMore(response.hasMore);
       setOffset(nextOffset);
-      setSearchMeta(questionMode && 'meta' in response ? response.meta : null);
+      const nextMeta = questionMode && 'meta' in response
+        ? response.meta as AiBibleSearchMeta
+        : null;
+      setSearchMeta(nextMeta);
 
       if (reset) {
         mainRef.current?.scrollTo({ top: 0 });
@@ -344,7 +347,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
               return (
                 <div key={verse.id} className="space-y-3">
                   {showSection && (
-                    <div className="pt-2 pb-1">
+                    <div className="pb-1 pt-2">
                       <div className="rounded-2xl border bg-white/80 px-4 py-3 shadow-sm" style={{ borderColor: T.line }}>
                         <p className="title-font text-sm font-black" style={{ color: T.accent }}>{section.title}</p>
                         <p className="mt-1 text-[11px] font-bold leading-relaxed" style={{ color: T.sub }}>{section.description}</p>
