@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 870 630" role="img" aria-labelledby="t d">
+<title id="t">말씀을 읽는 새싹 캐릭터</title><desc id="d">암송 화면에 사용하는 따뜻한 수채화풍 어린이 캐릭터 일러스트</desc>
+<defs>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#FFFDF5"/><stop offset=".65" stop-color="#EFF6E8"/><stop offset="1" stop-color="#E7F0DF"/></linearGradient>
+  <linearGradient id="skin" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFF6E5"/><stop offset="1" stop-color="#F2D9B8"/></linearGradient>
+  <linearGradient id="green" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#7AA15A"/><stop offset="1" stop-color="#416D3B"/></linearGradient>
+  <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#5F5A42" flood-opacity=".14"/></filter>
+</defs>
+<rect width="870" height="630" rx="52" fill="url(#sky)"/>
+<path d="M0 474C138 409 240 449 337 431c117-22 239-114 533-43v242H0Z" fill="#DDEBCF"/>
+<path d="M0 522c145-64 267-13 381-40 133-31 277-93 489-30v178H0Z" fill="#CFE2BD" opacity=".8"/>
+<g opacity=".65"><path d="M642 433l68-122 64 121" fill="none" stroke="#B0C897" stroke-width="14" stroke-linecap="round"/><path d="M693 422l76-151 79 151" fill="none" stroke="#C3D6AE" stroke-width="12" stroke-linecap="round"/></g>
+<g filter="url(#shadow)">
+  <ellipse cx="316" cy="330" rx="137" ry="141" fill="url(#skin)" stroke="#B99870" stroke-width="7"/>
+  <path d="M271 195c-18-49 21-83 58-67 20 9 27 30 19 52" fill="#7EA856" stroke="#4D743B" stroke-width="6"/>
+  <path d="M323 182c24-56 80-64 106-28-25 42-62 53-106 28Z" fill="#94B960" stroke="#4D743B" stroke-width="6"/>
+  <circle cx="266" cy="336" r="12" fill="#2E2926"/><circle cx="365" cy="336" r="12" fill="#2E2926"/>
+  <path d="M300 378q18 18 37 0" fill="none" stroke="#6E4B3E" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="227" cy="368" r="20" fill="#EFAF9A" opacity=".45"/><circle cx="405" cy="368" r="20" fill="#EFAF9A" opacity=".45"/>
+  <path d="M215 455q103-70 208 0l-10 123H226Z" fill="url(#green)" stroke="#3D6738" stroke-width="7"/>
+  <path d="M278 444h80v112h-80z" rx="8" fill="#365E35" stroke="#E4C77E" stroke-width="5"/>
+  <path d="M311 468h14v55h-14zM288 489h59v15h-59z" fill="#F1D284"/>
+</g>
+<g filter="url(#shadow)" transform="translate(460 326)">
+  <path d="M0 46Q98 6 190 52v168Q99 182 0 221Z" fill="#FFF3C8" stroke="#4A6F43" stroke-width="8"/>
+  <path d="M190 52q96-46 190-6v175q-96-39-190-1Z" fill="#FFF3C8" stroke="#4A6F43" stroke-width="8"/>
+  <path d="M190 54v164" stroke="#4A6F43" stroke-width="6"/>
+  <g stroke="#D8C596" stroke-width="4" stroke-linecap="round"><path d="M37 88h111M37 116h124M37 144h98M231 88h112M231 116h103M231 144h126"/></g>
+</g>
+<g fill="#F3B13D"><path d="M104 110l7 18 18 7-18 7-7 18-7-18-18-7 18-7Z"/><path d="M744 120l6 15 15 6-15 6-6 15-6-15-15-6 15-6Z"/></g>
+<g fill="#7CA153" opacity=".7"><ellipse cx="109" cy="484" rx="48" ry="16" transform="rotate(-24 109 484)"/><ellipse cx="140" cy="526" rx="50" ry="17" transform="rotate(18 140 526)"/><ellipse cx="771" cy="486" rx="45" ry="15" transform="rotate(20 771 486)"/></g>
+</svg>
