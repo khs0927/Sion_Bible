@@ -4,6 +4,9 @@ import './index.css';
 import './noonnu.css';
 import './sionUiPatches';
 import App from './App';
+import { activateSionFonts } from './fontRuntime';
+
+void activateSionFonts();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
