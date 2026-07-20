@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 690 324" role="img" aria-labelledby="t d">
+<title id="t">초록 성경과 잎사귀</title><desc id="d">통독 완료와 코스 화면에 사용하는 수채화풍 성경 일러스트</desc>
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFFDF5"/><stop offset="1" stop-color="#F2F7E9"/></linearGradient>
+  <linearGradient id="book" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#6E9852"/><stop offset=".58" stop-color="#466D3B"/><stop offset="1" stop-color="#355A33"/></linearGradient>
+  <linearGradient id="page" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#FFF2C7"/><stop offset="1" stop-color="#EACD8E"/></linearGradient>
+  <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#5D583D" flood-opacity=".18"/></filter>
+  <filter id="soft"><feGaussianBlur stdDeviation="5"/></filter>
+</defs>
+<rect width="690" height="324" rx="46" fill="url(#bg)"/>
+<ellipse cx="350" cy="274" rx="210" ry="23" fill="#B9B08C" opacity=".16" filter="url(#soft)"/>
+<g opacity=".9">
+  <path d="M90 255c72-44 111-77 146-132" fill="none" stroke="#78974F" stroke-width="9" stroke-linecap="round"/>
+  <g fill="#A8BF69"><ellipse cx="113" cy="236" rx="30" ry="13" transform="rotate(-24 113 236)"/><ellipse cx="146" cy="207" rx="34" ry="14" transform="rotate(16 146 207)"/><ellipse cx="181" cy="171" rx="33" ry="13" transform="rotate(-24 181 171)"/><ellipse cx="211" cy="136" rx="31" ry="13" transform="rotate(20 211 136)"/></g>
+  <path d="M596 258c-67-45-103-77-136-127" fill="none" stroke="#78974F" stroke-width="9" stroke-linecap="round"/>
+  <g fill="#A8BF69"><ellipse cx="572" cy="237" rx="30" ry="13" transform="rotate(22 572 237)"/><ellipse cx="538" cy="206" rx="34" ry="14" transform="rotate(-18 538 206)"/><ellipse cx="503" cy="171" rx="33" ry="13" transform="rotate(24 503 171)"/><ellipse cx="474" cy="139" rx="31" ry="13" transform="rotate(-18 474 139)"/></g>
+</g>
+<g filter="url(#shadow)" transform="translate(238 30) rotate(-5 120 125)">
+  <path d="M30 28Q29 12 47 9L194 0q20-1 22 20l9 194q1 20-18 22L57 246q-23 2-24-21Z" fill="url(#book)" stroke="#36552E" stroke-width="6"/>
+  <path d="M58 245l150-10q15-1 18-16l2 22q1 17-16 19L66 270q-19 1-22-16Z" fill="url(#page)" stroke="#B79054" stroke-width="4"/>
+  <path d="M50 31l12 194" stroke="#8FB071" stroke-width="5" opacity=".65"/>
+  <path d="M90 34l84-6" stroke="#90AF71" stroke-width="4" opacity=".35"/>
+  <path d="M117 72h24v98h-24zM83 105h93v26H83z" rx="5" fill="#F6D786" stroke="#FFF0B8" stroke-width="4"/>
+  <path d="M71 247l-8 49 25-19 22 15 3-51" fill="#D29A3E" stroke="#A6742C" stroke-width="3"/>
+</g>
+<g fill="#F3B13D"><path d="M100 74l7 18 18 7-18 7-7 18-7-18-18-7 18-7Z"/><path d="M595 80l5 13 13 5-13 5-5 13-5-13-13-5 13-5Z"/><circle cx="151" cy="64" r="5"/><circle cx="548" cy="58" r="5"/></g>
+</svg>
