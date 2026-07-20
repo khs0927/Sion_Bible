@@ -1,6 +1,11 @@
 import { callGeminiChat } from './_lib/gemini.js';
 import { guardAiRequest } from './_lib/httpGuard.js';
-import { listNvidiaModels, sendJson } from './_lib/nvidia.js';
+import {
+  callNvidiaChat,
+  filterLikelyChatModels,
+  listNvidiaModels,
+  sendJson,
+} from './_lib/nvidia.js';
 
 function providerFailure(error) {
   const status = Number(error?.statusCode || 0);
@@ -13,14 +18,31 @@ function providerFailure(error) {
 
 async function probeNvidia() {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(new Error('NVIDIA health probe timeout')), 8_000);
+  const timeout = setTimeout(() => controller.abort(new Error('NVIDIA health probe timeout')), 10_000);
   const startedAt = Date.now();
   try {
     const models = await listNvidiaModels({ signal: controller.signal });
+    const candidates = filterLikelyChatModels(models);
+    const configuredModel = String(process.env.NVIDIA_PRIMARY_MODEL || process.env.NVIDIA_FAST_MODEL_1 || '').trim();
+    const model = configuredModel && models.includes(configuredModel) ? configuredModel : candidates[0];
+    if (!model) throw new Error('No NVIDIA chat model is available');
+
+    const response = await callNvidiaChat({
+      model,
+      messages: [{ role: 'user', content: 'Reply with the single word OK.' }],
+      temperature: 0,
+      maxTokens: 8,
+      signal: controller.signal,
+      responseFormat: null,
+      retryWithoutResponseFormat: false,
+    });
+
     return {
-      ok: true,
+      ok: Boolean(response.content),
       latencyMs: Date.now() - startedAt,
       modelCount: models.length,
+      model: response.model,
+      generation: Boolean(response.content),
     };
   } catch (error) {
     return { ...providerFailure(error), latencyMs: Date.now() - startedAt };
@@ -44,6 +66,7 @@ async function probeGemini() {
       ok: Boolean(response.content),
       latencyMs: Date.now() - startedAt,
       model: response.model,
+      generation: Boolean(response.content),
     };
   } catch (error) {
     return { ...providerFailure(error), latencyMs: Date.now() - startedAt };
