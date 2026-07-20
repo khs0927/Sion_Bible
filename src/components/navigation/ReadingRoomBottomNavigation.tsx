@@ -28,7 +28,7 @@ export function ReadingRoomBottomNavigation() {
   const currentSection = getCurrentSection();
 
   return (
-    <nav aria-label="통독 하단 네비게이션" className="fixed inset-x-0 bottom-0 z-[120] mx-auto max-w-[430px] border-t border-[#E9DFD2] bg-white/96 px-3 pb-[calc(env(safe-area-inset-bottom)+7px)] pt-2 shadow-[0_-8px_26px_rgba(80,65,42,0.07)] backdrop-blur-xl">
+    <div role="navigation" aria-label="통독 하단 네비게이션" className="reading-room-bottom-nav fixed inset-x-0 bottom-0 z-[120] mx-auto max-w-[430px] border-t border-[#E9DFD2] bg-white/96 px-3 pb-[calc(env(safe-area-inset-bottom)+7px)] pt-2 shadow-[0_-8px_26px_rgba(80,65,42,0.07)] backdrop-blur-xl">
       <div className="grid grid-cols-5">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -50,6 +50,6 @@ export function ReadingRoomBottomNavigation() {
           );
         })}
       </div>
-    </nav>
+    </div>
   );
 }
