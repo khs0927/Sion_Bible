@@ -1,0 +1,60 @@
+name: One-time completion fixes
+
+on:
+  push:
+    branches:
+      - fix/complete-reading-room-memory-ai
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, 'fix: apply reading room compatibility fixes') && !contains(github.event.head_commit.message, 'chore: remove one-time completion workflow') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/complete-reading-room-memory-ai
+      - name: Patch compatibility and navigation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          picker = Path('src/components/bible/BibleVersePicker.tsx')
+          text = picker.read_text(encoding='utf-8')
+          text = text.replace("import { Loader2 } from 'lucide-react';", "import { Check, Loader2 } from 'lucide-react';")
+          picker.write_text(text, encoding='utf-8')
+
+          search = Path('src/components/bible/BibleSearchSheet.tsx')
+          text = search.read_text(encoding='utf-8')
+          text = text.replace(
+              "setSearchMeta(questionMode && 'meta' in response ? response.meta : null);",
+              "setSearchMeta(questionMode && 'meta' in response ? response.meta as AiBibleSearchMeta : null);",
+          )
+          search.write_text(text, encoding='utf-8')
+
+          app = Path('src/App.tsx')
+          text = app.read_text(encoding='utf-8')
+          old = """  const handleNavigateToRange = (taskOverride?: ReadingDayTask | null) => {\n    const task = taskOverride ?? todayReadingTask;\n    if (!task) return;\n    setTodayReadingTask(task);\n    const range = convertTaskToBibleRange(task);\n    if (routePath.startsWith('/reading-room')) navigateAppPath('/');\n    setActiveReadingRange(range);\n    setTab('read');\n    window.scrollTo(0, 0);\n  };"""
+          new = """  const handleNavigateToRange = (taskOverride?: ReadingDayTask | null) => {\n    const task = taskOverride ?? todayReadingTask;\n    if (!task) return;\n    const range = convertTaskToBibleRange(task);\n    setTodayReadingTask(task);\n    setActiveReadingRange(range);\n    setDetail(null);\n    setTab('read');\n    if (window.location.pathname !== '/') window.history.pushState({}, '', '/');\n    setRoutePath('/');\n    window.requestAnimationFrame(() => window.scrollTo(0, 0));\n  };"""
+          if old in text:
+              text = text.replace(old, new)
+
+          old = """  const handleStartPlanAndRead = (template: ReadingPlanTemplate) => {\n    setReadingProgress(startReadingPlan(template));\n    const firstTask = template.tasks[0];\n    if (firstTask) {\n      setTodayReadingTask(firstTask);\n      if (routePath.startsWith('/reading-room')) navigateAppPath('/');\n      setActiveReadingRange(convertTaskToBibleRange(firstTask));\n      setTab('read');\n      window.scrollTo(0, 0);\n    }\n  };"""
+          new = """  const handleStartPlanAndRead = (template: ReadingPlanTemplate) => {\n    setReadingProgress(startReadingPlan(template));\n    const firstTask = template.tasks[0];\n    if (!firstTask) return;\n    setTodayReadingTask(firstTask);\n    setActiveReadingRange(convertTaskToBibleRange(firstTask));\n    setDetail(null);\n    setTab('read');\n    if (window.location.pathname !== '/') window.history.pushState({}, '', '/');\n    setRoutePath('/');\n    window.requestAnimationFrame(() => window.scrollTo(0, 0));\n  };"""
+          if old in text:
+              text = text.replace(old, new)
+          app.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit fixes
+        run: |
+          if git diff --quiet; then
+            echo "No changes required"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.tsx src/components/bible/BibleVersePicker.tsx src/components/bible/BibleSearchSheet.tsx
+          git commit -m "fix: apply reading room compatibility fixes"
+          git push origin HEAD:fix/complete-reading-room-memory-ai
