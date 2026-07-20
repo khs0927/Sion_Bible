@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { type BibleBook } from '../../data/bibleBooks';
 import { loadBibleVerseIndex } from '../../services/bibleIndex';
 import { sanitizeScriptureText } from '../../utils/textUtils';
