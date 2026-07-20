@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sion-bible-shell-v20260711-01';
+const CACHE_NAME = 'sion-bible-shell-v20260720-02';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
@@ -31,7 +31,6 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Serverless APIs and the Bible index must always use the latest network response.
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/bible/')) {
     event.respondWith(fetch(event.request, { cache: 'no-store' }));
     return;
@@ -47,7 +46,8 @@ self.addEventListener('fetch', (event) => {
 
   if (PRECACHE_ASSETS.includes(url.pathname)) {
     event.respondWith(
-      caches.match(event.request).then((cachedResponse) => cachedResponse || fetch(event.request))
+      fetch(event.request, { cache: 'no-store' })
+        .catch(() => caches.match(event.request))
     );
     return;
   }
