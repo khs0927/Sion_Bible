@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 220" role="img" aria-labelledby="title">
+  <title id="title">말씀을 마음에 새기는 기도하는 아이</title>
+  <defs>
+    <linearGradient id="dress" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#F7B76B"/><stop offset="1" stop-color="#E98749"/></linearGradient>
+    <linearGradient id="hair" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#B8683D"/><stop offset="1" stop-color="#7E422F"/></linearGradient>
+    <filter id="shadow" x="-25%" y="-25%" width="150%" height="150%"><feDropShadow dx="0" dy="7" stdDeviation="6" flood-color="#79614A" flood-opacity=".18"/></filter>
+  </defs>
+  <ellipse cx="115" cy="194" rx="67" ry="13" fill="#E9E2D6"/>
+  <g fill="#8FB36B"><path d="M47 182c-19-28-11-53 18-59 5 29-3 49-18 59Z"/><path d="M181 184c20-27 12-52-17-59-6 28 2 49 17 59Z"/></g>
+  <g filter="url(#shadow)">
+    <path d="M72 81c-7-36 12-62 43-62 32 0 53 26 45 63-4 21-15 37-45 37-29 0-39-16-43-38Z" fill="url(#hair)"/>
+    <circle cx="115" cy="73" r="40" fill="#FFD8B7"/>
+    <path d="M78 65c4-31 20-45 39-45 24 0 39 16 42 45-14-8-22-21-27-34-12 18-31 28-54 34Z" fill="url(#hair)"/>
+    <path d="M80 73c-13 2-14 23 2 24M151 73c13 2 14 23-2 24" fill="#FFD8B7" stroke="#D69670" stroke-width="3"/>
+    <path d="M96 74c4 5 9 5 13 0M122 74c4 5 9 5 13 0" fill="none" stroke="#6F493C" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M106 91c6 5 13 5 19 0" fill="none" stroke="#D47766" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="88" cy="87" r="7" fill="#F39A8B" opacity=".38"/><circle cx="143" cy="87" r="7" fill="#F39A8B" opacity=".38"/>
+    <path d="M70 184c5-51 24-73 45-73 22 0 41 22 46 73Z" fill="url(#dress)" stroke="#D67845" stroke-width="4"/>
+    <path d="M95 121c5 12 12 19 20 21 8-2 15-9 20-21" fill="#FFF4E5" stroke="#E8C8AA" stroke-width="3"/>
+    <path d="M83 139c10 3 20 11 32 25 12-14 23-22 32-25" fill="none" stroke="#FFD8B7" stroke-width="15" stroke-linecap="round"/>
+    <path d="M103 159c5-8 18-8 24 0-2 13-8 20-12 20s-10-7-12-20Z" fill="#FFD8B7" stroke="#D69670" stroke-width="2.5"/>
+  </g>
+  <g fill="#F4C75B"><path d="M49 52l4 8 9 1-7 6 2 9-8-4-8 4 2-9-7-6 9-1Z"/><circle cx="179" cy="56" r="6"/></g>
+  <g fill="#E98A5B"><path d="M174 91c9-13 24-3 14 8l-14 13-14-13c-10-11 5-21 14-8Z"/></g>
+</svg>
