@@ -1,9 +1,13 @@
-const CACHE_NAME = 'sion-bible-shell-v20260720-03';
+const CACHE_NAME = 'sion-bible-shell-v20260721-01';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icon-512.png'
+  '/icon-512.png',
+  '/illustrations/reading-bible.svg',
+  '/illustrations/memory-child.svg',
+  '/illustrations/reading-meadow.svg',
+  '/illustrations/leaf-divider.svg'
 ];
 
 self.addEventListener('install', (event) => {
@@ -47,6 +51,11 @@ self.addEventListener('fetch', (event) => {
   if (PRECACHE_ASSETS.includes(url.pathname)) {
     event.respondWith(
       fetch(event.request, { cache: 'no-store' })
+        .then((response) => {
+          const copy = response.clone();
+          void caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          return response;
+        })
         .catch(() => caches.match(event.request))
     );
     return;
