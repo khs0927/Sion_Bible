@@ -16,7 +16,6 @@ import verseBg11 from './verse-backgrounds/verse-bg-11.png';
 import verseBg12 from './verse-backgrounds/verse-bg-12.png';
 
 import childPraying from './decorations/child-praying.png';
-import childBible from './decorations/child-bible.png';
 import childResting from './decorations/child-resting.png';
 import childWaving from './decorations/child-waving.png';
 import churchHill from './decorations/church-hill.png';
@@ -30,10 +29,7 @@ import flowerBunch from './decorations/flower-bunch.png';
 import softCloud from './decorations/soft-cloud.png';
 import sparkles from './decorations/sparkles.png';
 import hillsSmall from './decorations/hills-small.png';
-import pathMeadow from './decorations/path-meadow.png';
-import openBibleLarge from './decorations/open-bible-large.png';
 import heartLeaves from './decorations/heart-leaves.png';
-import homeCross from './decorations/home-cross.png';
 import sunriseHills from './decorations/sunrise-hills.png';
 import doveBranch from './decorations/dove-branch.png';
 import butterfly from './decorations/butterfly.png';
@@ -43,12 +39,17 @@ import bookmarks from './decorations/bookmarks.png';
 import flowerPot from './decorations/flower-pot.png';
 import flowerBouquet from './decorations/flower-bouquet.png';
 
+const generatedReadingBible = '/illustrations/reading-bible.svg';
+const generatedMemoryChild = '/illustrations/memory-child.svg';
+const generatedReadingMeadow = '/illustrations/reading-meadow.svg';
+const generatedLeafDivider = '/illustrations/leaf-divider.svg';
+
 export const verseBackgrounds = [verseBg01, verseBg02, verseBg03, verseBg04, verseBg05, verseBg06, verseBg07, verseBg08, verseBg09, verseBg10, verseBg11, verseBg12];
 export { appBookBackground, continueCardBackground, moodCardBackground };
 
 export const designDecorations = {
   childPraying,
-  childBible,
+  childBible: generatedMemoryChild,
   childResting,
   childWaving,
   churchHill,
@@ -62,10 +63,10 @@ export const designDecorations = {
   softCloud,
   sparkles,
   hillsSmall,
-  pathMeadow,
-  openBibleLarge,
+  pathMeadow: generatedReadingMeadow,
+  openBibleLarge: generatedReadingBible,
   heartLeaves,
-  homeCross,
+  homeCross: generatedReadingBible,
   sunriseHills,
   doveBranch,
   butterfly,
@@ -74,4 +75,8 @@ export const designDecorations = {
   bookmarks,
   flowerPot,
   flowerBouquet,
+  generatedReadingBible,
+  generatedMemoryChild,
+  generatedReadingMeadow,
+  generatedLeafDivider,
 };
