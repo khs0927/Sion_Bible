@@ -1,112 +1,150 @@
 /* Noonnu-hosted OFL fonts: Paperlogy for UI and Gowun Batang for Scripture. */
 @font-face {
-  font-family: 'Paperozi';
-  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-4Regular.woff2') format('woff2');
+  font-family: 'Paperlogy';
+  src:
+    local('Paperlogy Regular'),
+    local('Paperlogy'),
+    url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-4Regular.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Paperozi';
-  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-5Medium.woff2') format('woff2');
+  font-family: 'Paperlogy';
+  src:
+    local('Paperlogy Medium'),
+    url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-5Medium.woff2') format('woff2');
   font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Paperozi';
-  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-6SemiBold.woff2') format('woff2');
+  font-family: 'Paperlogy';
+  src:
+    local('Paperlogy SemiBold'),
+    url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-6SemiBold.woff2') format('woff2');
   font-weight: 600;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Paperozi';
-  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-7Bold.woff2') format('woff2');
+  font-family: 'Paperlogy';
+  src:
+    local('Paperlogy Bold'),
+    url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-7Bold.woff2') format('woff2');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Paperozi';
-  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-8ExtraBold.woff2') format('woff2');
+  font-family: 'Paperlogy';
+  src:
+    local('Paperlogy ExtraBold'),
+    url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-8ExtraBold.woff2') format('woff2');
   font-weight: 800;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Paperozi';
-  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-9Black.woff2') format('woff2');
+  font-family: 'Paperlogy';
+  src:
+    local('Paperlogy Black'),
+    url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-9Black.woff2') format('woff2');
   font-weight: 900;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'GounBatang';
-  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2108@1.1/GowunBatang-Regular.woff') format('woff');
+  font-family: 'GowunBatang';
+  src:
+    local('Gowun Batang'),
+    local('GowunBatang Regular'),
+    url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2108@1.1/GowunBatang-Regular.woff') format('woff');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'GounBatang';
-  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2108@1.1/GowunBatang-Bold.woff') format('woff');
+  font-family: 'GowunBatang';
+  src:
+    local('Gowun Batang Bold'),
+    local('GowunBatang Bold'),
+    url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2108@1.1/GowunBatang-Bold.woff') format('woff');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 
 :root {
-  --sion-ui-font: 'Paperozi', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-  --sion-scripture-font: 'GounBatang', 'Nanum Myeongjo', serif;
+  --sion-ui-font: 'Paperlogy', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  --sion-scripture-font: 'GowunBatang', 'Gowun Batang', 'Nanum Myeongjo', serif;
 }
 
 html,
 body,
 #root,
-#root > div,
+#root *,
+body > div,
+body > div *,
 button,
 input,
 textarea,
-select {
+select,
+.sion-sort-sheet,
+.sion-sort-sheet * {
   font-family: var(--sion-ui-font) !important;
   font-kerning: normal;
+  font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
 
 .title-font,
-.display-font {
+.display-font,
+#root .title-font,
+#root .display-font {
   font-family: var(--sion-ui-font) !important;
   font-weight: 800;
   letter-spacing: -0.035em;
 }
 
-.serif-verse,
-.scripture-font,
-blockquote[data-scripture='true'] {
+#root .serif-verse,
+#root .scripture-font,
+#root blockquote[data-scripture='true'],
+body .serif-verse,
+body .scripture-font,
+body blockquote[data-scripture='true'] {
   font-family: var(--sion-scripture-font) !important;
   font-style: normal;
   font-weight: 400;
   letter-spacing: -0.015em;
   line-height: 1.9;
   word-break: keep-all;
+  font-synthesis: none;
 }
 
-.serif-verse strong,
-.scripture-font strong {
+#root .serif-verse strong,
+#root .scripture-font strong,
+body .serif-verse strong,
+body .scripture-font strong {
+  font-family: var(--sion-scripture-font) !important;
   font-weight: 700;
 }
 
 .reading-room-bottom-nav,
 .reading-room-bottom-nav button {
   font-family: var(--sion-ui-font) !important;
+}
+
+html[data-sion-fonts='ready'] .serif-verse,
+html[data-sion-fonts='ready'] .scripture-font {
+  visibility: visible;
 }
 
 .sion-soft-card {
