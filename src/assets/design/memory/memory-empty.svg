@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 190" role="img" aria-labelledby="title">
+  <title id="title">암송할 말씀을 기다리는 열린 성경</title>
+  <defs>
+    <linearGradient id="page" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#FFFDF4"/><stop offset="1" stop-color="#F7EBD2"/></linearGradient>
+    <linearGradient id="cover" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#79A765"/><stop offset="1" stop-color="#477B54"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="7" stdDeviation="7" flood-color="#725B3D" flood-opacity=".15"/></filter>
+  </defs>
+  <ellipse cx="130" cy="166" rx="88" ry="13" fill="#E7DED0"/>
+  <g filter="url(#shadow)" transform="translate(32 42)">
+    <path d="M4 19c32-23 64-22 94 0v91c-31-17-62-17-94 0Z" fill="url(#page)" stroke="#DCC594" stroke-width="4"/>
+    <path d="M98 19c32-22 64-23 94 0v91c-31-17-62-17-94 0Z" fill="url(#page)" stroke="#DCC594" stroke-width="4"/>
+    <path d="M98 20v90" stroke="#D6BE89" stroke-width="4"/>
+    <path d="M0 109c35-8 67-4 98 10 31-14 64-18 98-10" fill="none" stroke="url(#cover)" stroke-width="11" stroke-linecap="round"/>
+    <g stroke="#E2D3AD" stroke-width="3" stroke-linecap="round"><path d="M20 42h55"/><path d="M20 55h46"/><path d="M20 68h52"/><path d="M121 42h52"/><path d="M121 55h45"/><path d="M121 68h54"/></g>
+    <path d="M141 4v47l14-10 14 10V2c-10-3-19-2-28 2Z" fill="#F0A43B"/>
+    <path d="M48 74c11-16 31-4 19 10L48 101 29 84c-12-14 8-26 19-10Z" fill="#F1906D" opacity=".88"/>
+  </g>
+  <g fill="#8DAF6E"><path d="M25 147c-14-21-7-41 15-46 4 22-2 38-15 46Z"/><path d="M234 147c14-21 7-41-15-46-4 22 2 38 15 46Z"/></g>
+  <g fill="#F1BE51"><circle cx="45" cy="32" r="5"/><circle cx="218" cy="42" r="5"/><path d="M213 19l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1Z"/></g>
+</svg>
