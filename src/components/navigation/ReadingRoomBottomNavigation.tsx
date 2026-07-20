@@ -1,46 +1,38 @@
-import { BarChart3, CalendarCheck, ClipboardList, Gift } from 'lucide-react';
+import { BarChart3, BookOpen, BriefcaseBusiness, Home, MoreHorizontal } from 'lucide-react';
 
 const navItems = [
-  { label: '오늘', href: '/reading-room/today', icon: CalendarCheck, section: 'today' },
-  { label: '통독', href: '/reading-room', icon: ClipboardList, section: 'plan', featured: true },
+  { label: '홈', href: '/reading-room', icon: Home, section: 'home' },
+  { label: '추천 코스', href: '/reading-room/courses', icon: BriefcaseBusiness, section: 'courses' },
+  { label: '나의 코스', href: '/reading-room/my-courses', icon: BookOpen, section: 'my-courses' },
   { label: '기록', href: '/reading-room/records', icon: BarChart3, section: 'records' },
-  { label: '보상', href: '/reading-room/rewards', icon: Gift, section: 'rewards' },
+  { label: '더보기', href: '/reading-room/rewards', icon: MoreHorizontal, section: 'rewards' },
 ] as const;
 
-type ReadingRoomBottomNavigationProps = {
-  onOpenBible: () => void;
-};
-
 function getCurrentSection() {
-  if (typeof window === 'undefined') return 'plan';
+  if (typeof window === 'undefined') return 'home';
   const path = window.location.pathname;
-  if (path.startsWith('/reading-room/today')) return 'today';
+  if (path.startsWith('/reading-room/courses')) return 'courses';
+  if (path.startsWith('/reading-room/my-courses')) return 'my-courses';
   if (path.startsWith('/reading-room/records')) return 'records';
   if (path.startsWith('/reading-room/rewards')) return 'rewards';
-  return 'plan';
+  return 'home';
 }
 
 function navigate(path: string) {
-  if (window.location.pathname !== path) {
-    window.history.pushState({}, '', path);
-  }
+  if (window.location.pathname !== path) window.history.pushState({}, '', path);
   window.dispatchEvent(new PopStateEvent('popstate'));
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-export function ReadingRoomBottomNavigation({ onOpenBible }: ReadingRoomBottomNavigationProps) {
-  void onOpenBible;
+export function ReadingRoomBottomNavigation() {
   const currentSection = getCurrentSection();
 
   return (
-    <nav
-      aria-label="통독방 하단 네비게이션"
-      className="fixed inset-x-0 bottom-0 z-[120] mx-auto h-[calc(84px+env(safe-area-inset-bottom))] max-w-[430px] border-t border-[#E8DDCD] bg-white/95 px-3 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] backdrop-blur"
-    >
-      <div className="grid grid-cols-4 items-end">
+    <div role="navigation" aria-label="통독 하단 네비게이션" className="reading-room-bottom-nav fixed inset-x-0 bottom-0 z-[120] mx-auto max-w-[430px] border-t border-[#E9DFD2] bg-white/96 px-3 pb-[calc(env(safe-area-inset-bottom)+7px)] pt-2 shadow-[0_-8px_26px_rgba(80,65,42,0.07)] backdrop-blur-xl">
+      <div className="grid grid-cols-5">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const active = item.section === currentSection;
+          const active = currentSection === item.section;
           return (
             <button
               key={item.label}
@@ -48,27 +40,16 @@ export function ReadingRoomBottomNavigation({ onOpenBible }: ReadingRoomBottomNa
               onClick={() => navigate(item.href)}
               aria-label={`${item.label} 페이지`}
               aria-current={active ? 'page' : undefined}
-              className={[
-                'flex min-h-[66px] flex-col items-center gap-1 bg-transparent transition active:scale-95',
-                item.featured ? 'justify-end' : 'justify-center',
-                active ? 'text-[#4E7F59]' : 'text-[#8A8175]',
-              ].join(' ')}
+              className={['flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-2xl bg-transparent transition active:scale-90', active ? 'text-[#4E7F59]' : 'text-[#8F877D]'].join(' ')}
             >
-              {item.featured ? (
-                <div className={[
-                  '-mt-7 flex h-14 w-14 items-center justify-center rounded-[18px] border shadow-[0_4px_14px_rgba(0,0,0,0.12)]',
-                  active ? 'border-[#D5E6D1] bg-[#F3F7EF]' : 'border-[#E8DDCD] bg-white',
-                ].join(' ')}>
-                  <Icon className="h-7 w-7" strokeWidth={2.2} />
-                </div>
-              ) : (
-                <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 1.9} />
-              )}
-              <span className={['text-[11px] leading-none', active ? 'font-extrabold' : 'font-medium'].join(' ')}>{item.label}</span>
+              <span className={['grid h-7 w-8 place-items-center rounded-xl transition', active ? 'bg-[#EEF5EB]' : 'bg-transparent'].join(' ')}>
+                <Icon className="h-[21px] w-[21px]" strokeWidth={active ? 2.4 : 1.9} fill={active && (item.section === 'home' || item.section === 'my-courses') ? 'currentColor' : 'none'} />
+              </span>
+              <span className={['whitespace-nowrap text-[10px] leading-none tracking-[-0.03em]', active ? 'font-black' : 'font-semibold'].join(' ')}>{item.label}</span>
             </button>
           );
         })}
       </div>
-    </nav>
+    </div>
   );
 }
