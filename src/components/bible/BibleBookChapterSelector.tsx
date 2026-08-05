@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { BookOpen, ChevronDown, Search, X } from 'lucide-react';
 import { BIBLE_BOOKS, type BibleBook } from '../../data/bibleBooks';
-import { Search, X } from 'lucide-react';
 
 interface BibleBookChapterSelectorProps {
   selectedBook: BibleBook;
@@ -9,95 +9,194 @@ interface BibleBookChapterSelectorProps {
   onSelectChapter: (chapter: number) => void;
 }
 
+type TestamentFilter = 'old' | 'new';
+type PickerStep = 'book' | 'chapter';
+
 export function BibleBookChapterSelector({
   selectedBook,
+  selectedChapter,
   onSelectBook,
   onSelectChapter,
 }: BibleBookChapterSelectorProps) {
   const [showPicker, setShowPicker] = useState(false);
   const [bookSearch, setBookSearch] = useState('');
-  const [testament, setTestament] = useState<'old' | 'new' | 'all'>('all');
+  const [testament, setTestament] = useState<TestamentFilter>(selectedBook.testament);
+  const [step, setStep] = useState<PickerStep>('book');
+  const [pendingBook, setPendingBook] = useState<BibleBook>(selectedBook);
 
-  const filteredBooks = useMemo(() => 
-    BIBLE_BOOKS.filter(b => {
-      const matchesTestament = testament === 'all' || b.testament === testament;
-      const matchesSearch = !bookSearch || b.name.includes(bookSearch) || b.abbr.includes(bookSearch);
+  const filteredBooks = useMemo(
+    () => BIBLE_BOOKS.filter((book) => {
+      const matchesTestament = book.testament === testament;
+      const normalizedSearch = bookSearch.trim();
+      const matchesSearch = !normalizedSearch
+        || book.name.includes(normalizedSearch)
+        || book.abbr.includes(normalizedSearch);
       return matchesTestament && matchesSearch;
-    }), [bookSearch, testament]);
+    }),
+    [bookSearch, testament],
+  );
 
+  const openPicker = () => {
+    setPendingBook(selectedBook);
+    setTestament(selectedBook.testament);
+    setBookSearch('');
+    setStep('book');
+    setShowPicker(true);
+  };
+
+  const selectBook = (book: BibleBook) => {
+    setPendingBook(book);
+    setStep('chapter');
+  };
+
+  const selectChapter = (chapter: number) => {
+    onSelectBook(pendingBook);
+    onSelectChapter(chapter);
+    setShowPicker(false);
+  };
 
   return (
     <div className="space-y-3">
-      {/* Removed duplicate icon button as it is already in the main header */}
-
+      <button
+        type="button"
+        onClick={openPicker}
+        className="flex w-full items-center justify-between rounded-[18px] border bg-white px-4 py-3 text-left shadow-sm transition-all active:scale-[0.99]"
+        style={{ borderColor: '#E8D8C8' }}
+        aria-label={`성경 본문 선택, 현재 ${selectedBook.name} ${selectedChapter}장`}
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-[#F4EAE0] text-[#7B6A5D]">
+            <BookOpen size={20} />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[10px] font-black tracking-[0.16em] text-[#9A897B]">
+              {selectedBook.testament === 'old' ? '구약' : '신약'} · 본문 선택
+            </span>
+            <span className="title-font block truncate text-lg font-black text-[#3D3129]">
+              {selectedBook.name} {selectedChapter}장
+            </span>
+          </span>
+        </span>
+        <ChevronDown size={20} className="flex-shrink-0 text-[#8C786E]" />
+      </button>
 
       {showPicker && (
-        <div className="fixed inset-0 z-[200] flex items-end">
-          <div 
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        <div className="fixed inset-0 z-[1200] flex items-end sm:items-center sm:justify-center">
+          <button
+            type="button"
+            aria-label="성경 본문 선택 닫기"
+            className="absolute inset-0 bg-black/45 backdrop-blur-sm"
             onClick={() => setShowPicker(false)}
           />
-          <div className="relative w-full max-h-[80vh] bg-[#FDF6F0] rounded-t-[32px] p-6 overflow-hidden flex flex-col shadow-2xl border-t border-white">
-            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-6" />
-            
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-black text-[#3D3129]">성경 책 선택</h3>
-              <button onClick={() => setShowPicker(false)} className="p-2 rounded-full bg-black/5">
+
+          <section className="relative flex h-[88dvh] w-full flex-col overflow-hidden rounded-t-[28px] border-t border-white bg-[#FDF6F0] shadow-2xl sm:h-auto sm:max-h-[86vh] sm:max-w-2xl sm:rounded-[28px] sm:border">
+            <div className="mx-auto my-2 h-1 w-10 flex-shrink-0 rounded-full bg-gray-300/70 sm:hidden" />
+
+            <header className="flex flex-shrink-0 items-center justify-between px-5 pb-4 pt-3 sm:pt-5">
+              <div>
+                <p className="text-[10px] font-black tracking-[0.18em] text-[#9A897B]">
+                  {step === 'book' ? '1단계' : '2단계'}
+                </p>
+                <h3 className="title-font text-xl font-black text-[#3D3129]">
+                  {step === 'book' ? '성경 책 선택' : `${pendingBook.name} 장 선택`}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPicker(false)}
+                className="rounded-full bg-black/5 p-2"
+                aria-label="닫기"
+              >
                 <X size={20} />
               </button>
-            </div>
+            </header>
 
-            <div className="flex gap-2 mb-4">
-              {(['all', 'old', 'new'] as const).map(k => (
-                <button
-                  key={k}
-                  onClick={() => setTestament(k)}
-                  className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
-                    testament === k 
-                    ? 'bg-[#8d95d8] text-white shadow-md' 
-                    : 'bg-white text-[#8c786e] border border-[#e8d8ce]'
-                  }`}
-                >
-                  {k === 'all' ? '전체' : k === 'old' ? '구약' : '신약'}
-                </button>
-              ))}
-            </div>
+            {step === 'book' ? (
+              <>
+                <div className="flex-shrink-0 px-5">
+                  <div className="grid grid-cols-2 gap-2 rounded-2xl bg-[#EFE5DB] p-1.5">
+                    {(['old', 'new'] as const).map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setTestament(value)}
+                        className="rounded-xl px-4 py-3 text-sm font-black transition-all"
+                        style={{
+                          background: testament === value ? '#8D95D8' : 'transparent',
+                          color: testament === value ? '#FFFFFF' : '#7B6A5D',
+                          boxShadow: testament === value ? '0 4px 12px rgba(81, 86, 151, 0.2)' : 'none',
+                        }}
+                      >
+                        {value === 'old' ? '구약' : '신약'}
+                      </button>
+                    ))}
+                  </div>
 
-            <div className="flex items-center gap-3 bg-white rounded-2xl border border-[#e8d8ce] px-4 py-3 mb-6 focus-within:border-[#8d95d8] transition-colors">
-              <Search size={18} className="text-[#8c786e]" />
-              <input
-                value={bookSearch}
-                onChange={e => setBookSearch(e.target.value)}
-                placeholder="책 이름 검색 (예: 요한, 창)"
-                className="flex-1 bg-transparent outline-none text-sm font-medium"
-              />
-            </div>
+                  <div className="mb-4 mt-3 flex items-center gap-3 rounded-2xl border border-[#E8D8C8] bg-white px-4 py-3 focus-within:border-[#8D95D8]">
+                    <Search size={18} className="text-[#8C786E]" />
+                    <input
+                      value={bookSearch}
+                      onChange={(event) => setBookSearch(event.target.value)}
+                      placeholder="성경 책 검색 (예: 창세기, 요한)"
+                      className="min-w-0 flex-1 bg-transparent text-sm font-medium outline-none"
+                      autoFocus
+                    />
+                  </div>
+                </div>
 
-            <div className="flex-1 overflow-y-auto pr-1">
-              <div className="grid grid-cols-4 gap-3 pb-8">
-                {filteredBooks.map(book => (
+                <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-[calc(24px+env(safe-area-inset-bottom))]">
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                    {filteredBooks.map((book) => (
+                      <button
+                        key={book.id}
+                        type="button"
+                        onClick={() => selectBook(book)}
+                        className="flex min-h-[72px] flex-col items-center justify-center rounded-2xl border bg-white px-2 py-3 text-center transition-all active:scale-95"
+                        style={{
+                          borderColor: selectedBook.id === book.id ? '#8D95D8' : '#E8D8C8',
+                          background: selectedBook.id === book.id ? '#F1F2FF' : '#FFFFFF',
+                        }}
+                      >
+                        <span className="text-xs font-black text-[#3D3129]">{book.name}</span>
+                        <span className="mt-1 text-[10px] font-bold text-[#8C786E]">{book.chapters}장</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex-shrink-0 px-5 pb-3">
                   <button
-                    key={book.id}
-                    onClick={() => {
-                      onSelectBook(book);
-                      onSelectChapter(1);
-                      setShowPicker(false);
-                    }}
-                    className={`flex flex-col items-center justify-center py-4 rounded-2xl border transition-all ${
-                      selectedBook.id === book.id
-                      ? 'bg-[#8d95d8] border-[#8d95d8] text-white shadow-lg'
-                      : 'bg-white border-[#e8d8ce] text-[#3D3129] hover:bg-[#FDF2E7]'
-                    }`}
+                    type="button"
+                    onClick={() => setStep('book')}
+                    className="rounded-xl border border-[#E8D8C8] bg-white px-3 py-2 text-xs font-black text-[#7B6A5D]"
                   >
-                    <span className="text-xs font-black">{book.name}</span>
-                    <span className={`text-[10px] mt-1 ${selectedBook.id === book.id ? 'opacity-80' : 'text-[#8c786e]'}`}>
-                      {book.chapters}장
-                    </span>
+                    ← 성경 책 다시 선택
                   </button>
-                ))}
-              </div>
-            </div>
-          </div>
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-[calc(24px+env(safe-area-inset-bottom))]">
+                  <div className="grid grid-cols-5 gap-2 sm:grid-cols-7">
+                    {Array.from({ length: pendingBook.chapters }, (_, index) => index + 1).map((chapter) => (
+                      <button
+                        key={chapter}
+                        type="button"
+                        onClick={() => selectChapter(chapter)}
+                        className="aspect-square rounded-2xl border text-sm font-black transition-all active:scale-95"
+                        style={{
+                          borderColor: pendingBook.id === selectedBook.id && chapter === selectedChapter ? '#8D95D8' : '#E8D8C8',
+                          background: pendingBook.id === selectedBook.id && chapter === selectedChapter ? '#8D95D8' : '#FFFFFF',
+                          color: pendingBook.id === selectedBook.id && chapter === selectedChapter ? '#FFFFFF' : '#3D3129',
+                        }}
+                      >
+                        {chapter}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </section>
         </div>
       )}
     </div>
