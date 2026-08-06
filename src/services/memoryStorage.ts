@@ -23,16 +23,16 @@ export function isVerseMemorized(ref: string, text: string): boolean {
   const verses = getMemoryVerses();
   const normalizedRef = ref.trim();
   const normalizedText = text.trim();
-  return verses.some(v => v.ref === normalizedRef && v.text === normalizedText);
+  return verses.some((verse) => verse.ref === normalizedRef && verse.text === normalizedText);
 }
 
 export function saveMemoryVerses(verses: MemoryVerse[]) {
   localStorage.setItem(MEMORY_KEY, JSON.stringify(verses));
 }
 
-export function addMemoryVerse(input: { 
-  ref: string; 
-  text: string; 
+export function addMemoryVerse(input: {
+  ref: string;
+  text: string;
   note?: string;
   source?: 'bible-picker' | 'keyword-search' | 'saved' | 'manual' | 'today' | 'reading';
   verses?: { bookId: string; bookName: string; chapter: number; verse: number; text: string; }[];
@@ -56,19 +56,34 @@ export function addMemoryVerse(input: {
     source: input.source,
     verses: input.verses,
   };
-  const next = [verse, ...getMemoryVerses()];
-  saveMemoryVerses(next);
+  saveMemoryVerses([verse, ...getMemoryVerses()]);
+
+  const reminderSettings = getMemoryReminderSettings();
+  if (
+    reminderSettings.enabled
+    && reminderSettings.mode === 'auto'
+    && reminderSettings.auto.enabled
+    && reminderSettings.permission === 'granted'
+  ) {
+    void import('./memoryReminder')
+      .then(({ createAutoReminderSchedule }) => createAutoReminderSchedule(verse.id, reminderSettings.auto.preset))
+      .catch((error) => console.error('Failed to create memory reminder schedule:', error));
+  }
+
   return verse;
 }
 
 export function updateMemoryVerse(id: string, patch: Partial<Pick<MemoryVerse, 'ref' | 'text' | 'note'>>) {
-  const next = getMemoryVerses().map((verse) => verse.id === id ? { ...verse, ...patch, updatedAt: new Date().toISOString() } : verse);
+  const next = getMemoryVerses().map((verse) => (
+    verse.id === id ? { ...verse, ...patch, updatedAt: new Date().toISOString() } : verse
+  ));
   saveMemoryVerses(next);
   return next.find((verse) => verse.id === id) ?? null;
 }
 
 export function deleteMemoryVerse(id: string) {
   saveMemoryVerses(getMemoryVerses().filter((verse) => verse.id !== id));
+  saveAutoReminders(getAutoReminders().filter((reminder) => reminder.verseId !== id));
 }
 
 export function getDueMemoryVerses(now = new Date()) {
@@ -92,7 +107,7 @@ export function moveMemoryVerseLevel(id: string, delta: number) {
     return { ...verse, level: nextLevel as MemoryVerse['level'], updatedAt: new Date().toISOString() };
   });
   saveMemoryVerses(next);
-  return next.find((v) => v.id === id) || null;
+  return next.find((verse) => verse.id === id) || null;
 }
 
 export function setMemoryVerseLevel(id: string, level: number) {
@@ -103,20 +118,21 @@ export function setMemoryVerseLevel(id: string, level: number) {
     return { ...verse, level: nextLevel as MemoryVerse['level'], updatedAt: new Date().toISOString() };
   });
   saveMemoryVerses(next);
-  return next.find((v) => v.id === id) || null;
+  return next.find((verse) => verse.id === id) || null;
 }
 
 export function getMemoryReminderSettings(): MemoryReminderSettings {
   try {
     const raw = localStorage.getItem(REMINDER_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw);
-      // Migration: if old format, return default
+      const parsed = JSON.parse(raw) as MemoryReminderSettings;
       if (!parsed.mode) throw new Error('Old format');
-      return parsed as MemoryReminderSettings;
+      return parsed;
     }
-  } catch {}
-  
+  } catch {
+    // Fall through to defaults.
+  }
+
   return {
     enabled: false,
     mode: 'time',
@@ -143,7 +159,11 @@ export function getMemoryReminderSettings(): MemoryReminderSettings {
 }
 
 export function saveMemoryReminderSettings(settings: MemoryReminderSettings) {
-  localStorage.setItem(REMINDER_KEY, JSON.stringify({ ...settings, updatedAt: new Date().toISOString() }));
+  localStorage.setItem(REMINDER_KEY, JSON.stringify({
+    ...settings,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    updatedAt: new Date().toISOString(),
+  }));
 }
 
 export function getAutoReminders(): MemoryAutoReminder[] {
