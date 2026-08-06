@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { BookOpen, Check, Cross, Heart, RefreshCw, Send, Sparkles } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { BookOpen, Check, Cross, Heart, RefreshCw, Send, Sparkles, WifiOff } from 'lucide-react';
 import { askVerseQuestion, type VerseQuestionAnswer } from '../../services/verseQuestionApi';
 import type { VerseDevotionResult } from '../../services/verseDevotionApi';
+import { assertNonEmptyAiText, classifyAiFailure, isBrowserOffline, type AiFailure } from '../../services/aiError';
 
 const QUESTION_GROUPS = [
   {
@@ -54,7 +55,7 @@ export function VerseQuestionPanel({ verse, devotion }: VerseQuestionPanelProps)
   const [selectedQuestion, setSelectedQuestion] = useState('');
   const [answer, setAnswer] = useState<VerseQuestionAnswer | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [failure, setFailure] = useState<AiFailure | null>(null);
 
   async function handleAsk(nextQuestion: string) {
     const trimmed = nextQuestion.trim();
@@ -64,7 +65,13 @@ export function VerseQuestionPanel({ verse, devotion }: VerseQuestionPanelProps)
     setSelectedQuestion(trimmed);
     setLoading(true);
     setAnswer(null);
-    setError('');
+    setFailure(null);
+
+    if (isBrowserOffline()) {
+      setFailure(classifyAiFailure(new Error('offline')));
+      setLoading(false);
+      return;
+    }
 
     try {
       const result = await askVerseQuestion({
@@ -74,15 +81,22 @@ export function VerseQuestionPanel({ verse, devotion }: VerseQuestionPanelProps)
         prayer: devotion.prayer,
         question: trimmed,
       });
-      setAnswer({ ...result, answer: result.answer.replace(/\*\*/g, '') });
+      const normalizedAnswer = assertNonEmptyAiText(result.answer, 'AI 답변').replace(/\*\*/g, '');
+      setAnswer({ ...result, answer: normalizedAnswer });
     } catch (askError) {
-      setError(askError instanceof Error
-        ? askError.message
-        : '질문 답변을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+      setFailure(classifyAiFailure(askError));
     } finally {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    const retry = () => {
+      if (question.trim() && !loading) void handleAsk(question);
+    };
+    window.addEventListener('sion:ai-retry', retry);
+    return () => window.removeEventListener('sion:ai-retry', retry);
+  }, [question, loading]);
 
   return (
     <section className="meditation-question-panel" aria-label="묵상 질문하기">
@@ -115,16 +129,31 @@ export function VerseQuestionPanel({ verse, devotion }: VerseQuestionPanelProps)
         </div>
       )}
 
-      {error && !loading && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold leading-6 text-red-700" role="alert">
-          <p>{error}</p>
-          <button
-            type="button"
-            onClick={() => void handleAsk(question)}
-            className="mt-3 inline-flex items-center gap-1 rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-black text-red-700"
-          >
-            <RefreshCw size={14} />다시 시도
-          </button>
+      {failure && !loading && (
+        <div
+          className={`rounded-2xl border p-4 text-sm font-bold leading-6 ${
+            failure.kind === 'offline'
+              ? 'border-amber-200 bg-amber-50 text-amber-800'
+              : 'border-red-200 bg-red-50 text-red-700'
+          }`}
+          role="alert"
+        >
+          <div className="flex items-start gap-2">
+            {failure.kind === 'offline' ? <WifiOff size={18} className="mt-1 shrink-0" /> : <Sparkles size={18} className="mt-1 shrink-0" />}
+            <div>
+              <p className="font-black">{failure.title}</p>
+              <p className="mt-1 text-xs leading-5 opacity-85">{failure.message}</p>
+            </div>
+          </div>
+          {failure.retryable && (
+            <button
+              type="button"
+              onClick={() => void handleAsk(question)}
+              className="mt-3 inline-flex items-center gap-1 rounded-xl border border-current/20 bg-white px-3 py-2 text-xs font-black"
+            >
+              <RefreshCw size={14} />다시 시도
+            </button>
+          )}
         </div>
       )}
 
