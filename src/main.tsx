@@ -9,7 +9,9 @@ import { initializeDataBackup } from './dataBackup';
 import { initializeReadingRoomHelp } from './readingRoomHelp';
 import { initializeAiExperience } from './aiExperience';
 import { initializeReadingUiUnification } from './readingUiUnification';
+import { initializeDesignConsistency } from './designConsistency';
 
+initializeDesignConsistency();
 initializeAiExperience();
 initializeMemoryReminderEngine();
 initializeReadingRoomEnhancements();
