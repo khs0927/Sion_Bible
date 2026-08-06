@@ -1,0 +1,6 @@
+name = "sion-bible-khs0927"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-08-07"
+
+[vars]
+SION_API_ORIGIN = "https://sion-bible.vercel.app"
