@@ -271,7 +271,7 @@ export function BibleVersePicker({
             나가기
           </button>
         </div>
-      ) : (
+      ) : mode === 'select' ? (
         <BibleBookChapterSelector
           selectedBook={selBook}
           selectedChapter={selChap}
@@ -281,7 +281,7 @@ export function BibleVersePicker({
             onNavigate?.(book, chapter);
           }}
         />
-      )}
+      ) : null}
 
       <div className="min-h-[200px] flex-1 space-y-8">
         {loading && (
