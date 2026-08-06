@@ -1,8 +1,9 @@
-const CACHE_NAME = 'sion-bible-shell-v20260720-02';
+const CACHE_NAME = 'sion-bible-shell-v20260806-01';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/icon-192.png',
   '/icon-512.png'
 ];
 
@@ -23,6 +24,23 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = new URL(event.notification.data?.url || '/?open=memory', self.location.origin).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clients) => {
+      for (const client of clients) {
+        if ('focus' in client) {
+          if ('navigate' in client) await client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow ? self.clients.openWindow(targetUrl) : undefined;
+    })
+  );
 });
 
 self.addEventListener('fetch', (event) => {
