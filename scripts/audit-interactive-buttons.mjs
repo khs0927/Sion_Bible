@@ -37,12 +37,12 @@ function attributesFor(node) {
 }
 
 function attributeName(attribute) {
-  if (!ts.isJsxAttribute(attribute)) return null;
+  if (!attribute || !ts.isJsxAttribute(attribute)) return null;
   return attribute.name.getText();
 }
 
 function literalAttributeValue(attribute) {
-  if (!ts.isJsxAttribute(attribute)) return null;
+  if (!attribute || !ts.isJsxAttribute(attribute)) return null;
   if (!attribute.initializer) return true;
   if (ts.isStringLiteral(attribute.initializer)) return attribute.initializer.text;
   return null;
