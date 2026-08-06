@@ -8,12 +8,14 @@ import { initializeReadingRoomEnhancements } from './readingRoomEnhancements';
 import { initializeDataBackup } from './dataBackup';
 import { initializeReadingRoomHelp } from './readingRoomHelp';
 import { initializeAiExperience } from './aiExperience';
+import { initializeReadingUiUnification } from './readingUiUnification';
 
 initializeAiExperience();
 initializeMemoryReminderEngine();
 initializeReadingRoomEnhancements();
 initializeDataBackup();
 initializeReadingRoomHelp();
+initializeReadingUiUnification();
 
 function handleLaunchIntent() {
   const params = new URLSearchParams(window.location.search);
