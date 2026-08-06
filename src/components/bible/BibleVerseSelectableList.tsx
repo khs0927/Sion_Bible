@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Bookmark, Check, Copy, Highlighter, MessageSquareText, Minus, Palette, PenLine, Prayer, X } from 'lucide-react';
+import { Bookmark, Check, Copy, HeartHandshake, Highlighter, MessageSquareText, Minus, Palette, PenLine, X } from 'lucide-react';
 import { sanitizeScriptureText } from '../../utils/textUtils';
 
 interface Verse {
@@ -203,11 +203,8 @@ export function BibleVerseSelectableList({
                 <button
                   type="button"
                   onClick={() => {
-                    if (showCheckbox) {
-                      onToggleVerse(verse.verse);
-                    } else {
-                      setActiveVerse(verse.verse);
-                    }
+                    if (showCheckbox) onToggleVerse(verse.verse);
+                    else setActiveVerse(verse.verse);
                   }}
                   className="serif-verse min-w-0 flex-1 bg-transparent p-0 text-left leading-[1.72] text-[#3D3129]"
                   style={{
@@ -232,29 +229,15 @@ export function BibleVerseSelectableList({
         <div className="fixed inset-x-0 bottom-[calc(72px+env(safe-area-inset-bottom))] z-[950] mx-auto w-[min(680px,calc(100%-16px))] rounded-[24px] border border-[#E1D5C8] bg-[#FFFDF8]/95 p-3 shadow-[0_18px_45px_rgba(54,43,33,.22)] backdrop-blur-xl">
           <div className="flex items-center justify-between gap-2 px-1 pb-2">
             <div className="flex items-center gap-2 text-xs font-black text-[#5F5147]">
-              <Highlighter size={16} />
-              <span>{activeVerse}절 꾸미기</span>
+              <Highlighter size={16} /><span>{activeVerse}절 꾸미기</span>
             </div>
-            <button type="button" onClick={() => setActiveVerse(null)} aria-label="구절 도구 닫기" className="rounded-full p-1.5 text-[#78695E]">
-              <X size={18} />
-            </button>
+            <button type="button" onClick={() => setActiveVerse(null)} aria-label="구절 도구 닫기" className="rounded-full p-1.5 text-[#78695E]"><X size={18} /></button>
           </div>
 
           <div className="flex items-center gap-2 overflow-x-auto pb-2">
             <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-black text-[#8A786B]"><Palette size={14} />색</span>
             {(Object.keys(HIGHLIGHT_COLORS) as HighlightColor[]).map((color) => (
-              <button
-                key={color}
-                type="button"
-                aria-label={`${color} 형광펜`}
-                aria-pressed={activeAnnotation.color === color}
-                onClick={() => updateAnnotation({ color })}
-                className="h-8 w-8 shrink-0 rounded-full border-2 shadow-sm"
-                style={{
-                  backgroundColor: HIGHLIGHT_COLORS[color],
-                  borderColor: activeAnnotation.color === color ? '#5F5147' : '#FFFFFF',
-                }}
-              />
+              <button key={color} type="button" aria-label={`${color} 형광펜`} aria-pressed={activeAnnotation.color === color} onClick={() => updateAnnotation({ color })} className="h-8 w-8 shrink-0 rounded-full border-2 shadow-sm" style={{ backgroundColor: HIGHLIGHT_COLORS[color], borderColor: activeAnnotation.color === color ? '#5F5147' : '#FFFFFF' }} />
             ))}
             <span className="mx-1 h-7 w-px shrink-0 bg-[#E4D8CB]" />
             <button type="button" onClick={() => updateAnnotation({ underline: 'solid' })} className="inline-flex h-9 shrink-0 items-center gap-1 rounded-xl border px-3 text-xs font-black"><Minus size={16} />실선</button>
@@ -265,7 +248,7 @@ export function BibleVerseSelectableList({
           <div className="grid grid-cols-3 gap-2 border-t border-[#E7DCCF] pt-2">
             <button type="button" onClick={() => openVerseTool('commentary')} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-2xl bg-white text-xs font-black text-[#5F5147] shadow-sm"><MessageSquareText size={16} />해설</button>
             <button type="button" onClick={() => openVerseTool('meditation')} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-2xl bg-white text-xs font-black text-[#5F5147] shadow-sm"><Highlighter size={16} />묵상</button>
-            <button type="button" onClick={() => openVerseTool('prayer')} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-2xl bg-white text-xs font-black text-[#5F5147] shadow-sm"><Prayer size={16} />기도</button>
+            <button type="button" onClick={() => openVerseTool('prayer')} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-2xl bg-white text-xs font-black text-[#5F5147] shadow-sm"><HeartHandshake size={16} />기도</button>
           </div>
         </div>
       )}
