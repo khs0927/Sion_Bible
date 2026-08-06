@@ -7,7 +7,9 @@ import { initializeMemoryReminderEngine } from './services/memoryReminder';
 import { initializeReadingRoomEnhancements } from './readingRoomEnhancements';
 import { initializeDataBackup } from './dataBackup';
 import { initializeReadingRoomHelp } from './readingRoomHelp';
+import { initializeAiExperience } from './aiExperience';
 
+initializeAiExperience();
 initializeMemoryReminderEngine();
 initializeReadingRoomEnhancements();
 initializeDataBackup();
