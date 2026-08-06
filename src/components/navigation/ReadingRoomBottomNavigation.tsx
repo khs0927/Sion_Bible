@@ -11,6 +11,7 @@ const navItems = [
 function getCurrentSection() {
   if (typeof window === 'undefined') return 'home';
   const path = window.location.pathname;
+  if (path.startsWith('/reading-room/course-detail') || path.startsWith('/reading-room/mission') || path.startsWith('/reading-room/course-complete')) return 'my-courses';
   if (path.startsWith('/reading-room/courses')) return 'courses';
   if (path.startsWith('/reading-room/my-courses')) return 'my-courses';
   if (path.startsWith('/reading-room/records')) return 'records';
@@ -28,7 +29,7 @@ export function ReadingRoomBottomNavigation() {
   const currentSection = getCurrentSection();
 
   return (
-    <div role="navigation" aria-label="통독 하단 네비게이션" className="reading-room-bottom-nav fixed inset-x-0 bottom-0 z-[120] mx-auto max-w-[430px] border-t border-[#E9DFD2] bg-white/96 px-3 pb-[calc(env(safe-area-inset-bottom)+7px)] pt-2 shadow-[0_-8px_26px_rgba(80,65,42,0.07)] backdrop-blur-xl">
+    <div role="navigation" aria-label="통독 하단 네비게이션" className="reading-room-bottom-nav fixed inset-x-0 bottom-0 z-[120] mx-auto max-w-[430px] border-t border-[#E9DFD2] bg-white/96 px-3 pb-[calc(env(safe-area-inset-bottom)+7px)] pt-2 shadow-[0_-8px_26px_rgba(80,65,42,.07)] backdrop-blur-xl">
       <div className="grid grid-cols-5">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -45,7 +46,7 @@ export function ReadingRoomBottomNavigation() {
               <span className={['grid h-7 w-8 place-items-center rounded-xl transition', active ? 'bg-[#EEF5EB]' : 'bg-transparent'].join(' ')}>
                 <Icon className="h-[21px] w-[21px]" strokeWidth={active ? 2.4 : 1.9} fill={active && (item.section === 'home' || item.section === 'my-courses') ? 'currentColor' : 'none'} />
               </span>
-              <span className={['whitespace-nowrap text-[10px] leading-none tracking-[-0.03em]', active ? 'font-black' : 'font-semibold'].join(' ')}>{item.label}</span>
+              <span className={['whitespace-nowrap text-[10px] leading-none tracking-[-.03em]', active ? 'font-black' : 'font-semibold'].join(' ')}>{item.label}</span>
             </button>
           );
         })}
