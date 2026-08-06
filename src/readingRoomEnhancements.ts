@@ -344,6 +344,13 @@ function applyStoreState() {
   }
 }
 
+function purchaseHistorySignature(purchases: RewardPurchase[]) {
+  return purchases
+    .map((purchase) => `${purchase.id}:${purchase.cost}:${purchase.purchasedAt}`)
+    .sort()
+    .join('|');
+}
+
 function injectPurchaseHistory() {
   if (!window.location.pathname.startsWith('/reading-room/rewards')) return;
   const rewards = getRewardState();
@@ -352,11 +359,19 @@ function injectPurchaseHistory() {
   const section = heading?.closest('section');
   if (!section) return;
 
-  section.querySelector('[data-sion-purchase-history]')?.remove();
-  if (!rewards.purchases.length) return;
+  const current = section.querySelector<HTMLElement>('[data-sion-purchase-history]');
+  if (!rewards.purchases.length) {
+    current?.remove();
+    return;
+  }
+
+  const signature = purchaseHistorySignature(rewards.purchases);
+  if (current?.dataset.sionPurchaseSignature === signature) return;
+  current?.remove();
 
   const group = document.createElement('div');
   group.dataset.sionPurchaseHistory = 'true';
+  group.dataset.sionPurchaseSignature = signature;
   Object.assign(group.style, { marginTop: '12px', borderTop: '1px solid #EFE7DC' });
 
   for (const purchase of [...rewards.purchases].reverse()) {
