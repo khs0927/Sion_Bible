@@ -6,10 +6,12 @@ import App from './App';
 import { initializeMemoryReminderEngine } from './services/memoryReminder';
 import { initializeReadingRoomEnhancements } from './readingRoomEnhancements';
 import { initializeDataBackup } from './dataBackup';
+import { initializeReadingRoomHelp } from './readingRoomHelp';
 
 initializeMemoryReminderEngine();
 initializeReadingRoomEnhancements();
 initializeDataBackup();
+initializeReadingRoomHelp();
 
 function handleLaunchIntent() {
   const params = new URLSearchParams(window.location.search);
