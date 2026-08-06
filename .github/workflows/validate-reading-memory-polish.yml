@@ -1,0 +1,33 @@
+name: Validate reading memory polish
+
+on:
+  push:
+    branches:
+      - feat/noonnu-reading-memory-polish
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate Bible data, AI speech level, fonts, assets, types, and build
+        run: npm run build

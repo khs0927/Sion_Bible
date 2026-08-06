@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 930 435" role="img" aria-labelledby="t d">
+<title id="t">교회가 있는 초록 들판</title><desc id="d">통독 코스 카드와 배경에 사용하는 수채화풍 풍경</desc>
+<defs>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#FFFDF3"/><stop offset=".55" stop-color="#EAF3E3"/><stop offset="1" stop-color="#DCEACF"/></linearGradient>
+  <linearGradient id="hill" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#A8C88F"/><stop offset="1" stop-color="#6F9B64"/></linearGradient>
+  <linearGradient id="path" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#F7E4AF"/><stop offset="1" stop-color="#DDBE7B"/></linearGradient>
+  <filter id="soft"><feGaussianBlur stdDeviation="7"/></filter>
+  <filter id="shadow"><feDropShadow dx="0" dy="7" stdDeviation="8" flood-color="#536447" flood-opacity=".18"/></filter>
+</defs>
+<rect width="930" height="435" rx="38" fill="url(#sky)"/>
+<circle cx="160" cy="112" r="73" fill="#FFF4B6" opacity=".38" filter="url(#soft)"/>
+<path d="M0 265Q176 119 343 232T650 218T930 206V435H0Z" fill="#BCD7A8"/>
+<path d="M0 306Q186 194 381 272T698 251T930 261V435H0Z" fill="url(#hill)"/>
+<path d="M445 435q7-102 93-155 43-27 109-31-63 40-91 83-32 51-35 103Z" fill="url(#path)" opacity=".9"/>
+<g filter="url(#shadow)" transform="translate(602 91)">
+  <path d="M0 107 91 31l94 76v150H0Z" fill="#FFF8DD" stroke="#7D8D63" stroke-width="7"/>
+  <path d="M-12 109 91 18l108 91" fill="none" stroke="#8A704D" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M73 257v-82q19-28 38 0v82" fill="#8B6E4A"/>
+  <circle cx="91" cy="121" r="23" fill="#F4D88A" stroke="#7D8D63" stroke-width="5"/>
+  <path d="M91 39V-5M71 8h40" stroke="#8B6E4A" stroke-width="8" stroke-linecap="round"/>
+  <rect x="25" y="151" width="37" height="49" rx="18" fill="#A8C98D"/><rect x="124" y="151" width="37" height="49" rx="18" fill="#A8C98D"/>
+</g>
+<g fill="#5F8A52"><ellipse cx="106" cy="309" rx="74" ry="30"/><ellipse cx="181" cy="327" rx="61" ry="26"/><ellipse cx="817" cy="330" rx="76" ry="31"/><ellipse cx="867" cy="302" rx="58" ry="23"/></g>
+<g fill="#FFF3C7"><circle cx="75" cy="348" r="8"/><circle cx="121" cy="326" r="7"/><circle cx="162" cy="358" r="8"/><circle cx="789" cy="354" r="8"/><circle cx="852" cy="342" r="7"/></g>
+<g stroke="#7FA263" stroke-width="6" stroke-linecap="round"><path d="M69 347l-11 35M121 325l8 35M162 357l-7 31M789 353l-6 31M852 341l8 34"/></g>
+</svg>

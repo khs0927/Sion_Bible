@@ -8,6 +8,7 @@ import {
   sendJson,
   validateVerseDevotion,
 } from './_lib/nvidia.js';
+import { normalizeAndValidateDevotionSpeechLevel } from './_lib/devotionStyleGuard.js';
 import { buildVerseDevotionReferenceMessages } from './_lib/verseDevotionReferencePrompt.js';
 
 const GPT_OSS_120B_MODEL = 'openai/gpt-oss-120b';
@@ -58,10 +59,17 @@ function withPreferredPrayerEnding(devotion) {
   };
 }
 
+function normalizeValidatedDevotion(parsed, { ref, verseText }) {
+  const validated = validateVerseDevotion(parsed, { ref, verseText });
+  if (!validated) return null;
+  const voiceChecked = normalizeAndValidateDevotionSpeechLevel(validated);
+  return voiceChecked ? withPreferredPrayerEnding(voiceChecked) : null;
+}
+
 function buildFallbackDevotion(ref, errorCode) {
   const normalizedRef = String(ref || '').trim() || '선택한 말씀';
-  const question = '오늘 이 말씀 앞에서 하나님께 맡기고 순종해야 할 한 가지는 무엇일까?';
-  return {
+  const question = '오늘 이 말씀 앞에서 하나님께 맡기고 순종해야 할 한 가지는 무엇일까요?';
+  return withPreferredPrayerEnding({
     ok: true,
     reference: normalizedRef,
     title: '말씀 앞에 잠시 머무르기',
@@ -69,8 +77,8 @@ function buildFallbackDevotion(ref, errorCode) {
     keyWords: ['말씀', '은혜', '기도'],
     keyPhrase: '말씀 붙들기',
     explanation: '이 말씀을 잠시 멈추어 다시 읽어보세요. 본문 안에서 마음에 남는 단어와 표현이 무엇인지 천천히 살펴보면 좋겠습니다. 하나님은 짧은 말씀 속에서도 우리의 마음을 비추시고, 예수 그리스도의 은혜 안에서 오늘 걸어갈 방향을 보여주십니다. 본문을 내 소원대로만 적용하기보다, 하나님이 오늘 내게 보여주시는 뜻을 겸손히 묵상하는 것이 중요합니다.',
-    meditation: '말씀 앞에 조용히 머물며 지금 내 마음을 아버지께 올려드립니다. 답을 급히 찾기보다, 하나님이 이 말씀을 통해 내게 보여주시는 작은 빛을 기다립니다. 오늘은 큰 결심보다 마음에 남은 한 문장을 붙들고 주님과 동행합니다.',
-    prayer: PRAYER_ENDING,
+    meditation: '저는 말씀 앞에 조용히 머물며 지금 제 마음을 아버지께 올려드립니다. 답을 급히 찾기보다 하나님께서 이 말씀을 통해 제게 보여주시는 작은 빛을 기다립니다. 오늘은 큰 결심보다 마음에 남은 한 문장을 붙들고 주님과 동행합니다.',
+    prayer: '아버지, 이 말씀 앞에 제 마음을 조용히 내려놓습니다. 제 생각과 감정보다 아버지의 뜻을 먼저 듣게 하시고, 예수 그리스도의 은혜 안에서 오늘 작은 순종을 걷게 하소서. 성령님께서 제 마음을 비추시고 아버지를 신뢰할 힘을 주소서.',
     application: [
       '본문을 한 번 더 천천히 읽고 마음에 남는 표현 하나 적기',
       '그 표현 앞에서 지금 내 마음을 짧게 기도하기',
@@ -80,7 +88,7 @@ function buildFallbackDevotion(ref, errorCode) {
     reflectionQuestion: question,
     fallback: true,
     errorCode,
-  };
+  });
 }
 
 function buildFastModels(modelConfig) {
@@ -126,15 +134,15 @@ async function callNvidiaVerseDevotion({ apiKey, messages, ref, verseText, mode 
     timeoutMs: mode === 'deep'
       ? numberEnv('NVIDIA_DEEP_TOTAL_TIMEOUT_MS', 26_000)
       : numberEnv('NVIDIA_TOTAL_TIMEOUT_MS', 15_000),
-    temperature: mode === 'deep' ? 0.25 : 0.22,
+    temperature: mode === 'deep' ? 0.2 : 0.18,
     maxTokens: mode === 'deep' ? 2800 : 2300,
     responseFormat: { type: 'json_object' },
-    validate: (parsed) => validateVerseDevotion(parsed, { ref, verseText }),
+    validate: (parsed) => normalizeValidatedDevotion(parsed, { ref, verseText }),
   });
 
   return {
     ...raceResult,
-    result: withPreferredPrayerEnding(raceResult.result),
+    result: raceResult.result,
     modelConfig: { ...modelConfig, modelsForRace: models },
     mode,
   };
@@ -143,15 +151,15 @@ async function callNvidiaVerseDevotion({ apiKey, messages, ref, verseText, mode 
 async function callGeminiVerseDevotion({ messages, ref, verseText, mode }) {
   const response = await callGeminiChat({
     messages,
-    temperature: mode === 'deep' ? 0.25 : 0.22,
+    temperature: mode === 'deep' ? 0.2 : 0.18,
     maxTokens: mode === 'deep' ? 2800 : 2300,
     timeoutMs: mode === 'deep' ? 20_000 : 13_000,
   });
   if (!response) throw new Error('GEMINI_API_KEY is not configured');
   const parsed = parseJsonLoose(response.content);
-  const validated = validateVerseDevotion(parsed, { ref, verseText });
-  if (!validated) throw new Error('Gemini returned an invalid devotion payload');
-  return { result: withPreferredPrayerEnding(validated), model: response.model };
+  const validated = normalizeValidatedDevotion(parsed, { ref, verseText });
+  if (!validated) throw new Error('Gemini returned a devotion with an invalid Korean speech level');
+  return { result: validated, model: response.model };
 }
 
 function debugPayload(value) {
@@ -202,9 +210,11 @@ export default async function handler(req, res) {
           fallback: false,
           provider: 'nvidia',
           model: raceResult.model,
+          speechLevelGuard: 'formal-first-person-v1',
           ...debugPayload({
             provider: 'nvidia',
             prompt: 'verseDevotionReferencePrompt',
+            promptVersion: 'deep-handwritten-reference-v2-formal-voice',
             selectedModels: raceResult.modelConfig?.modelsForRace || [],
             winningModel: raceResult.model,
             latencyMs: raceResult.latencyMs,
@@ -229,6 +239,7 @@ export default async function handler(req, res) {
           fallback: false,
           provider: 'gemini',
           model: geminiResult.model,
+          speechLevelGuard: 'formal-first-person-v1',
           ...debugPayload({ failures, mode: requestMode }),
         });
       } catch (error) {
@@ -238,11 +249,13 @@ export default async function handler(req, res) {
 
     return sendJson(res, 200, {
       ...buildFallbackDevotion(ref, apiKey || process.env.GEMINI_API_KEY ? 'AI_PROVIDERS_FAILED' : 'AI_NOT_CONFIGURED'),
+      speechLevelGuard: 'formal-first-person-v1',
       ...debugPayload({ failures, mode: requestMode }),
     });
   } catch (fatalError) {
     return sendJson(res, 200, {
       ...buildFallbackDevotion(req.body?.ref, 'UNKNOWN_ERROR'),
+      speechLevelGuard: 'formal-first-person-v1',
       ...debugPayload({ error: fatalError instanceof Error ? fatalError.message : String(fatalError) }),
     });
   }
