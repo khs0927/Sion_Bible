@@ -5,9 +5,11 @@ import './sionUiPatches';
 import App from './App';
 import { initializeMemoryReminderEngine } from './services/memoryReminder';
 import { initializeReadingRoomEnhancements } from './readingRoomEnhancements';
+import { initializeDataBackup } from './dataBackup';
 
 initializeMemoryReminderEngine();
 initializeReadingRoomEnhancements();
+initializeDataBackup();
 
 function handleLaunchIntent() {
   const params = new URLSearchParams(window.location.search);
