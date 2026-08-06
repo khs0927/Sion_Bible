@@ -5,8 +5,7 @@ import { BIBLE_BOOKS, type BibleBook } from '../../data/bibleBooks';
 interface BibleBookChapterSelectorProps {
   selectedBook: BibleBook;
   selectedChapter: number;
-  onSelectBook: (book: BibleBook) => void;
-  onSelectChapter: (chapter: number) => void;
+  onSelectReference: (book: BibleBook, chapter: number) => void;
 }
 
 type TestamentFilter = 'old' | 'new';
@@ -15,8 +14,7 @@ type PickerStep = 'book' | 'chapter';
 export function BibleBookChapterSelector({
   selectedBook,
   selectedChapter,
-  onSelectBook,
-  onSelectChapter,
+  onSelectReference,
 }: BibleBookChapterSelectorProps) {
   const [showPicker, setShowPicker] = useState(false);
   const [bookSearch, setBookSearch] = useState('');
@@ -50,8 +48,7 @@ export function BibleBookChapterSelector({
   };
 
   const selectChapter = (chapter: number) => {
-    onSelectBook(pendingBook);
-    onSelectChapter(chapter);
+    onSelectReference(pendingBook, chapter);
     setShowPicker(false);
   };
 

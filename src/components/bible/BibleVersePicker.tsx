@@ -275,14 +275,10 @@ export function BibleVersePicker({
         <BibleBookChapterSelector
           selectedBook={selBook}
           selectedChapter={selChap}
-          onSelectBook={(book) => {
+          onSelectReference={(book, chapter) => {
             setSelBook(book);
-            setSelChap(1);
-            onNavigate?.(book, 1);
-          }}
-          onSelectChapter={(chapter) => {
             setSelChap(chapter);
-            onNavigate?.(selBook, chapter);
+            onNavigate?.(book, chapter);
           }}
         />
       )}
