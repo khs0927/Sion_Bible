@@ -189,7 +189,7 @@ function clearScheduledTimer() {
   nextReminderTimeout = null;
 }
 
-function scheduleAt(date: Date, callback: () => void | Promise<void>) {
+function scheduleAt(date: Date, callback: () => unknown | Promise<unknown>) {
   clearScheduledTimer();
   const delay = Math.max(1000, Math.min(MAX_TIMER_DELAY, date.getTime() - Date.now()));
   nextReminderTimeout = setTimeout(() => {
