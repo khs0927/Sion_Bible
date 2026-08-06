@@ -57,24 +57,24 @@ export function BibleBookChapterSelector({
       <button
         type="button"
         onClick={openPicker}
-        className="flex w-full items-center justify-between rounded-[18px] border bg-white px-4 py-3 text-left shadow-sm transition-all active:scale-[0.99]"
+        className="flex w-full items-center justify-between rounded-[16px] border bg-white px-4 py-3 text-left shadow-sm transition-all active:scale-[0.99]"
         style={{ borderColor: '#E8D8C8' }}
-        aria-label={`성경 본문 선택, 현재 ${selectedBook.name} ${selectedChapter}장`}
+        aria-label={`성경 본문 변경, 현재 ${selectedBook.name} ${selectedChapter}장`}
       >
         <span className="flex min-w-0 items-center gap-3">
-          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-[#F4EAE0] text-[#7B6A5D]">
-            <BookOpen size={20} />
+          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-[#F4EAE0] text-[#7B6A5D]">
+            <BookOpen size={18} />
           </span>
           <span className="min-w-0">
-            <span className="block text-[10px] font-black tracking-[0.16em] text-[#9A897B]">
-              {selectedBook.testament === 'old' ? '구약' : '신약'} · 본문 선택
+            <span className="block text-[12px] font-black tracking-[-0.01em] text-[#6F8F72]">
+              {selectedBook.testament === 'old' ? '구약' : '신약'} · 본문 변경
             </span>
-            <span className="title-font block truncate text-lg font-black text-[#3D3129]">
-              {selectedBook.name} {selectedChapter}장
+            <span className="mt-0.5 block truncate text-[11px] font-bold text-[#8C786E]">
+              다른 성경책이나 장을 선택합니다
             </span>
           </span>
         </span>
-        <ChevronDown size={20} className="flex-shrink-0 text-[#8C786E]" />
+        <ChevronDown size={19} className="flex-shrink-0 text-[#8C786E]" />
       </button>
 
       {showPicker && (
@@ -91,10 +91,10 @@ export function BibleBookChapterSelector({
 
             <header className="flex flex-shrink-0 items-center justify-between px-5 pb-4 pt-3 sm:pt-5">
               <div>
-                <p className="text-[10px] font-black tracking-[0.18em] text-[#9A897B]">
+                <p className="text-[11px] font-black tracking-[0.14em] text-[#9A897B]">
                   {step === 'book' ? '1단계' : '2단계'}
                 </p>
-                <h3 className="title-font text-xl font-black text-[#3D3129]">
+                <h3 className="title-font text-[22px] font-black leading-tight text-[#3D3129]">
                   {step === 'book' ? '성경 책 선택' : `${pendingBook.name} 장 선택`}
                 </h3>
               </div>
@@ -117,7 +117,7 @@ export function BibleBookChapterSelector({
                         key={value}
                         type="button"
                         onClick={() => setTestament(value)}
-                        className="rounded-xl px-4 py-3 text-sm font-black transition-all"
+                        className="rounded-xl px-4 py-3 text-[14px] font-black transition-all"
                         style={{
                           background: testament === value ? '#8D95D8' : 'transparent',
                           color: testament === value ? '#FFFFFF' : '#7B6A5D',
@@ -135,7 +135,7 @@ export function BibleBookChapterSelector({
                       value={bookSearch}
                       onChange={(event) => setBookSearch(event.target.value)}
                       placeholder="성경 책 검색 (예: 창세기, 요한)"
-                      className="min-w-0 flex-1 bg-transparent text-sm font-medium outline-none"
+                      className="min-w-0 flex-1 bg-transparent text-[14px] font-medium outline-none"
                       autoFocus
                     />
                   </div>
@@ -154,8 +154,8 @@ export function BibleBookChapterSelector({
                           background: selectedBook.id === book.id ? '#F1F2FF' : '#FFFFFF',
                         }}
                       >
-                        <span className="text-xs font-black text-[#3D3129]">{book.name}</span>
-                        <span className="mt-1 text-[10px] font-bold text-[#8C786E]">{book.chapters}장</span>
+                        <span className="text-[13px] font-black text-[#3D3129]">{book.name}</span>
+                        <span className="mt-1 text-[11px] font-bold text-[#8C786E]">{book.chapters}장</span>
                       </button>
                     ))}
                   </div>
@@ -167,7 +167,7 @@ export function BibleBookChapterSelector({
                   <button
                     type="button"
                     onClick={() => setStep('book')}
-                    className="rounded-xl border border-[#E8D8C8] bg-white px-3 py-2 text-xs font-black text-[#7B6A5D]"
+                    className="rounded-xl border border-[#E8D8C8] bg-white px-3 py-2 text-[12px] font-black text-[#7B6A5D]"
                   >
                     ← 성경 책 다시 선택
                   </button>
@@ -179,7 +179,7 @@ export function BibleBookChapterSelector({
                         key={chapter}
                         type="button"
                         onClick={() => selectChapter(chapter)}
-                        className="aspect-square rounded-2xl border text-sm font-black transition-all active:scale-95"
+                        className="aspect-square rounded-2xl border text-[14px] font-black transition-all active:scale-95"
                         style={{
                           borderColor: pendingBook.id === selectedBook.id && chapter === selectedChapter ? '#8D95D8' : '#E8D8C8',
                           background: pendingBook.id === selectedBook.id && chapter === selectedChapter ? '#8D95D8' : '#FFFFFF',
