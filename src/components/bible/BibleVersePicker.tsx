@@ -316,6 +316,7 @@ export function BibleVersePicker({
                 onToggleVerse={(verseNumber) => handleRangeToggle(chapter, verseNumber)}
                 mode="read"
                 selectionMode={readSelectionMode}
+                referenceLabel={`${chapter.bookName} ${chapter.chapter}`}
                 onVerseClick={(verse) => onVerseClick?.({ ref: `${chapter.bookName} ${chapter.chapter}:${verse.verse}`, text: verse.text })}
                 fontSize={fontSize}
                 onToggleSave={onToggleSave ? (verse) => onToggleSave({ ref: `${chapter.bookName} ${chapter.chapter}:${verse.verse}`, text: verse.text }) : undefined}
@@ -333,6 +334,7 @@ export function BibleVersePicker({
             onToggleVerse={handleToggleVerse}
             mode={mode}
             selectionMode={readSelectionMode}
+            referenceLabel={`${selBook.name} ${selChap}`}
             onVerseClick={handleVerseClick}
             fontSize={fontSize}
             onToggleSave={onToggleSave ? (verse) => onToggleSave({ ref: `${selBook.name} ${selChap}:${verse.verse}`, text: verse.text }) : undefined}
