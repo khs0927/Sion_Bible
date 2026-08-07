@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Bookmark, Check, Copy, Minus, Palette, PenLine, X } from 'lucide-react';
+import { Bookmark, Check, Minus, Palette, PenLine, X } from 'lucide-react';
 import { sanitizeScriptureText } from '../../utils/textUtils';
 import { VerseDevotionPanel } from './VerseDevotionPanel';
 import { KawaiiMeditationIcon, KawaiiPrayerIcon, KawaiiVerseIcon, KawaiiWisdomIcon } from '../icons';
@@ -265,34 +265,49 @@ export function BibleVerseSelectableList({
               <div className="text-[11px] font-black text-[#A17C5B]">선택한 말씀</div>
               <div className="truncate text-sm font-black text-[#3D3129]">{selectedVerseDetail?.ref || `${activeVerse}절`}</div>
             </div>
-            <button type="button" onClick={closeSheet} aria-label="구절 도구 닫기" className="rounded-full p-2 text-[#78695E]"><X size={20} /></button>
+            <div className="flex items-center gap-1">
+              {onCopy && (
+                <button
+                  type="button"
+                  onClick={() => onCopy(activeVerseData)}
+                  aria-label="선택한 구절 복사"
+                  className="grid h-9 w-9 place-items-center rounded-full bg-[#FFF6DD] text-[#604B2F] transition active:scale-90"
+                >
+                  <img src={verseCopyIcon} alt="" className="h-5 w-5 object-contain" />
+                </button>
+              )}
+              <button type="button" onClick={closeSheet} aria-label="구절 도구 닫기" className="rounded-full p-2 text-[#78695E]"><X size={20} /></button>
+            </div>
           </div>
 
           <div className="shrink-0 border-y border-[#E8DCCF] bg-[#FFF9EF] px-3 py-3">
-            <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            <div className="flex items-center gap-2 pb-2">
               <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-black text-[#8A786B]"><Palette size={14} />형광펜</span>
-              {(Object.keys(HIGHLIGHT_COLORS) as HighlightColor[]).map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  aria-label={`${color} 형광펜`}
-                  aria-pressed={activeAnnotation.color === color}
-                  onClick={() => updateAnnotation({ color })}
-                  className="h-9 w-9 shrink-0 rounded-full border-[3px] shadow-sm transition active:scale-95"
-                  style={{ backgroundColor: HIGHLIGHT_COLORS[color], borderColor: activeAnnotation.color === color ? '#6F4D27' : '#FFFFFF', outline: activeAnnotation.color === color ? '2px solid #D0A13D' : 'none' }}
-                />
-              ))}
+              <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
+                {(Object.keys(HIGHLIGHT_COLORS) as HighlightColor[]).map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    aria-label={`${color} 형광펜`}
+                    aria-pressed={activeAnnotation.color === color}
+                    onClick={() => updateAnnotation({ color })}
+                    className="h-9 w-9 shrink-0 rounded-full border-[3px] shadow-sm transition active:scale-95"
+                    style={{ backgroundColor: HIGHLIGHT_COLORS[color], borderColor: activeAnnotation.color === color ? '#6F4D27' : '#FFFFFF', outline: activeAnnotation.color === color ? '2px solid #D0A13D' : 'none' }}
+                  />
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={clearAnnotation}
+                className="inline-flex h-9 shrink-0 items-center rounded-xl border border-[#D6C3AE] bg-white px-2.5 text-[11px] font-black text-[#725F51]"
+              >
+                표시 지우기
+              </button>
             </div>
             <div className="flex items-center gap-2 overflow-x-auto">
               <button type="button" onClick={() => updateAnnotation({ underline: 'none' })} className={`inline-flex h-9 shrink-0 items-center rounded-xl border px-3 text-xs font-black ${activeAnnotation.underline === 'none' ? 'border-[#6F4D27] bg-[#F2E3C5]' : 'border-[#DCCDBE] bg-white'}`}>밑줄 없음</button>
               <button type="button" onClick={() => updateAnnotation({ underline: 'solid' })} className={`inline-flex h-9 shrink-0 items-center gap-1 rounded-xl border px-3 text-xs font-black ${activeAnnotation.underline === 'solid' ? 'border-[#6F4D27] bg-[#F2E3C5]' : 'border-[#DCCDBE] bg-white'}`}><Minus size={16} />실선</button>
               <button type="button" onClick={() => updateAnnotation({ underline: 'dashed' })} className={`inline-flex h-9 shrink-0 items-center gap-1 rounded-xl border px-3 text-xs font-black ${activeAnnotation.underline === 'dashed' ? 'border-[#6F4D27] bg-[#F2E3C5]' : 'border-[#DCCDBE] bg-white'}`}><PenLine size={16} />점선</button>
-              <button type="button" onClick={clearAnnotation} className="inline-flex h-9 shrink-0 items-center rounded-xl border border-[#DCCDBE] bg-white px-3 text-xs font-black">표시 지우기</button>
-              {onCopy && (
-                <button type="button" onClick={() => onCopy(activeVerseData)} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-[#D0A13D] bg-[#FFF2C9] px-3 text-xs font-black text-[#604B2F]">
-                  <img src={verseCopyIcon} alt="" className="h-5 w-5 object-contain" />복사
-                </button>
-              )}
             </div>
           </div>
 
@@ -310,10 +325,11 @@ export function BibleVerseSelectableList({
                 visibleSection={detailTab}
                 compact
                 fontSize={fontSize}
+                generationMode="deep"
               />
             ) : (
               <div className="rounded-[20px] border border-dashed border-[#DDCDBA] bg-[#FFF9EF] px-5 py-5 text-center text-sm font-bold leading-6 text-[#7C6958]">
-                형광펜·밑줄·복사를 사용할 수 있습니다.<br />해설을 누르면 해설·묵상·기도를 한 번에 준비해 탭별로 보여드립니다.
+                형광펜과 밑줄을 표시하거나 구절을 복사할 수 있습니다.<br />해설을 누르면 기존의 깊은 원고 스타일로 해설·묵상·기도를 함께 준비합니다.
               </div>
             )}
           </div>
