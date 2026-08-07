@@ -43,7 +43,13 @@ function annotationKey(verse: number) {
 function readAnnotation(verse: number): VerseAnnotation | null {
   try {
     const raw = localStorage.getItem(annotationKey(verse));
-    return raw ? JSON.parse(raw) as VerseAnnotation : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<VerseAnnotation>;
+    if (!parsed.color || !Object.prototype.hasOwnProperty.call(HIGHLIGHT_COLORS, parsed.color)) return null;
+    return {
+      color: parsed.color,
+      underline: 'none',
+    };
   } catch {
     return null;
   }
@@ -68,7 +74,10 @@ export function BibleVerseSelectableList({
     const next: Record<number, VerseAnnotation> = {};
     for (const verse of verses) {
       const stored = readAnnotation(verse.verse);
-      if (stored) next[verse.verse] = stored;
+      if (stored) {
+        next[verse.verse] = stored;
+        localStorage.setItem(annotationKey(verse.verse), JSON.stringify(stored));
+      }
     }
     setAnnotations(next);
   }, [verses]);
@@ -132,21 +141,20 @@ export function BibleVerseSelectableList({
               key={verse.verse}
               id={`verse-${verse.verse}`}
               className={[
-                'relative w-full px-4 py-3.5 text-left transition-all',
+                'relative w-full px-3 py-2 text-left transition-all',
                 selected && showCheckbox
-                  ? 'bg-[#6F8F72]/15 ring-2 ring-inset ring-[#6F8F72]/55'
+                  ? 'bg-[#6F8F72]/10 ring-1 ring-inset ring-[#6F8F72]/45'
                   : isActive
-                    ? 'ring-2 ring-inset ring-[#D9B84F]/60'
-                    : 'bg-white hover:bg-[#FFF8F1]',
+                    ? 'bg-[#FFFDF8] ring-1 ring-inset ring-[#D9B84F]/45'
+                    : 'bg-white hover:bg-[#FFFDF8]',
               ].join(' ')}
-              style={{ backgroundColor: annotation ? HIGHLIGHT_COLORS[annotation.color] : undefined }}
             >
-              <div className="flex items-start gap-3">
-                <div className="mt-1 flex w-9 shrink-0 flex-col items-center gap-2">
+              <div className="flex items-start gap-2">
+                <div className="mt-0.5 flex w-7 shrink-0 flex-col items-center gap-1">
                   {showCheckbox ? (
-                    <div className="flex flex-col items-center gap-2">
+                    <div className="flex flex-col items-center gap-1">
                       <span className={[
-                        'inline-flex h-6 min-w-6 items-center justify-center rounded-md text-[10px] font-black leading-none transition-colors',
+                        'inline-flex h-5 min-w-5 items-center justify-center rounded-md text-[9px] font-black leading-none transition-colors',
                         selected ? 'bg-[#6F8F72] text-white' : 'bg-[#F7EFE7] text-[#8C6F55]',
                       ].join(' ')}>
                         {verse.verse}
@@ -157,18 +165,16 @@ export function BibleVerseSelectableList({
                         aria-pressed={selected}
                         onClick={() => onToggleVerse(verse.verse)}
                         className={[
-                          'inline-flex h-8 w-8 items-center justify-center rounded-xl border-2 shadow-sm transition-all',
-                          selected
-                            ? 'border-[#6F8F72] bg-[#6F8F72] text-white shadow-[#6F8F72]/20'
-                            : 'border-[#D9CBBE] bg-white text-transparent',
+                          'inline-flex h-7 w-7 items-center justify-center rounded-lg transition-all',
+                          selected ? 'bg-[#6F8F72] text-white' : 'bg-transparent text-[#C8B9AB]',
                         ].join(' ')}
                       >
-                        <Check size={17} strokeWidth={4} />
+                        <Check size={16} strokeWidth={3.5} />
                       </button>
                     </div>
                   ) : (
                     <>
-                      <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-md bg-[#F7EFE7] text-[10px] font-black leading-none text-[#8C6F55]">
+                      <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-[#F7EFE7] text-[9px] font-black leading-none text-[#8C6F55]">
                         {verse.verse}
                       </span>
                       <button
@@ -177,13 +183,13 @@ export function BibleVerseSelectableList({
                         aria-pressed={saved}
                         onClick={() => onToggleSave?.(verse)}
                         disabled={!onToggleSave}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#E8D8C8] bg-[#FFFDF8] shadow-sm disabled:cursor-default"
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-transparent p-0 text-[#B9A99A] transition active:scale-90 disabled:cursor-default"
                       >
                         <Bookmark
-                          size={17}
+                          size={16}
                           fill={saved ? '#6F8F72' : 'transparent'}
-                          stroke={saved ? '#6F8F72' : '#BFAE9D'}
-                          strokeWidth={2.2}
+                          stroke={saved ? '#6F8F72' : 'currentColor'}
+                          strokeWidth={2}
                         />
                       </button>
                       {onCopy && (
@@ -191,9 +197,9 @@ export function BibleVerseSelectableList({
                           type="button"
                           aria-label={`${verse.verse}절 복사`}
                           onClick={() => onCopy(verse)}
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#E8D8C8] bg-[#FFFDF8] text-[#7B6A5D] shadow-sm transition active:scale-90"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-transparent p-0 text-[#8C7B6D] transition active:scale-90"
                         >
-                          <Copy size={17} strokeWidth={2} />
+                          <Copy size={16} strokeWidth={2} />
                         </button>
                       )}
                     </>
@@ -206,18 +212,25 @@ export function BibleVerseSelectableList({
                     if (showCheckbox) onToggleVerse(verse.verse);
                     else setActiveVerse(verse.verse);
                   }}
-                  className="serif-verse min-w-0 flex-1 bg-transparent p-0 text-left leading-[1.72] text-[#3D3129]"
-                  style={{
-                    fontSize,
-                    whiteSpace: 'pre-wrap',
-                    textDecorationLine: annotation?.underline === 'none' ? 'none' : 'underline',
-                    textDecorationStyle: annotation?.underline === 'wavy' ? 'wavy' : annotation?.underline === 'dashed' ? 'dashed' : 'solid',
-                    textDecorationThickness: annotation?.underline === 'none' ? undefined : '2px',
-                    textUnderlineOffset: '5px',
-                  }}
+                  className="serif-verse min-w-0 flex-1 bg-transparent p-0 text-left leading-[1.6] text-[#3D3129]"
+                  style={{ fontSize, whiteSpace: 'pre-wrap' }}
                   aria-pressed={isActive}
                 >
-                  {sanitizeScriptureText(verse.text)}
+                  <span
+                    style={{
+                      backgroundColor: annotation ? HIGHLIGHT_COLORS[annotation.color] : 'transparent',
+                      boxDecorationBreak: 'clone',
+                      WebkitBoxDecorationBreak: 'clone',
+                      padding: annotation ? '0 .08em' : undefined,
+                      borderRadius: annotation ? '0.12em' : undefined,
+                      textDecorationLine: annotation?.underline === 'none' ? 'none' : 'underline',
+                      textDecorationStyle: annotation?.underline === 'wavy' ? 'wavy' : annotation?.underline === 'dashed' ? 'dashed' : 'solid',
+                      textDecorationThickness: annotation?.underline === 'none' ? undefined : '2px',
+                      textUnderlineOffset: annotation?.underline === 'none' ? undefined : '4px',
+                    }}
+                  >
+                    {sanitizeScriptureText(verse.text)}
+                  </span>
                 </button>
               </div>
             </div>
@@ -242,6 +255,7 @@ export function BibleVerseSelectableList({
             <span className="mx-1 h-7 w-px shrink-0 bg-[#E4D8CB]" />
             <button type="button" onClick={() => updateAnnotation({ underline: 'solid' })} className="inline-flex h-9 shrink-0 items-center gap-1 rounded-xl border px-3 text-xs font-black"><Minus size={16} />실선</button>
             <button type="button" onClick={() => updateAnnotation({ underline: 'dashed' })} className="inline-flex h-9 shrink-0 items-center gap-1 rounded-xl border px-3 text-xs font-black"><PenLine size={16} />점선</button>
+            <button type="button" onClick={() => updateAnnotation({ underline: 'none' })} className="inline-flex h-9 shrink-0 items-center rounded-xl border px-3 text-xs font-black">밑줄 없음</button>
             <button type="button" onClick={clearAnnotation} className="inline-flex h-9 shrink-0 items-center rounded-xl border px-3 text-xs font-black">지우기</button>
           </div>
 
