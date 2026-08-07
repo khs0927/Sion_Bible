@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Bookmark, Check, Copy, HeartHandshake, Highlighter, MessageSquareText, Minus, Palette, PenLine, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Bookmark, Check, Copy, Minus, Palette, PenLine, X } from 'lucide-react';
 import { sanitizeScriptureText } from '../../utils/textUtils';
+import { VerseDevotionPanel } from './VerseDevotionPanel';
+import { KawaiiMeditationIcon, KawaiiPrayerIcon, KawaiiVerseIcon, KawaiiWisdomIcon } from '../icons';
+import verseCopyIcon from '../../assets/design/verse-actions/copy.png';
 
 interface Verse {
   verse: number;
@@ -9,6 +12,7 @@ interface Verse {
 
 type HighlightColor = 'yellow' | 'green' | 'pink' | 'blue' | 'purple';
 type UnderlineStyle = 'none' | 'solid' | 'dashed' | 'wavy';
+type DetailTab = 'explanation' | 'meditation' | 'prayer' | 'question';
 
 type VerseAnnotation = {
   color: HighlightColor;
@@ -26,14 +30,15 @@ interface BibleVerseSelectableListProps {
   isSaved?: (verseNumber: number) => boolean;
   onCopy?: (verse: Verse) => void;
   selectionMode?: boolean;
+  referenceLabel?: string;
 }
 
 const HIGHLIGHT_COLORS: Record<HighlightColor, string> = {
-  yellow: '#FFF2A8',
-  green: '#DFF0C8',
-  pink: '#FFD7E0',
-  blue: '#D8E8FF',
-  purple: '#E9DBFF',
+  yellow: '#FFF0A3',
+  green: '#DDEFC6',
+  pink: '#FFD7E2',
+  blue: '#D8E7FF',
+  purple: '#E7DBFF',
 };
 
 function annotationKey(verse: number) {
@@ -48,7 +53,7 @@ function readAnnotation(verse: number): VerseAnnotation | null {
     if (!parsed.color || !Object.prototype.hasOwnProperty.call(HIGHLIGHT_COLORS, parsed.color)) return null;
     return {
       color: parsed.color,
-      underline: 'none',
+      underline: parsed.underline === 'solid' || parsed.underline === 'dashed' || parsed.underline === 'wavy' ? parsed.underline : 'none',
     };
   } catch {
     return null;
@@ -66,26 +71,40 @@ export function BibleVerseSelectableList({
   isSaved,
   onCopy,
   selectionMode = false,
+  referenceLabel = '',
 }: BibleVerseSelectableListProps) {
   const [activeVerse, setActiveVerse] = useState<number | null>(null);
   const [annotations, setAnnotations] = useState<Record<number, VerseAnnotation>>({});
+  const [detailTab, setDetailTab] = useState<DetailTab | null>(null);
+  const dragStartY = useRef<number | null>(null);
 
   useEffect(() => {
     const next: Record<number, VerseAnnotation> = {};
     for (const verse of verses) {
       const stored = readAnnotation(verse.verse);
-      if (stored) {
-        next[verse.verse] = stored;
-        localStorage.setItem(annotationKey(verse.verse), JSON.stringify(stored));
-      }
+      if (stored) next[verse.verse] = stored;
     }
     setAnnotations(next);
+    setActiveVerse(null);
+    setDetailTab(null);
   }, [verses]);
 
   const activeAnnotation = useMemo(
     () => activeVerse ? annotations[activeVerse] ?? { color: 'yellow' as const, underline: 'none' as const } : null,
     [activeVerse, annotations],
   );
+
+  const activeVerseData = useMemo(
+    () => verses.find((item) => item.verse === activeVerse) ?? null,
+    [activeVerse, verses],
+  );
+
+  const selectedVerseDetail = activeVerseData
+    ? {
+        ref: `${referenceLabel}${referenceLabel ? ':' : ''}${activeVerseData.verse}`,
+        text: activeVerseData.text,
+      }
+    : null;
 
   const updateAnnotation = (patch: Partial<VerseAnnotation>) => {
     if (!activeVerse) return;
@@ -108,14 +127,19 @@ export function BibleVerseSelectableList({
     });
   };
 
-  const openVerseTool = (tool: 'commentary' | 'meditation' | 'prayer') => {
-    if (!activeVerse) return;
-    const verse = verses.find((item) => item.verse === activeVerse);
-    if (!verse) return;
-    window.dispatchEvent(new CustomEvent('sion:bible-verse-tool', {
-      detail: { tool, verse },
-    }));
-    onVerseClick(verse);
+  const closeSheet = () => {
+    setActiveVerse(null);
+    setDetailTab(null);
+  };
+
+  const handleDragStart = (event: React.PointerEvent<HTMLDivElement>) => {
+    dragStartY.current = event.clientY;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  };
+
+  const handleDragEnd = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (dragStartY.current !== null && event.clientY - dragStartY.current > 64) closeSheet();
+    dragStartY.current = null;
   };
 
   if (verses.length === 0) {
@@ -141,24 +165,22 @@ export function BibleVerseSelectableList({
               key={verse.verse}
               id={`verse-${verse.verse}`}
               className={[
-                'relative w-full px-3 py-2 text-left transition-all',
+                'relative w-full px-3 py-1.5 text-left transition-all',
                 selected && showCheckbox
-                  ? 'bg-[#6F8F72]/10 ring-1 ring-inset ring-[#6F8F72]/45'
+                  ? 'bg-[#EAF2E6] ring-2 ring-inset ring-[#6F8F72]/70'
                   : isActive
-                    ? 'bg-[#FFFDF8] ring-1 ring-inset ring-[#D9B84F]/45'
+                    ? 'bg-[#FFF6DD] ring-2 ring-inset ring-[#D0A13D] shadow-[inset_4px_0_0_#D0A13D]'
                     : 'bg-white hover:bg-[#FFFDF8]',
               ].join(' ')}
             >
               <div className="flex items-start gap-2">
-                <div className="mt-0.5 flex w-7 shrink-0 flex-col items-center gap-1">
+                <div className="mt-0.5 flex w-7 shrink-0 flex-col items-center gap-0.5">
                   {showCheckbox ? (
-                    <div className="flex flex-col items-center gap-1">
+                    <div className="flex flex-col items-center gap-0.5">
                       <span className={[
                         'inline-flex h-5 min-w-5 items-center justify-center rounded-md text-[9px] font-black leading-none transition-colors',
                         selected ? 'bg-[#6F8F72] text-white' : 'bg-[#F7EFE7] text-[#8C6F55]',
-                      ].join(' ')}>
-                        {verse.verse}
-                      </span>
+                      ].join(' ')}>{verse.verse}</span>
                       <button
                         type="button"
                         aria-label={`${verse.verse}절 선택`}
@@ -174,34 +196,20 @@ export function BibleVerseSelectableList({
                     </div>
                   ) : (
                     <>
-                      <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-[#F7EFE7] text-[9px] font-black leading-none text-[#8C6F55]">
-                        {verse.verse}
-                      </span>
+                      <span className={[
+                        'inline-flex h-5 min-w-5 items-center justify-center rounded-md text-[9px] font-black leading-none transition-colors',
+                        isActive ? 'bg-[#D0A13D] text-white' : 'bg-[#F7EFE7] text-[#8C6F55]',
+                      ].join(' ')}>{verse.verse}</span>
                       <button
                         type="button"
                         aria-label={`${verse.verse}절 ${saved ? '저장 취소' : '저장'}`}
                         aria-pressed={saved}
                         onClick={() => onToggleSave?.(verse)}
                         disabled={!onToggleSave}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-transparent p-0 text-[#B9A99A] transition active:scale-90 disabled:cursor-default"
+                        className="inline-flex h-7 w-7 items-center justify-center bg-transparent p-0 text-[#B9A99A] transition active:scale-90 disabled:cursor-default"
                       >
-                        <Bookmark
-                          size={16}
-                          fill={saved ? '#6F8F72' : 'transparent'}
-                          stroke={saved ? '#6F8F72' : 'currentColor'}
-                          strokeWidth={2}
-                        />
+                        <Bookmark size={16} fill={saved ? '#6F8F72' : 'transparent'} stroke={saved ? '#6F8F72' : 'currentColor'} strokeWidth={2} />
                       </button>
-                      {onCopy && (
-                        <button
-                          type="button"
-                          aria-label={`${verse.verse}절 복사`}
-                          onClick={() => onCopy(verse)}
-                          className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-transparent p-0 text-[#8C7B6D] transition active:scale-90"
-                        >
-                          <Copy size={16} strokeWidth={2} />
-                        </button>
-                      )}
                     </>
                   )}
                 </div>
@@ -210,10 +218,13 @@ export function BibleVerseSelectableList({
                   type="button"
                   onClick={() => {
                     if (showCheckbox) onToggleVerse(verse.verse);
-                    else setActiveVerse(verse.verse);
+                    else {
+                      setActiveVerse(verse.verse);
+                      setDetailTab(null);
+                    }
                   }}
-                  className="serif-verse min-w-0 flex-1 bg-transparent p-0 text-left leading-[1.6] text-[#3D3129]"
-                  style={{ fontSize, whiteSpace: 'pre-wrap' }}
+                  className="serif-verse min-w-0 flex-1 bg-transparent p-0 text-left leading-[1.55] text-[#3D3129] no-underline"
+                  style={{ fontSize, whiteSpace: 'pre-wrap', textDecoration: 'none' }}
                   aria-pressed={isActive}
                 >
                   <span
@@ -223,10 +234,10 @@ export function BibleVerseSelectableList({
                       WebkitBoxDecorationBreak: 'clone',
                       padding: annotation ? '0 .08em' : undefined,
                       borderRadius: annotation ? '0.12em' : undefined,
-                      textDecorationLine: annotation?.underline === 'none' ? 'none' : 'underline',
+                      textDecorationLine: annotation?.underline && annotation.underline !== 'none' ? 'underline' : 'none',
                       textDecorationStyle: annotation?.underline === 'wavy' ? 'wavy' : annotation?.underline === 'dashed' ? 'dashed' : 'solid',
-                      textDecorationThickness: annotation?.underline === 'none' ? undefined : '2px',
-                      textUnderlineOffset: annotation?.underline === 'none' ? undefined : '4px',
+                      textDecorationThickness: annotation?.underline && annotation.underline !== 'none' ? '2px' : undefined,
+                      textUnderlineOffset: annotation?.underline && annotation.underline !== 'none' ? '4px' : undefined,
                     }}
                   >
                     {sanitizeScriptureText(verse.text)}
@@ -238,31 +249,73 @@ export function BibleVerseSelectableList({
         })}
       </div>
 
-      {activeVerse && activeAnnotation && mode === 'read' && !selectionMode && (
-        <div className="fixed inset-x-0 bottom-[calc(72px+env(safe-area-inset-bottom))] z-[950] mx-auto w-[min(680px,calc(100%-16px))] rounded-[24px] border border-[#E1D5C8] bg-[#FFFDF8]/95 p-3 shadow-[0_18px_45px_rgba(54,43,33,.22)] backdrop-blur-xl">
-          <div className="flex items-center justify-between gap-2 px-1 pb-2">
-            <div className="flex items-center gap-2 text-xs font-black text-[#5F5147]">
-              <Highlighter size={16} /><span>{activeVerse}절 꾸미기</span>
+      {activeVerse && activeAnnotation && activeVerseData && mode === 'read' && !selectionMode && (
+        <div className="fixed inset-x-0 bottom-0 z-[1400] mx-auto flex max-h-[88dvh] w-full max-w-[720px] flex-col overflow-hidden rounded-t-[28px] border-x border-t border-[#D8C7B4] bg-[#FFFDF8] shadow-[0_-20px_60px_rgba(54,43,33,.24)]">
+          <div
+            className="shrink-0 cursor-grab px-4 pb-2 pt-2 active:cursor-grabbing"
+            onPointerDown={handleDragStart}
+            onPointerUp={handleDragEnd}
+            onPointerCancel={() => { dragStartY.current = null; }}
+          >
+            <div className="mx-auto h-1.5 w-12 rounded-full bg-[#CBB9A6]" />
+          </div>
+
+          <div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-3">
+            <div className="min-w-0">
+              <div className="text-[11px] font-black text-[#A17C5B]">선택한 말씀</div>
+              <div className="truncate text-sm font-black text-[#3D3129]">{selectedVerseDetail?.ref || `${activeVerse}절`}</div>
             </div>
-            <button type="button" onClick={() => setActiveVerse(null)} aria-label="구절 도구 닫기" className="rounded-full p-1.5 text-[#78695E]"><X size={18} /></button>
+            <button type="button" onClick={closeSheet} aria-label="구절 도구 닫기" className="rounded-full p-2 text-[#78695E]"><X size={20} /></button>
           </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-2">
-            <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-black text-[#8A786B]"><Palette size={14} />색</span>
-            {(Object.keys(HIGHLIGHT_COLORS) as HighlightColor[]).map((color) => (
-              <button key={color} type="button" aria-label={`${color} 형광펜`} aria-pressed={activeAnnotation.color === color} onClick={() => updateAnnotation({ color })} className="h-8 w-8 shrink-0 rounded-full border-2 shadow-sm" style={{ backgroundColor: HIGHLIGHT_COLORS[color], borderColor: activeAnnotation.color === color ? '#5F5147' : '#FFFFFF' }} />
-            ))}
-            <span className="mx-1 h-7 w-px shrink-0 bg-[#E4D8CB]" />
-            <button type="button" onClick={() => updateAnnotation({ underline: 'solid' })} className="inline-flex h-9 shrink-0 items-center gap-1 rounded-xl border px-3 text-xs font-black"><Minus size={16} />실선</button>
-            <button type="button" onClick={() => updateAnnotation({ underline: 'dashed' })} className="inline-flex h-9 shrink-0 items-center gap-1 rounded-xl border px-3 text-xs font-black"><PenLine size={16} />점선</button>
-            <button type="button" onClick={() => updateAnnotation({ underline: 'none' })} className="inline-flex h-9 shrink-0 items-center rounded-xl border px-3 text-xs font-black">밑줄 없음</button>
-            <button type="button" onClick={clearAnnotation} className="inline-flex h-9 shrink-0 items-center rounded-xl border px-3 text-xs font-black">지우기</button>
+          <div className="shrink-0 border-y border-[#E8DCCF] bg-[#FFF9EF] px-3 py-3">
+            <div className="flex items-center gap-2 overflow-x-auto pb-2">
+              <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-black text-[#8A786B]"><Palette size={14} />형광펜</span>
+              {(Object.keys(HIGHLIGHT_COLORS) as HighlightColor[]).map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  aria-label={`${color} 형광펜`}
+                  aria-pressed={activeAnnotation.color === color}
+                  onClick={() => updateAnnotation({ color })}
+                  className="h-9 w-9 shrink-0 rounded-full border-[3px] shadow-sm transition active:scale-95"
+                  style={{ backgroundColor: HIGHLIGHT_COLORS[color], borderColor: activeAnnotation.color === color ? '#6F4D27' : '#FFFFFF', outline: activeAnnotation.color === color ? '2px solid #D0A13D' : 'none' }}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto">
+              <button type="button" onClick={() => updateAnnotation({ underline: 'none' })} className={`inline-flex h-9 shrink-0 items-center rounded-xl border px-3 text-xs font-black ${activeAnnotation.underline === 'none' ? 'border-[#6F4D27] bg-[#F2E3C5]' : 'border-[#DCCDBE] bg-white'}`}>밑줄 없음</button>
+              <button type="button" onClick={() => updateAnnotation({ underline: 'solid' })} className={`inline-flex h-9 shrink-0 items-center gap-1 rounded-xl border px-3 text-xs font-black ${activeAnnotation.underline === 'solid' ? 'border-[#6F4D27] bg-[#F2E3C5]' : 'border-[#DCCDBE] bg-white'}`}><Minus size={16} />실선</button>
+              <button type="button" onClick={() => updateAnnotation({ underline: 'dashed' })} className={`inline-flex h-9 shrink-0 items-center gap-1 rounded-xl border px-3 text-xs font-black ${activeAnnotation.underline === 'dashed' ? 'border-[#6F4D27] bg-[#F2E3C5]' : 'border-[#DCCDBE] bg-white'}`}><PenLine size={16} />점선</button>
+              <button type="button" onClick={clearAnnotation} className="inline-flex h-9 shrink-0 items-center rounded-xl border border-[#DCCDBE] bg-white px-3 text-xs font-black">표시 지우기</button>
+              {onCopy && (
+                <button type="button" onClick={() => onCopy(activeVerseData)} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-[#D0A13D] bg-[#FFF2C9] px-3 text-xs font-black text-[#604B2F]">
+                  <img src={verseCopyIcon} alt="" className="h-5 w-5 object-contain" />복사
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 border-t border-[#E7DCCF] pt-2">
-            <button type="button" onClick={() => openVerseTool('commentary')} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-2xl bg-white text-xs font-black text-[#5F5147] shadow-sm"><MessageSquareText size={16} />해설</button>
-            <button type="button" onClick={() => openVerseTool('meditation')} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-2xl bg-white text-xs font-black text-[#5F5147] shadow-sm"><Highlighter size={16} />묵상</button>
-            <button type="button" onClick={() => openVerseTool('prayer')} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-2xl bg-white text-xs font-black text-[#5F5147] shadow-sm"><HeartHandshake size={16} />기도</button>
+          <div className="grid shrink-0 grid-cols-4 gap-2 border-b border-[#E8DCCF] bg-white px-3 py-3">
+            <button type="button" onClick={() => setDetailTab('explanation')} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl border text-[11px] font-black transition ${detailTab === 'explanation' ? 'border-[#C88D32] bg-[#FFF0CD] text-[#66461E] shadow-sm' : 'border-[#E4D8CA] bg-[#FFFDF9] text-[#6C5A4C]'}`}><KawaiiVerseIcon size={24} /><span>해설</span></button>
+            <button type="button" onClick={() => setDetailTab('meditation')} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl border text-[11px] font-black transition ${detailTab === 'meditation' ? 'border-[#7E9A63] bg-[#EDF4E5] text-[#40552F] shadow-sm' : 'border-[#E4D8CA] bg-[#FFFDF9] text-[#6C5A4C]'}`}><KawaiiMeditationIcon size={24} /><span>묵상</span></button>
+            <button type="button" onClick={() => setDetailTab('prayer')} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl border text-[11px] font-black transition ${detailTab === 'prayer' ? 'border-[#D7A56F] bg-[#FFF0E3] text-[#6C4B31] shadow-sm' : 'border-[#E4D8CA] bg-[#FFFDF9] text-[#6C5A4C]'}`}><KawaiiPrayerIcon size={24} /><span>기도</span></button>
+            <button type="button" onClick={() => setDetailTab('question')} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl border text-[11px] font-black transition ${detailTab === 'question' ? 'border-[#9A8BC2] bg-[#F1ECFA] text-[#51446F] shadow-sm' : 'border-[#E4D8CA] bg-[#FFFDF9] text-[#6C5A4C]'}`}><KawaiiWisdomIcon size={24} /><span>질문</span></button>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-[calc(16px+env(safe-area-inset-bottom))] pt-3">
+            {detailTab ? (
+              <VerseDevotionPanel
+                selectedVerse={selectedVerseDetail}
+                visibleSection={detailTab}
+                compact
+                fontSize={fontSize}
+              />
+            ) : (
+              <div className="rounded-[20px] border border-dashed border-[#DDCDBA] bg-[#FFF9EF] px-5 py-5 text-center text-sm font-bold leading-6 text-[#7C6958]">
+                형광펜·밑줄·복사를 사용할 수 있습니다.<br />해설을 누르면 해설·묵상·기도를 한 번에 준비해 탭별로 보여드립니다.
+              </div>
+            )}
           </div>
         </div>
       )}
