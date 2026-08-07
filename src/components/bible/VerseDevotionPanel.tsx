@@ -14,12 +14,16 @@ interface SelectedVerse {
   application?: string | string[];
 }
 
+type VisibleSection = 'all' | 'explanation' | 'meditation' | 'prayer' | 'question';
+
 interface VerseDevotionPanelProps {
   selectedVerse: SelectedVerse | null;
   initialDevotion?: VerseDevotionResult | null;
   onGoToMemory?: (verse: SelectedVerse) => void;
   onSaveDevotionSection?: (section: 'explanation' | 'meditation' | 'prayer' | 'application', devotion: VerseDevotionResult) => void;
   fontSize?: string;
+  visibleSection?: VisibleSection;
+  compact?: boolean;
 }
 
 function stripMarkdown(text: string) {
@@ -92,6 +96,7 @@ function SectionCard({
   titleSize = 'label',
   titleFontSize,
   onBookmark,
+  compact = false,
 }: {
   title: string;
   children: ReactNode;
@@ -100,6 +105,7 @@ function SectionCard({
   titleSize?: 'label' | 'body';
   titleFontSize?: string;
   onBookmark?: () => void;
+  compact?: boolean;
 }) {
   const toneClass = tone === 'prayer'
     ? 'bg-[#FFF8F1]/80'
@@ -108,7 +114,7 @@ function SectionCard({
       : 'bg-white/70';
 
   return (
-    <article className={`rounded-[22px] p-5 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500 ${delay} ${toneClass}`}>
+    <article className={`${compact ? 'rounded-[18px] p-4' : 'rounded-[22px] p-5'} shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500 ${delay} ${toneClass}`}>
       <div className="mb-3 flex items-center justify-between gap-3">
         <p
           className={`font-bold text-[#A17C5B] serif-verse ${title.includes('불러오고') ? 'animate-pulse' : ''} ${titleSize === 'body' ? '' : 'text-[11px]'}`}
@@ -140,6 +146,8 @@ export function VerseDevotionPanel({
   initialDevotion,
   onSaveDevotionSection,
   fontSize = '1rem',
+  visibleSection = 'all',
+  compact = false,
 }: VerseDevotionPanelProps) {
   const [loading, setLoading] = useState(false);
   const [devotion, setDevotion] = useState<VerseDevotionResult | null>(null);
@@ -187,9 +195,7 @@ export function VerseDevotionPanel({
         });
 
         if (isCurrentRequest()) {
-          if (response?.result) {
-            setDevotion(response.result);
-          }
+          if (response?.result) setDevotion(response.result);
           setErrorMessage('');
           setLoading(false);
         }
@@ -209,54 +215,53 @@ export function VerseDevotionPanel({
 
   if (!selectedVerse) return null;
 
+  const showAll = visibleSection === 'all';
+  const showExplanation = showAll || visibleSection === 'explanation';
+  const showMeditation = showAll || visibleSection === 'meditation';
+  const showPrayer = showAll || visibleSection === 'prayer';
+  const showQuestion = showAll || visibleSection === 'question';
+
   return (
-    <div className="mt-2 space-y-3">
+    <div className={`${compact ? 'mt-0' : 'mt-2'} space-y-3`}>
       {devotion && (
         <>
-          <article className="rounded-[24px] bg-white/75 p-5 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <div className="flex items-center gap-1 mb-2 text-[#A17C5B]">
-              <KawaiiVerseIcon size={22} />
-              <p className={`text-xs font-bold ${loading && devotion.fallback ? 'animate-pulse' : ''}`}>
-                {loading && devotion.fallback ? '묵상문을 불러오고 있습니다.' : '말씀 해설'}
-              </p>
-            </div>
-            <h3 className="text-lg font-black text-[#3D3129] mb-3 leading-tight title-font">
-              {devotion.title}
-            </h3>
-            {devotion.coreMessage && (
-              <div className="mb-3 rounded-[18px] border border-[#F5E6D3] bg-[#FFF8F1] px-4 py-3">
-                <p className="mb-1 text-[10px] font-bold text-[#A17C5B]">핵심 메시지</p>
-                <p className="text-[14px] leading-relaxed font-bold text-[#3D3129] serif-verse">
-                  {stripMarkdown(devotion.coreMessage)}
+          {showAll && (
+            <article className="rounded-[24px] bg-white/75 p-5 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <div className="flex items-center gap-1 mb-2 text-[#A17C5B]">
+                <KawaiiVerseIcon size={22} />
+                <p className={`text-xs font-bold ${loading && devotion.fallback ? 'animate-pulse' : ''}`}>
+                  {loading && devotion.fallback ? '묵상문을 불러오고 있습니다.' : '말씀 해설'}
                 </p>
               </div>
-            )}
-            {(devotion.keyWords?.length || devotion.keyPhrase) && (
-              <div className="flex flex-wrap gap-1.5">
-                {(devotion.keyWords?.length ? devotion.keyWords : [devotion.keyPhrase || '말씀']).map((word) => (
-                  <span key={word} className="rounded-full border border-[#F5E6D3] bg-white/80 px-3 py-1 text-[11px] font-bold text-[#7B6A5D]">
-                    {word}
-                  </span>
-                ))}
-              </div>
-            )}
-          </article>
+              <h3 className="text-lg font-black text-[#3D3129] mb-3 leading-tight title-font">{devotion.title}</h3>
+              {devotion.coreMessage && (
+                <div className="mb-3 rounded-[18px] border border-[#F5E6D3] bg-[#FFF8F1] px-4 py-3">
+                  <p className="mb-1 text-[10px] font-bold text-[#A17C5B]">핵심 메시지</p>
+                  <p className="text-[14px] leading-relaxed font-bold text-[#3D3129] serif-verse">{stripMarkdown(devotion.coreMessage)}</p>
+                </div>
+              )}
+            </article>
+          )}
 
-          {devotion.explanation && (
-            <SectionCard title="해설" delay="delay-75" titleSize="body" titleFontSize={fontSize} onBookmark={() => onSaveDevotionSection?.('explanation', devotion)}>
+          {showExplanation && devotion.explanation && (
+            <SectionCard title={loading ? '해설을 불러오고 있습니다.' : '해설'} delay="delay-75" titleSize="body" titleFontSize={fontSize} compact={compact} onBookmark={() => onSaveDevotionSection?.('explanation', devotion)}>
               <DevotionParagraph fontSize={fontSize}>{devotion.explanation}</DevotionParagraph>
             </SectionCard>
           )}
 
-          <SectionCard title={loading ? '묵상문을 불러오고 있습니다.' : '묵상'} delay="delay-100" titleSize="body" titleFontSize={fontSize} onBookmark={() => onSaveDevotionSection?.('meditation', devotion)}>
-            <DevotionParagraph fontSize={fontSize}>{devotion.meditation}</DevotionParagraph>
-          </SectionCard>
+          {showMeditation && (
+            <SectionCard title={loading ? '묵상문을 불러오고 있습니다.' : '묵상'} delay="delay-100" titleSize="body" titleFontSize={fontSize} compact={compact} onBookmark={() => onSaveDevotionSection?.('meditation', devotion)}>
+              <DevotionParagraph fontSize={fontSize}>{devotion.meditation}</DevotionParagraph>
+            </SectionCard>
+          )}
 
-          <SectionCard title={loading ? '기도문을 불러오고 있습니다.' : '기도문'} delay="delay-150" tone="prayer" titleSize="body" titleFontSize={fontSize} onBookmark={() => onSaveDevotionSection?.('prayer', devotion)}>
-            <DevotionParagraph fontSize={fontSize}>{ensureAmen(stripMarkdown(devotion.prayer))}</DevotionParagraph>
-          </SectionCard>
+          {showPrayer && (
+            <SectionCard title={loading ? '기도문을 불러오고 있습니다.' : '기도문'} delay="delay-150" tone="prayer" titleSize="body" titleFontSize={fontSize} compact={compact} onBookmark={() => onSaveDevotionSection?.('prayer', devotion)}>
+              <DevotionParagraph fontSize={fontSize}>{ensureAmen(stripMarkdown(devotion.prayer))}</DevotionParagraph>
+            </SectionCard>
+          )}
 
-          {asApplicationList(devotion.application).length > 0 && (
+          {showAll && asApplicationList(devotion.application).length > 0 && (
             <SectionCard title="오늘의 적용" delay="delay-200" titleSize="body" titleFontSize={fontSize} onBookmark={() => onSaveDevotionSection?.('application', devotion)}>
               <div className="space-y-2">
                 {asApplicationList(devotion.application).map((item, index) => (
@@ -264,39 +269,27 @@ export function VerseDevotionPanel({
                     <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#E9F1E5] text-[#6F8F72]">
                       <Check size={12} strokeWidth={3} />
                     </span>
-                    <p className="text-[#5C4D42] leading-relaxed serif-verse" style={{ fontSize: `calc(${fontSize} * 0.92)` }}>
-                      {formatDevotionText(item)}
-                    </p>
+                    <p className="text-[#5C4D42] leading-relaxed serif-verse" style={{ fontSize: `calc(${fontSize} * 0.92)` }}>{formatDevotionText(item)}</p>
                   </div>
                 ))}
               </div>
             </SectionCard>
           )}
 
-          {devotionQuestion(devotion) && (
+          {showAll && devotionQuestion(devotion) && (
             <SectionCard title="오늘 붙들 질문" delay="delay-250" tone="question" titleSize="body" titleFontSize={fontSize}>
               <DevotionParagraph fontSize={fontSize} strong>{devotionQuestion(devotion)}</DevotionParagraph>
             </SectionCard>
           )}
 
-          <VerseQuestionPanel verse={selectedVerse} devotion={devotion} />
+          {showQuestion && <VerseQuestionPanel verse={selectedVerse} devotion={devotion} />}
         </>
       )}
 
-      {loading && !devotion && (
-        <>
-          <DevotionLoadingMessage />
-          <div className="space-y-3 animate-pulse">
-            <div className="h-40 rounded-[22px] bg-white/40 border border-white/50" />
-            <div className="h-32 rounded-[22px] bg-white/40 border border-white/50" />
-          </div>
-        </>
-      )}
+      {loading && !devotion && <DevotionLoadingMessage />}
 
       {!loading && !devotion && errorMessage && (
-        <div className="rounded-[24px] bg-white/70 p-5 text-center border border-white/80 text-[#7B6A5D] serif-verse leading-relaxed">
-          {errorMessage}
-        </div>
+        <div className="rounded-[24px] bg-white/70 p-5 text-center border border-white/80 text-[#7B6A5D] serif-verse leading-relaxed">{errorMessage}</div>
       )}
     </div>
   );
@@ -308,13 +301,8 @@ function DevotionLoadingMessage() {
       <div className="mx-auto mb-4 h-10 w-10 animate-pulse rounded-full bg-[#F5C292] flex items-center justify-center">
         <div className="h-5 w-5 rounded-full bg-white opacity-40 animate-ping" />
       </div>
-
-      <p className="text-lg font-black text-[#3D3129] mb-2">
-        묵상문을 불러오고 있습니다.
-      </p>
-      <p className="text-xs leading-5 text-[#7B6A5D] font-medium serif-verse">
-        본문을 따라 오늘의 기도와 묵상을 준비하고 있습니다.
-      </p>
+      <p className="text-lg font-black text-[#3D3129] mb-2">말씀을 살펴보고 있습니다.</p>
+      <p className="text-xs leading-5 text-[#7B6A5D] font-medium serif-verse">해설과 묵상, 기도를 함께 준비하고 있습니다.</p>
     </div>
   );
 }
