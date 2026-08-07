@@ -19,7 +19,10 @@ const checks = [
   ['completion screen is rendered', page.includes("section === 'completion'") && page.includes('<CompletionScreen')],
   ['detail and completion hide bottom navigation', layout.includes('hideBottomNavigation: detail || completion')],
   ['subpage header is suppressed', header.includes('if (meta.subpage) return null;')],
-  ['subpages map to my courses navigation', bottomNavigation.includes("path.startsWith('/reading-room/course-detail')")],
+  ['recommended and personal course routes share one bottom nav section', bottomNavigation.includes("path.startsWith('/reading-room/courses')") && bottomNavigation.includes("path.startsWith('/reading-room/my-courses')") && bottomNavigation.includes("return 'courses';")],
+  ['bottom navigation has one combined course item', bottomNavigation.includes("{ label: '코스', href: '/reading-room/courses'") && !bottomNavigation.includes("label: '추천 코스'") && !bottomNavigation.includes("label: '나의 코스'")],
+  ['bottom navigation keeps exactly five visible destinations', bottomNavigation.includes('grid grid-cols-5') && bottomNavigation.includes("label: '홈'") && bottomNavigation.includes("label: '기록'") && bottomNavigation.includes("label: '더보기'") && bottomNavigation.includes('통독방 나가기')],
+  ['reading room exit calls the supplied exit action', bottomNavigation.includes('onClick={onExit}') && layout.includes('<ReadingRoomBottomNavigation onExit={onExit} />')],
 ];
 
 let failures = 0;
