@@ -12,7 +12,7 @@ const main = read('src/main.tsx');
 const checks = [
   ['copy action is vertically aligned below bookmark in a compact icon rail', verseList.includes('flex w-7 shrink-0 flex-col') && verseList.includes('aria-label={`${verse.verse}절 복사`}')],
   ['bookmark and copy controls are borderless compact icons', verseList.includes('inline-flex h-7 w-7') && verseList.includes('bg-transparent p-0') && !verseList.includes('rounded-xl border border-[#E8D8C8] bg-[#FFFDF8] shadow-sm disabled:cursor-default')],
-  ['verse rows use compact vertical spacing', verseList.includes("'relative w-full px-3 py-2 text-left transition-all'"))],
+  ['verse rows use compact vertical spacing', verseList.includes("'relative w-full px-3 py-2 text-left transition-all'")],
   ['verse click activates a reading tool selection', verseList.includes('setActiveVerse(verse.verse)') && verseList.includes('aria-pressed={isActive}')],
   ['highlight colors are persisted', verseList.includes('HIGHLIGHT_COLORS') && verseList.includes('localStorage.setItem(annotationKey(activeVerse)')],
   ['highlight is applied to text span rather than full verse row', verseList.includes("backgroundColor: annotation ? HIGHLIGHT_COLORS[annotation.color] : 'transparent'") && verseList.includes("boxDecorationBreak: 'clone'") && !verseList.includes('style={{ backgroundColor: annotation ? HIGHLIGHT_COLORS[annotation.color] : undefined }}')],
