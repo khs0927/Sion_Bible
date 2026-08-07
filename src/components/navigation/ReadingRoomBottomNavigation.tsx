@@ -1,9 +1,12 @@
-import { BarChart3, BookOpen, BriefcaseBusiness, Home, MoreHorizontal } from 'lucide-react';
+import { BarChart3, BriefcaseBusiness, Home, LogOut, MoreHorizontal } from 'lucide-react';
+
+type ReadingRoomBottomNavigationProps = {
+  onExit: () => void;
+};
 
 const navItems = [
   { label: '홈', href: '/reading-room', icon: Home, section: 'home' },
-  { label: '추천 코스', href: '/reading-room/courses', icon: BriefcaseBusiness, section: 'courses' },
-  { label: '나의 코스', href: '/reading-room/my-courses', icon: BookOpen, section: 'my-courses' },
+  { label: '코스', href: '/reading-room/courses', icon: BriefcaseBusiness, section: 'courses' },
   { label: '기록', href: '/reading-room/records', icon: BarChart3, section: 'records' },
   { label: '더보기', href: '/reading-room/rewards', icon: MoreHorizontal, section: 'rewards' },
 ] as const;
@@ -11,9 +14,13 @@ const navItems = [
 function getCurrentSection() {
   if (typeof window === 'undefined') return 'home';
   const path = window.location.pathname;
-  if (path.startsWith('/reading-room/course-detail') || path.startsWith('/reading-room/mission') || path.startsWith('/reading-room/course-complete')) return 'my-courses';
-  if (path.startsWith('/reading-room/courses')) return 'courses';
-  if (path.startsWith('/reading-room/my-courses')) return 'my-courses';
+  if (
+    path.startsWith('/reading-room/courses')
+    || path.startsWith('/reading-room/my-courses')
+    || path.startsWith('/reading-room/course-detail')
+    || path.startsWith('/reading-room/mission')
+    || path.startsWith('/reading-room/course-complete')
+  ) return 'courses';
   if (path.startsWith('/reading-room/records')) return 'records';
   if (path.startsWith('/reading-room/rewards')) return 'rewards';
   return 'home';
@@ -25,7 +32,7 @@ function navigate(path: string) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-export function ReadingRoomBottomNavigation() {
+export function ReadingRoomBottomNavigation({ onExit }: ReadingRoomBottomNavigationProps) {
   const currentSection = getCurrentSection();
 
   return (
@@ -44,12 +51,24 @@ export function ReadingRoomBottomNavigation() {
               className={['flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-2xl bg-transparent transition active:scale-90', active ? 'text-[#4E7F59]' : 'text-[#8F877D]'].join(' ')}
             >
               <span className={['grid h-7 w-8 place-items-center rounded-xl transition', active ? 'bg-[#EEF5EB]' : 'bg-transparent'].join(' ')}>
-                <Icon className="h-[21px] w-[21px]" strokeWidth={active ? 2.4 : 1.9} fill={active && (item.section === 'home' || item.section === 'my-courses') ? 'currentColor' : 'none'} />
+                <Icon className="h-[21px] w-[21px]" strokeWidth={active ? 2.4 : 1.9} fill={active && item.section === 'home' ? 'currentColor' : 'none'} />
               </span>
               <span className={['whitespace-nowrap text-[10px] leading-none tracking-[-.03em]', active ? 'font-black' : 'font-semibold'].join(' ')}>{item.label}</span>
             </button>
           );
         })}
+
+        <button
+          type="button"
+          onClick={onExit}
+          aria-label="통독방 나가기"
+          className="flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-2xl bg-transparent text-[#725F51] transition active:scale-90"
+        >
+          <span className="grid h-7 w-8 place-items-center rounded-xl bg-transparent">
+            <LogOut className="h-[21px] w-[21px]" strokeWidth={2.1} />
+          </span>
+          <span className="whitespace-nowrap text-[10px] font-bold leading-none tracking-[-.03em]">나가기</span>
+        </button>
       </div>
     </div>
   );
