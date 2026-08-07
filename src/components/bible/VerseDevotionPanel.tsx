@@ -16,6 +16,8 @@ interface SelectedVerse {
 
 type VisibleSection = 'all' | 'explanation' | 'meditation' | 'prayer' | 'question';
 
+type GenerationMode = 'fast' | 'deep';
+
 interface VerseDevotionPanelProps {
   selectedVerse: SelectedVerse | null;
   initialDevotion?: VerseDevotionResult | null;
@@ -24,6 +26,7 @@ interface VerseDevotionPanelProps {
   fontSize?: string;
   visibleSection?: VisibleSection;
   compact?: boolean;
+  generationMode?: GenerationMode;
 }
 
 function stripMarkdown(text: string) {
@@ -148,6 +151,7 @@ export function VerseDevotionPanel({
   fontSize = '1rem',
   visibleSection = 'all',
   compact = false,
+  generationMode = 'fast',
 }: VerseDevotionPanelProps) {
   const [loading, setLoading] = useState(false);
   const [devotion, setDevotion] = useState<VerseDevotionResult | null>(null);
@@ -161,11 +165,11 @@ export function VerseDevotionPanel({
       return;
     }
     let cancelled = false;
-    const requestKey = `${selectedVerse.ref}:${selectedVerse.text}`;
+    const requestKey = `${selectedVerse.ref}:${selectedVerse.text}:${generationMode}`;
 
     async function run() {
       if (!selectedVerse) return;
-      const isCurrentRequest = () => !cancelled && requestKey === `${selectedVerse.ref}:${selectedVerse.text}`;
+      const isCurrentRequest = () => !cancelled && requestKey === `${selectedVerse.ref}:${selectedVerse.text}:${generationMode}`;
 
       if (initialDevotion) {
         setDevotion(initialDevotion);
@@ -192,6 +196,7 @@ export function VerseDevotionPanel({
         const response = await getOrGenerateVerseDevotion({
           ref: selectedVerse.ref,
           verseText: selectedVerse.text,
+          mode: generationMode,
         });
 
         if (isCurrentRequest()) {
@@ -211,7 +216,7 @@ export function VerseDevotionPanel({
     return () => {
       cancelled = true;
     };
-  }, [selectedVerse?.ref, selectedVerse?.text, selectedVerse?.meditation, selectedVerse?.prayer, initialDevotion]);
+  }, [selectedVerse?.ref, selectedVerse?.text, selectedVerse?.meditation, selectedVerse?.prayer, initialDevotion, generationMode]);
 
   if (!selectedVerse) return null;
 
@@ -301,8 +306,8 @@ function DevotionLoadingMessage() {
       <div className="mx-auto mb-4 h-10 w-10 animate-pulse rounded-full bg-[#F5C292] flex items-center justify-center">
         <div className="h-5 w-5 rounded-full bg-white opacity-40 animate-ping" />
       </div>
-      <p className="text-lg font-black text-[#3D3129] mb-2">말씀을 살펴보고 있습니다.</p>
-      <p className="text-xs leading-5 text-[#7B6A5D] font-medium serif-verse">해설과 묵상, 기도를 함께 준비하고 있습니다.</p>
+      <p className="text-lg font-black text-[#3D3129] mb-2">말씀을 깊이 살펴보고 있습니다.</p>
+      <p className="text-xs leading-5 text-[#7B6A5D] font-medium serif-verse">기존 깊은 원고 스타일로 해설과 묵상, 기도를 함께 준비하고 있습니다.</p>
     </div>
   );
 }
