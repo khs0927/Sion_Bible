@@ -49,7 +49,7 @@ export function ReadingRoomLayout({ children, onExit, onOpenBible }: ReadingRoom
           >
             {children}
           </main>
-          {!hideBottomNavigation && <ReadingRoomBottomNavigation />}
+          {!hideBottomNavigation && <ReadingRoomBottomNavigation onExit={onExit} />}
         </div>
       </div>
     </div>
