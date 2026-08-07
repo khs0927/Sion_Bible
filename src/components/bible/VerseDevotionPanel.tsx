@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { cleanDevotionText, createContextualFallback, getOrGenerateVerseDevotion, readCachedVerseDevotion, type VerseDevotionResult } from '../../services/verseDevotionApi';
+import { cleanDevotionText, createContextualFallback, getOrGenerateVerseDevotion, getVerseDevotionCacheKey, readCachedVerseDevotion, type VerseDevotionResult } from '../../services/verseDevotionApi';
 import { VerseQuestionPanel } from './VerseQuestionPanel';
 import { Bookmark, Check } from 'lucide-react';
 import { KawaiiVerseIcon } from '../icons';
@@ -15,7 +15,6 @@ interface SelectedVerse {
 }
 
 type VisibleSection = 'all' | 'explanation' | 'meditation' | 'prayer' | 'question';
-
 type GenerationMode = 'fast' | 'deep';
 
 interface VerseDevotionPanelProps {
@@ -60,15 +59,7 @@ function formatDevotionText(text: string) {
     .trim();
 }
 
-function DevotionParagraph({
-  children,
-  fontSize,
-  strong = false,
-}: {
-  children: string;
-  fontSize: string;
-  strong?: boolean;
-}) {
+function DevotionParagraph({ children, fontSize, strong = false }: { children: string; fontSize: string; strong?: boolean }) {
   return (
     <div
       className={`whitespace-pre-line text-[#5C4D42] leading-relaxed serif-verse ${strong ? 'font-semibold' : ''}`}
@@ -121,10 +112,7 @@ function SectionCard({
       <div className="mb-3 flex items-center justify-between gap-3">
         <p
           className={`font-bold text-[#A17C5B] serif-verse ${title.includes('불러오고') ? 'animate-pulse' : ''} ${titleSize === 'body' ? '' : 'text-[11px]'}`}
-          style={{
-            fontFamily: "'MaruBuri', 'S-Core Dream', serif",
-            fontSize: titleSize === 'body' ? titleFontSize || '1rem' : undefined,
-          }}
+          style={{ fontFamily: "'MaruBuri', 'S-Core Dream', serif", fontSize: titleSize === 'body' ? titleFontSize || '1rem' : undefined }}
         >
           {title}
         </p>
@@ -182,6 +170,12 @@ export function VerseDevotionPanel({
       setErrorMessage('');
       setLoading(true);
 
+      const cacheKey = getVerseDevotionCacheKey(selectedVerse.ref, selectedVerse.text);
+      const deepMarkerKey = `${cacheKey}:deep-v1`;
+      if (generationMode === 'deep' && localStorage.getItem(deepMarkerKey) !== '1') {
+        localStorage.removeItem(cacheKey);
+      }
+
       const cached = readCachedVerseDevotion(selectedVerse.ref, selectedVerse.text);
       if (cached) {
         if (isCurrentRequest()) {
@@ -200,7 +194,10 @@ export function VerseDevotionPanel({
         });
 
         if (isCurrentRequest()) {
-          if (response?.result) setDevotion(response.result);
+          if (response?.result) {
+            setDevotion(response.result);
+            if (generationMode === 'deep' && !response.result.fallback) localStorage.setItem(deepMarkerKey, '1');
+          }
           setErrorMessage('');
           setLoading(false);
         }
@@ -213,9 +210,7 @@ export function VerseDevotionPanel({
     }
 
     run();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [selectedVerse?.ref, selectedVerse?.text, selectedVerse?.meditation, selectedVerse?.prayer, initialDevotion, generationMode]);
 
   if (!selectedVerse) return null;
@@ -292,7 +287,6 @@ export function VerseDevotionPanel({
       )}
 
       {loading && !devotion && <DevotionLoadingMessage />}
-
       {!loading && !devotion && errorMessage && (
         <div className="rounded-[24px] bg-white/70 p-5 text-center border border-white/80 text-[#7B6A5D] serif-verse leading-relaxed">{errorMessage}</div>
       )}
