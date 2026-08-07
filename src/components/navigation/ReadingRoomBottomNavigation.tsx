@@ -4,11 +4,10 @@ type ReadingRoomBottomNavigationProps = {
   onExit: () => void;
 };
 
-const navItems = [
+const primaryNavItems = [
   { label: '홈', href: '/reading-room', icon: Home, section: 'home' },
   { label: '코스', href: '/reading-room/courses', icon: BriefcaseBusiness, section: 'courses' },
   { label: '기록', href: '/reading-room/records', icon: BarChart3, section: 'records' },
-  { label: '더보기', href: '/reading-room/rewards', icon: MoreHorizontal, section: 'rewards' },
 ] as const;
 
 function getCurrentSection() {
@@ -38,7 +37,7 @@ export function ReadingRoomBottomNavigation({ onExit }: ReadingRoomBottomNavigat
   return (
     <div role="navigation" aria-label="통독 하단 네비게이션" className="reading-room-bottom-nav fixed inset-x-0 bottom-0 z-[120] mx-auto max-w-[430px] border-t border-[#E9DFD2] bg-white/96 px-3 pb-[calc(env(safe-area-inset-bottom)+7px)] pt-2 shadow-[0_-8px_26px_rgba(80,65,42,.07)] backdrop-blur-xl">
       <div className="grid grid-cols-5">
-        {navItems.map((item) => {
+        {primaryNavItems.map((item) => {
           const Icon = item.icon;
           const active = currentSection === item.section;
           return (
@@ -67,7 +66,20 @@ export function ReadingRoomBottomNavigation({ onExit }: ReadingRoomBottomNavigat
           <span className="grid h-7 w-8 place-items-center rounded-xl bg-transparent">
             <LogOut className="h-[21px] w-[21px]" strokeWidth={2.1} />
           </span>
-          <span className="whitespace-nowrap text-[10px] font-bold leading-none tracking-[-.03em]">나가기</span>
+          <span className="whitespace-nowrap text-[10px] font-bold leading-none tracking-[-.03em]">통독방 나가기</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate('/reading-room/rewards')}
+          aria-label="더보기 페이지"
+          aria-current={currentSection === 'rewards' ? 'page' : undefined}
+          className={['flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-2xl bg-transparent transition active:scale-90', currentSection === 'rewards' ? 'text-[#4E7F59]' : 'text-[#8F877D]'].join(' ')}
+        >
+          <span className={['grid h-7 w-8 place-items-center rounded-xl transition', currentSection === 'rewards' ? 'bg-[#EEF5EB]' : 'bg-transparent'].join(' ')}>
+            <MoreHorizontal className="h-[21px] w-[21px]" strokeWidth={currentSection === 'rewards' ? 2.4 : 1.9} />
+          </span>
+          <span className={['whitespace-nowrap text-[10px] leading-none tracking-[-.03em]', currentSection === 'rewards' ? 'font-black' : 'font-semibold'].join(' ')}>더보기</span>
         </button>
       </div>
     </div>
