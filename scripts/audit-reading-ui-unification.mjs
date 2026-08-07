@@ -28,8 +28,9 @@ const checks = [
   ['deep devotion refreshes older shallow cache once', devotionPanel.includes('deep-v1') && devotionPanel.includes('localStorage.removeItem(cacheKey)') && devotionPanel.includes("localStorage.setItem(deepMarkerKey, '1')")],
   ['devotion panel can render one selected tab while sharing one generated devotion', devotionPanel.includes("type VisibleSection = 'all' | 'explanation' | 'meditation' | 'prayer' | 'question'") && devotionPanel.includes("visibleSection = 'all'") && devotionPanel.includes('getOrGenerateVerseDevotion')],
   ['question tab reuses the generated devotion context', devotionPanel.includes("visibleSection === 'question'") && devotionPanel.includes('<VerseQuestionPanel verse={selectedVerse} devotion={devotion} />')],
-  ['saved screen duplicate headings are consolidated', unification.includes('sion-duplicate-screen-header') && unification.includes('unifySavedHeader')],
-  ['saved controls are grouped into one layout zone', unification.includes('sion-saved-control-zone')],
+  ['saved screen duplicate headings are consolidated', unification.includes('sion-saved-card-header') && unification.includes('unifySavedScreen')],
+  ['saved controls are grouped into one layout zone', unification.includes('sion-saved-control-zone') && unification.includes('sion-saved-content-tabs') && unification.includes('sion-saved-sort-tabs')],
+  ['saved cards have a dedicated visual hierarchy', unification.includes('sion-saved-group-label') && unification.includes('sion-saved-item')],
   ['application initializes reading UI unification', main.includes('initializeReadingUiUnification();')],
 ];
 
