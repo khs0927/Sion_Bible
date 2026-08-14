@@ -2,17 +2,19 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 const root = process.cwd();
-const indexPath = resolve(root, 'public/bible/korean-bible-index.json');
-const patchPath = resolve(root, 'public/bible/korean-bible-patches.json');
+const bibleDir = resolve(root, 'public/bible');
+const manifestPath = resolve(bibleDir, 'korean-bible-index-manifest.json');
+const patchPath = resolve(bibleDir, 'korean-bible-patches.json');
 const booksPath = resolve(root, 'src/data/bibleBooks.ts');
 
-const [baseRaw, patchRaw, booksSource] = await Promise.all([
-  readFile(indexPath, 'utf8'),
+const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+const [baseChunks, patchRaw, booksSource] = await Promise.all([
+  Promise.all(Array.from({ length: manifest.chunks }, (_, index) => readFile(resolve(bibleDir, `korean-bible-index-${String(index + 1).padStart(2, '0')}.json`), 'utf8'))),
   readFile(patchPath, 'utf8').catch(() => '[]'),
   readFile(booksPath, 'utf8'),
 ]);
 
-const base = JSON.parse(baseRaw);
+const base = baseChunks.flatMap((chunk) => JSON.parse(chunk));
 const patches = JSON.parse(patchRaw);
 const bookPattern = /\{\s*id:\s*'([^']+)'[^}]*name:\s*'([^']+)'[^}]*chapters:\s*(\d+)\s*\}/g;
 const books = [];
