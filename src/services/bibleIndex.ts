@@ -52,10 +52,13 @@ async function fetchJson<T>(path: string, required: boolean): Promise<T> {
 
 async function loadIndex() {
   try {
-    const [base, patches] = await Promise.all([
-      fetchJson<BibleVerseRecord[]>('/bible/korean-bible-index.json', true),
+    const manifest = await fetchJson<{ chunks: number }>('/bible/korean-bible-index-manifest.json', true);
+    const chunkPaths = Array.from({ length: manifest.chunks }, (_, index) => `/bible/korean-bible-index-${String(index + 1).padStart(2, '0')}.json`);
+    const [baseChunks, patches] = await Promise.all([
+      Promise.all(chunkPaths.map((path) => fetchJson<BibleVerseRecord[]>(path, true))),
       fetchJson<BibleVerseRecord[]>('/bible/korean-bible-patches.json', false),
     ]);
+    const base = baseChunks.flat();
     const merged = mergeBibleIndex(base, patches);
 
     if (merged.length < 30_000) {
