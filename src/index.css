@@ -388,3 +388,99 @@ input, textarea, select {
 }
 
 
+
+/* Sion Bible UI upgrade: isolated home refresh layer */
+.home-dashboard {
+  position: relative;
+  isolation: isolate;
+  padding: 6px 0 18px;
+}
+.home-dashboard::before {
+  content: '';
+  position: absolute;
+  inset: -18px -16px auto;
+  height: 260px;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(circle at 12% 20%, rgba(250, 213, 163, .38), transparent 34%), radial-gradient(circle at 90% 8%, rgba(151, 194, 169, .30), transparent 32%), linear-gradient(180deg, rgba(255, 250, 240, .88), rgba(255, 250, 240, 0));
+}
+.home-dashboard > .home-mood-card {
+  position: relative;
+  border: 0 !important;
+  border-radius: 28px !important;
+  padding: 17px !important;
+  background: linear-gradient(135deg, rgba(255, 253, 247, .96), rgba(247, 240, 226, .92)) !important;
+  box-shadow: 0 18px 42px rgba(100, 75, 48, .10) !important;
+  overflow: hidden;
+}
+.home-dashboard > .home-mood-card::after {
+  content: '오늘의 마음';
+  position: absolute;
+  right: 16px;
+  top: 15px;
+  color: rgba(111, 143, 114, .46);
+  font-family: 'Giants', 'S-Core Dream', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+.home-dashboard > .home-mood-card > div:first-child { margin-bottom: 12px !important; }
+.home-dashboard > .home-mood-card .title-font { color: #332c26 !important; font-size: 20px !important; letter-spacing: -.02em; }
+.home-dashboard > .home-mood-card .mood-chip-grid { gap: 9px !important; }
+.home-dashboard > .home-mood-card .mood-chip-grid button {
+  min-height: 82px !important;
+  border: 1px solid rgba(224, 211, 191, .85) !important;
+  border-radius: 20px !important;
+  background: rgba(255, 255, 255, .64) !important;
+  box-shadow: 0 7px 18px rgba(82, 66, 49, .06) !important;
+  transition: transform .18s cubic-bezier(.23,1,.32,1), box-shadow .18s ease, background .18s ease !important;
+}
+.home-dashboard > .home-mood-card .mood-chip-grid button:hover,
+.home-dashboard > .home-mood-card .mood-chip-grid button:focus-visible { transform: translateY(-2px); box-shadow: 0 11px 24px rgba(82, 66, 49, .11) !important; }
+.home-dashboard > .home-mood-card .mood-chip-grid button[style*="linear-gradient"] { border-color: transparent !important; background: linear-gradient(145deg, #6f8f72, #86b7ad) !important; color: #fff !important; }
+.home-dashboard .home-verse-panel {
+  border: 0 !important;
+  border-radius: 30px !important;
+  padding: 16px !important;
+  background: rgba(255, 253, 248, .92) !important;
+  box-shadow: 0 20px 48px rgba(76, 58, 39, .12) !important;
+}
+.home-dashboard .home-verse-panel > div:first-child { margin: 0 2px 13px !important; }
+.home-dashboard .home-verse-panel > div:first-child .title-font { font-size: 21px !important; letter-spacing: -.03em; color: #2f2924 !important; }
+.home-dashboard .home-verse-card {
+  position: relative;
+  min-height: 208px !important;
+  border: 0 !important;
+  border-radius: 24px !important;
+  padding: 25px 21px 18px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 14px 30px rgba(98, 75, 45, .12) !important;
+  transition: transform .2s cubic-bezier(.23,1,.32,1), box-shadow .2s ease !important;
+}
+.home-dashboard .home-verse-card:hover,
+.home-dashboard .home-verse-card:focus-visible { transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 20px 38px rgba(98, 75, 45, .17) !important; }
+.home-dashboard .home-verse-card::before { content: '오늘의 한 문장'; display: block; margin-bottom: 12px; color: #a17c5b; font-family: 'S-Core Dream', sans-serif; font-size: 10px; font-weight: 900; letter-spacing: .12em; }
+.home-dashboard .home-verse-card .serif-verse { font-size: clamp(1rem, 2.1vw, 1.18rem) !important; line-height: 1.95 !important; color: #3d342c !important; }
+.home-dashboard .home-verse-card .title-font { margin-top: 18px !important; color: #6f8f72 !important; font-size: 14px !important; }
+.home-dashboard .home-verse-actions { gap: 8px !important; margin-top: 11px !important; }
+.home-dashboard .home-verse-actions button {
+  min-height: 48px !important;
+  border: 1px solid rgba(220, 204, 181, .8) !important;
+  border-radius: 16px !important;
+  background: #fffdf8 !important;
+  color: #54483d !important;
+  box-shadow: 0 7px 16px rgba(84, 64, 43, .07) !important;
+  transition: transform .16s ease, background .16s ease, box-shadow .16s ease !important;
+}
+.home-dashboard .home-verse-actions button:hover,
+.home-dashboard .home-verse-actions button:focus-visible { transform: translateY(-2px); background: #fff4df !important; box-shadow: 0 12px 22px rgba(84, 64, 43, .12) !important; }
+.home-dashboard .home-side-column .surface-card { border: 0 !important; border-radius: 26px !important; box-shadow: 0 15px 34px rgba(76, 58, 39, .09) !important; }
+.home-dashboard .home-side-column .home-continue-card { background: linear-gradient(145deg, rgba(237, 247, 232, .94), rgba(255, 252, 245, .96)) !important; }
+.home-dashboard .home-side-column .home-journal-card { background: linear-gradient(145deg, rgba(248, 240, 251, .92), rgba(255, 252, 245, .96)) !important; }
+.home-dashboard .home-side-column button { min-height: 46px !important; border-radius: 15px !important; }
+.home-dashboard button:focus-visible, .home-dashboard a:focus-visible { outline: 3px solid rgba(111, 143, 114, .34) !important; outline-offset: 3px; }
+@media (max-width: 900px) { .home-dashboard { padding-top: 2px; } .home-dashboard .home-verse-panel { padding: 14px !important; } }
+@media (max-width: 680px) { .home-dashboard > .home-mood-card { padding: 14px !important; } .home-dashboard > .home-mood-card .mood-chip-grid { gap: 7px !important; } .home-dashboard > .home-mood-card .mood-chip-grid button { min-height: 72px !important; border-radius: 17px !important; } .home-dashboard .home-verse-card { min-height: 190px !important; padding: 22px 17px 16px !important; } }
+@media (prefers-reduced-motion: reduce) { .home-dashboard * { transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+
+/* Shared polish for non-home surfaces. */
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid rgba(111, 143, 114, .30); outline-offset: 2px; }
