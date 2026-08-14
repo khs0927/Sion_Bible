@@ -591,3 +591,120 @@ button:not(:disabled) { touch-action: manipulation; }
 @media (prefers-reduced-motion: reduce) {
   .sion-toast { animation: none; }
 }
+
+
+/* Mobile layout correction: align visual icon bounds instead of image boxes. */
+.app-bottom-nav .app-nav-icon {
+  width: 46px !important;
+  height: 38px !important;
+}
+.app-bottom-nav .app-nav-icon > div {
+  width: 42px !important;
+  height: 38px !important;
+}
+.app-bottom-nav .bottom-nav-item.active {
+  background: rgba(111, 143, 114, .10) !important;
+  box-shadow: inset 0 0 0 1px rgba(111, 143, 114, .08);
+}
+.app-bottom-nav .bottom-nav-item.active::before {
+  top: 2px;
+}
+.app-bottom-nav .bottom-nav-item > span:last-child {
+  margin-top: 1px;
+}
+.saved-screen .surface-card,
+.saved-screen [class*="surface-card"] {
+  overflow: visible;
+}
+.saved-screen .saved-content-tabs {
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  padding: 4px;
+  border: 1px solid rgba(210, 201, 185, .72);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .42);
+}
+.saved-screen .saved-content-tabs button,
+.saved-screen .saved-group-tabs button {
+  min-height: 42px !important;
+  min-width: 0;
+  padding: 8px 5px !important;
+  border-radius: 16px !important;
+  white-space: nowrap;
+}
+.saved-screen .saved-group-tabs {
+  padding: 4px;
+  border: 1px solid rgba(210, 201, 185, .72);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .42);
+}
+.saved-screen .saved-group-tabs > div {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  width: 100%;
+  gap: 5px !important;
+}
+.saved-screen .saved-empty-state {
+  min-height: 118px;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  border: 1px dashed rgba(183, 169, 145, .65);
+  border-radius: 20px;
+  background: rgba(255, 252, 244, .55);
+  text-align: center;
+}
+.saved-screen .saved-content-tabs + .saved-group-tabs { margin-top: 2px; }
+@media (max-width: 680px) {
+  .saved-screen { gap: 10px !important; }
+  .saved-screen .saved-content-tabs button,
+  .saved-screen .saved-group-tabs button { font-size: 11px !important; }
+  .saved-screen .saved-group-tabs > div { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .saved-screen .saved-content-tabs,
+  .saved-screen .saved-group-tabs { margin-inline: -2px; }
+}
+
+.detail-sheet {
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.detail-sheet > button:first-child {
+  margin-bottom: 4px !important;
+}
+.detail-sheet .serif-verse {
+  letter-spacing: -.015em;
+}
+@media (max-width: 680px) {
+  .detail-sheet {
+    height: min(78vh, 700px) !important;
+    max-height: calc(100dvh - 14px) !important;
+    padding: 8px 12px calc(18px + env(safe-area-inset-bottom)) !important;
+    border-radius: 26px 26px 0 0 !important;
+  }
+  .detail-sheet > div:nth-of-type(2) {
+    gap: 8px !important;
+    margin-bottom: 8px !important;
+  }
+  .detail-sheet > div:nth-of-type(2) > div:first-child {
+    font-size: 14px !important;
+  }
+  .detail-sheet > div:nth-of-type(2) > div:last-child {
+    gap: 4px !important;
+  }
+  .detail-sheet > div:nth-of-type(2) > div:last-child button {
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 11px !important;
+  }
+}
+
+@media (max-width: 680px) {
+  .saved-screen .saved-content-tabs,
+  body.sion-saved-screen .sion-clean-menu-group:first-of-type {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .saved-screen .saved-content-tabs button,
+  body.sion-saved-screen .sion-clean-menu-group:first-of-type button {
+    min-height: 50px !important;
+    padding-inline: 3px !important;
+  }
+}

@@ -41,17 +41,17 @@ export function ClayIcon({
         <img
           src={clayIconMap[name]}
           alt={alt}
-          width={Math.round(size * 1.18)}
-          height={Math.round(size * 1.18)}
+          width={Math.round(size * 1.08)}
+          height={Math.round(size * 1.08)}
           loading="lazy"
           draggable={false}
           style={{
-            width: '118%',
-            height: '118%',
+            width: '108%',
+            height: '108%',
             objectFit: 'contain',
             userSelect: 'none',
             pointerEvents: 'none',
-            transform: 'translateY(-2%)',
+            transform: 'translateY(0)',
             filter: 'contrast(1.14) saturate(1.16) brightness(0.98) drop-shadow(0 4px 6px rgba(94, 62, 43, 0.2))',
             zIndex: 2,
           }}

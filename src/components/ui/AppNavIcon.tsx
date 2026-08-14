@@ -21,8 +21,8 @@ export function AppNavIcon({
     <div 
       className={`app-nav-icon ${className}`}
       style={{
-        width: 56,
-        height: 44,
+        width: 46,
+        height: 40,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -33,15 +33,15 @@ export function AppNavIcon({
     >
       <div
         style={{
-          width: 52,
-          height: 52,
+          width: 42,
+          height: 40,
           background: 'transparent',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'visible',
           boxShadow: 'none',
-          transform: `translate(${nudgeX}px, ${nudgeY}px) scale(${scale * (active ? 1.08 : 1)})`,
+          transform: `translate(${nudgeX}px, ${nudgeY}px) scale(${scale * (active ? 1.02 : 1) * 0.72})`,
           transition: 'transform 180ms ease',
         }}
       >
