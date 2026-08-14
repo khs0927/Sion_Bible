@@ -10,7 +10,7 @@ type KawaiiIconProps = {
 };
 
 function clay(name: ClayIconName, props: KawaiiIconProps) {
-  const visualSize = Math.round((props.size ?? 24) * 1.82);
+  const visualSize = Math.round((props.size ?? 24) * 1.28);
   return <ClayIcon name={name} size={visualSize} className={props.className} style={props.style} alt={props.title ?? ''} framed />;
 }
 

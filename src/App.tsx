@@ -1116,7 +1116,7 @@ export default function App() {
 
       {tab === 'memory' && <MemoryHome T={th} savedVerses={saved} />}
 
-      {tab === 'saved' && <div style={{ display: 'grid', gap: 12 }}>
+      {tab === 'saved' && <div className="saved-screen" style={{ display: 'grid', gap: 12 }}>
         <Card 
           title={SAVED_CONTENT_LABELS[savedContentMode].title} 
           subtitle="말씀과 묵상 기록을 다시 읽기" 
@@ -1139,7 +1139,7 @@ export default function App() {
             </button>
           }
         >
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6, marginBottom: 10 }}>
+          <div className="saved-content-tabs" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6, marginBottom: 10 }}>
             {(Object.keys(SAVED_CONTENT_LABELS) as SavedContentMode[]).map(mode => (
               <button key={mode} onClick={() => setSavedContentMode(mode)} style={{ ...chip(savedContentMode === mode), padding: '7px 4px' }}>
                 {SAVED_CONTENT_LABELS[mode].menu}
@@ -1173,7 +1173,7 @@ export default function App() {
               </button>
             </div>
           </div>
-          {savedGroups.length === 0 && <div style={{ color: th.sub, fontSize: 14 }}>{SAVED_CONTENT_LABELS[savedContentMode].empty}</div>}
+          {savedGroups.length === 0 && <div className="saved-empty-state" style={{ color: th.sub, fontSize: 14 }}>{SAVED_CONTENT_LABELS[savedContentMode].empty}</div>}
           {isReorderingSaved && <div style={{ color: th.sub, fontSize: 11, marginBottom: 8 }}>카드를 길게 잡고 원하는 위치로 끌어 옮겨보세요.</div>}
           <div style={{ display: 'grid', gap: 12 }}>{savedGroups.map(([label, items]) => <section key={label} style={{ display: 'grid', gap: 7 }}><div style={{ display: 'flex', alignItems: 'center', gap: 6, color: th.sub, fontWeight: 900, fontSize: 12 }}><KawaiiCalendarIcon size={17} />{label}</div>{items.map(s => <button key={`${label}-${s.ref}`} draggable={isReorderingSaved && savedContentMode === 'verse'} onDragStart={() => setDraggedSavedRef(s.ref)} onDragOver={e => { if (isReorderingSaved && savedContentMode === 'verse') e.preventDefault(); }} onDrop={e => { e.preventDefault(); if (draggedSavedRef) moveSavedVerse(draggedSavedRef, s.ref); setDraggedSavedRef(null); }} onDragEnd={() => setDraggedSavedRef(null)} onClick={() => { if (!isReorderingSaved) openVerseDetail(s.ref, s.text); }} className={isReorderingSaved ? 'reorder-card' : undefined} style={{ textAlign: 'left', border: `1px solid ${draggedSavedRef === s.ref ? th.accent : th.line}`, borderRadius: 16, background: th.solid, color: th.text, padding: 12, fontFamily: 'inherit', cursor: isReorderingSaved && savedContentMode === 'verse' ? 'grab' : 'pointer', boxShadow: th.soft }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}><span style={{ fontWeight: 900, color: th.accent, fontSize: 13 }}>{s.ref}</span><span onClick={e => { e.stopPropagation(); if (!isReorderingSaved) toggleSave(s.ref, s.text); }}>{isReorderingSaved && savedContentMode === 'verse' ? <GripVertical size={14} color={th.sub} /> : <X size={13} color={th.sub} />}</span></div><div className="serif-verse" style={{ fontSize: fsize, lineHeight: 1.85, wordBreak: 'keep-all', whiteSpace: 'pre-line' }}>{getSavedContent(s, savedContentMode)}</div></button>)}</section>)}</div>
         </Card>
@@ -1333,7 +1333,7 @@ export default function App() {
     {detail && (
       <div style={{ position: 'fixed', inset: 0, zIndex: 120, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
         <div onClick={() => setDetail(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.38)', backdropFilter: 'blur(4px)' }} />
-        <section onScroll={expandSheetOnScroll('detail')} style={{ position: 'relative', width: '100%', maxWidth: 720, height: isDetailExpanded ? 'calc(100vh - 10px)' : '85vh', maxHeight: 'calc(100vh - 10px)', overflowY: 'auto', background: th.panel, borderTopLeftRadius: 26, borderTopRightRadius: 26, border: `1px solid ${th.line}`, padding: '10px 16px 16px', transition: 'height 220ms ease' }}>
+        <section className="detail-sheet" onScroll={expandSheetOnScroll('detail')} style={{ position: 'relative', width: '100%', maxWidth: 720, height: isDetailExpanded ? 'calc(100vh - 10px)' : '85vh', maxHeight: 'calc(100vh - 10px)', overflowY: 'auto', background: th.panel, borderTopLeftRadius: 26, borderTopRightRadius: 26, border: `1px solid ${th.line}`, padding: '10px 16px 16px', transition: 'height 220ms ease' }}>
           <button
             aria-label={isDetailExpanded ? '구절 팝업 내리기' : '구절 팝업 올리기'}
             onPointerDown={beginSheetDrag('detail', isDetailExpanded)}

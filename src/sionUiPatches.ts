@@ -21,8 +21,8 @@
       body.sion-saved-screen .sion-card-title-hidden { display: none !important; }
       body.sion-saved-screen .sion-clean-toolbar { display: inline-flex !important; align-items: center !important; justify-content: flex-end !important; gap: 6px !important; margin-left: auto !important; }
       body.sion-saved-screen .sion-clean-toolbar > button { height: 32px !important; min-height: 32px !important; padding: 0 10px !important; border-radius: 12px !important; font-size: 10px !important; font-weight: 900 !important; white-space: nowrap !important; }
-      body.sion-saved-screen .sion-clean-menu-group { padding: 8px !important; border: 1px solid rgba(228,216,202,.82) !important; border-radius: 18px !important; background: rgba(255,252,247,.62) !important; margin-bottom: 9px !important; }
-      body.sion-saved-screen .sion-clean-menu-label { display: block !important; margin: 0 0 6px 2px !important; color: #756B61 !important; font-size: 10px !important; font-weight: 900 !important; letter-spacing: -.02em !important; }
+      body.sion-saved-screen .sion-clean-menu-group { display: grid !important; grid-template-columns: repeat(5, minmax(0, 1fr)) !important; gap: 6px !important; padding: 8px !important; border: 1px solid rgba(228,216,202,.82) !important; border-radius: 18px !important; background: rgba(255,252,247,.62) !important; margin-bottom: 9px !important; }
+      body.sion-saved-screen .sion-clean-menu-label { grid-column: 1 / -1 !important; display: block !important; margin: 0 0 2px 2px !important; color: #756B61 !important; font-size: 10px !important; font-weight: 900 !important; letter-spacing: -.02em !important; }
       body.sion-saved-screen .sion-clean-check,
       body.sion-saved-screen .sion-clean-action-box { width: 30px !important; height: 30px !important; min-width: 30px !important; min-height: 30px !important; padding: 0 !important; border-radius: 11px !important; border: 1px solid #E4D8CA !important; background: #fff !important; color: #756B61 !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; box-shadow: 0 6px 12px rgba(52,45,39,0.05) !important; flex: 0 0 auto !important; }
       body.sion-saved-screen .sion-clean-check { color: transparent !important; }
@@ -44,6 +44,10 @@
       nav .sion-nav-verified:nth-child(3) { order: 2 !important; }
       nav .sion-nav-verified:nth-child(4) { order: 4 !important; }
       nav .sion-nav-verified:nth-child(5) { order: 5 !important; }
+      @media (max-width: 680px) {
+        body.sion-saved-screen .sion-clean-content-group { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+        body.sion-saved-screen .sion-clean-content-group > button { min-height: 50px !important; padding-inline: 3px !important; }
+      }
     `;
     document.head.appendChild(style);
   };
@@ -176,7 +180,7 @@
     const contentButton = $all<HTMLButtonElement>('button').find(button => ['말씀', '해설', '묵상', '기도문', '적용'].includes(button.textContent?.trim() || ''));
     const contentGroup = contentButton?.parentElement;
     if (contentGroup && !contentGroup.querySelector('.sion-clean-menu-label')) {
-      contentGroup.classList.add('sion-clean-menu-group');
+      contentGroup.classList.add('sion-clean-menu-group', 'sion-clean-content-group');
       const label = document.createElement('span');
       label.className = 'sion-clean-menu-label';
       label.textContent = '내용 메뉴';
@@ -186,7 +190,7 @@
     const groupButton = $all<HTMLButtonElement>('button').find(button => ['일별', '주별', '월별', '주제별', '권별'].includes(button.textContent?.trim() || ''));
     const group = groupButton?.parentElement;
     if (group && !group.querySelector('.sion-clean-menu-label')) {
-      group.classList.add('sion-clean-menu-group');
+      group.classList.add('sion-clean-menu-group', 'sion-clean-sort-group');
       const label = document.createElement('span');
       label.className = 'sion-clean-menu-label';
       label.textContent = '정렬/분류 메뉴';
@@ -310,3 +314,4 @@
   window.addEventListener('load', () => observer.observe(document.body, { childList: true, subtree: true }));
   window.setInterval(scheduleApply, 700);
 })();
+
