@@ -284,6 +284,7 @@ export default function App() {
   const [isHomeQuestionOpen, setIsHomeQuestionOpen] = useState(false);
   const [isHomeQuestionExpanded, setIsHomeQuestionExpanded] = useState(false);
   const [isDetailExpanded, setIsDetailExpanded] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const sheetDragStart = useRef<{ y: number; expanded: boolean; sheet: 'homeQuestion' | 'detail' } | null>(null);
   const allReadingPlanTemplates = useMemo(
     () => [...ALL_READING_PLAN_TEMPLATES, ...userReadingTemplates],
@@ -511,13 +512,18 @@ export default function App() {
     });
   };
 
+  const notify = (message: string) => {
+    setNotice(message);
+    window.setTimeout(() => setNotice(null), 2400);
+  };
+
   const copyReadSelection = async () => {
     if (readSelectedVerses.length === 0) return;
     const text = readSelectedVerses
       .map(item => `${sanitizeScriptureText(item.text)}\n${item.ref}`)
       .join('\n\n');
     await navigator.clipboard.writeText(text);
-    alert('선택한 말씀이 복사되었습니다.');
+    notify('선택한 말씀이 복사되었습니다.');
   };
 
   const saveReadSelection = () => {
@@ -542,7 +548,7 @@ export default function App() {
       }
     });
     if (addedCount > 0) confetti({ particleCount: 46, spread: 48, origin: { y: 0.76 } });
-    alert(addedCount > 0 ? '암송 목록으로 보냈습니다.' : '이미 암송 목록에 있는 말씀입니다.');
+    notify(addedCount > 0 ? '암송 목록으로 보냈습니다.' : '이미 암송 목록에 있는 말씀입니다.');
   };
 
   const btn = (active: boolean): CSSProperties => ({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, minWidth: 0, padding: '9px 12px', borderRadius: 12, border: active ? 'none' : `1px solid ${th.line}`, background: active ? `linear-gradient(145deg, ${th.mint}, ${th.accent})` : th.card, color: active ? '#fff' : th.text, cursor: 'pointer', fontWeight: 800, fontSize: 12, fontFamily: 'inherit', boxShadow: active ? '0 10px 20px rgba(74, 112, 86, 0.2)' : th.soft, outline: 'none', WebkitTapHighlightColor: 'transparent' });
@@ -619,10 +625,10 @@ export default function App() {
       document.body.removeChild(textarea);
     }
   };
-  const copyText = async (ref: string, text: string) => { await writeClipboard(`${compactRef(ref)} ${sanitizeScriptureText(text)}`); alert('복사되었습니다!'); };
+  const copyText = async (ref: string, text: string) => { await writeClipboard(`${compactRef(ref)} ${sanitizeScriptureText(text)}`); notify('말씀을 복사했습니다.'); };
   const copyVerseBlock = async (ref: string, text: string) => {
     await writeClipboard(`${sanitizeScriptureText(text)}\n${ref}`);
-    alert('복사되었습니다!');
+    notify('말씀과 출처를 복사했습니다.');
   };
   const speak = (text: string) => {
     if (!('speechSynthesis' in window)) return;
@@ -885,7 +891,9 @@ export default function App() {
     );
   }
 
-  return <div style={{ minHeight: '100vh', backgroundColor: th.bg, backgroundImage: theme === 'a-soft' ? `linear-gradient(180deg, rgba(241,238,231,0.90), rgba(241,238,231,0.78) 42%, rgba(241,238,231,0.96)), url(${appBookBackground})` : `radial-gradient(circle at top left, rgba(255,255,255,0.16), transparent 34%)`, backgroundSize: theme === 'a-soft' ? 'cover' : 'auto', backgroundPosition: 'center top', backgroundAttachment: theme === 'a-soft' ? 'fixed' : 'scroll', color: th.text, fontFamily: "'S-Core Dream', sans-serif" }}>
+  return <div className="sion-app-shell" style={{ minHeight: '100vh', backgroundColor: th.bg, backgroundImage: theme === 'a-soft' ? `linear-gradient(180deg, rgba(241,238,231,0.90), rgba(241,238,231,0.78) 42%, rgba(241,238,231,0.96)), url(${appBookBackground})` : `radial-gradient(circle at top left, rgba(255,255,255,0.16), transparent 34%)`, backgroundSize: theme === 'a-soft' ? 'cover' : 'auto', backgroundPosition: 'center top', backgroundAttachment: theme === 'a-soft' ? 'fixed' : 'scroll', color: th.text, fontFamily: "'S-Core Dream', sans-serif" }}>
+    <a className="skip-link" href="#main-content">본문으로 바로가기</a>
+    {notice && <div className="sion-toast" role="status" aria-live="polite">{notice}</div>}
     {isSearchOpen && <BibleSearchSheet onClose={() => setIsSearchOpen(false)} onNavigate={handleSearchNavigate} T={th} fontSize={fsize} />}
     
     <PwaInstallGuideSheet 
@@ -896,8 +904,8 @@ export default function App() {
       title={guideTitle}
     />
     
-    <main style={{ position: 'relative', maxWidth: 1120, margin: '0 auto', padding: tab === 'read' ? '6px 10px 106px' : '16px 16px 126px', minHeight: '100vh' }}>
-      <header style={{ position: 'sticky', top: 0, zIndex: 20, display: 'flex', alignItems: 'center', gap: 7, padding: tab === 'read' ? '4px 0 7px' : '8px 0 14px', background: `linear-gradient(180deg, ${th.bg} 80%, transparent)` }}>
+    <main id="main-content" tabIndex={-1} style={{ position: 'relative', maxWidth: 1120, margin: '0 auto', padding: tab === 'read' ? '6px 10px 106px' : '16px 16px 126px', minHeight: '100vh' }}>
+      <header className="app-topbar" style={{ position: 'sticky', top: 0, zIndex: 20, display: 'flex', alignItems: 'center', gap: 7, padding: tab === 'read' ? '4px 0 7px' : '8px 0 14px', background: `linear-gradient(180deg, ${th.bg} 80%, transparent)` }}>
         <button aria-label="홈으로 이동" onClick={() => { setDetail(null); setTab('home'); setActiveReadingRange(null); }} style={{ ...circle(tab === 'home'), width: tab === 'read' ? 36 : 46, height: tab === 'read' ? 36 : 46, borderRadius: tab === 'read' ? 12 : 18 }}>{pageIcon}</button>
         <div style={{ minWidth: 0, flex: 1 }}>
           {tab !== 'read' && <div className="title-font" style={{ fontSize: 11, color: th.sub, fontWeight: 800 }}>시온성경</div>}
@@ -1092,7 +1100,7 @@ export default function App() {
             onVerseClick={(v) => openVerseDetail(v.ref, v.text)}
             onToggleSave={(v) => toggleSave(v.ref, v.text)}
             isSaved={(ref) => isSaved(ref)}
-            onCopy={(text) => { navigator.clipboard.writeText(text); alert('클립보드에 복사되었습니다.'); }}
+            onCopy={(text) => { navigator.clipboard.writeText(text); notify('말씀을 복사했습니다.'); }}
             fontSize={fsize}
             readingRange={activeReadingRange}
             onExitRange={handleCompleteReadingFromRange}
@@ -1185,7 +1193,7 @@ export default function App() {
       </div>
     )}
 
-    <nav style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 90, padding: '0 12px calc(14px + env(safe-area-inset-bottom))', background: `linear-gradient(180deg, transparent, ${th.bg} 50%, ${th.bg})`, transform: isNavVisible ? 'translateY(0)' : 'translateY(86px)', opacity: isNavVisible ? 1 : 0, transition: 'transform 260ms ease, opacity 220ms ease' }}>
+    <nav aria-label="주요 메뉴" className="app-bottom-nav" style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 90, padding: '0 12px calc(14px + env(safe-area-inset-bottom))', background: `linear-gradient(180deg, transparent, ${th.bg} 50%, ${th.bg})`, transform: isNavVisible ? 'translateY(0)' : 'translateY(86px)', opacity: isNavVisible ? 1 : 0, transition: 'transform 260ms ease, opacity 220ms ease' }}>
       <div style={{ maxWidth: 500, margin: '0 auto', display: 'grid', gridTemplateColumns: `repeat(${navItems.length}, 1fr)`, gap: 2, background: 'transparent', boxShadow: 'none', padding: 0 }}>
         {navItems.map(n => (
           <button 
