@@ -458,11 +458,11 @@ export default function App() {
   } as const;
 
   const navItems = [
-    { id: 'home', label: '홈', icon: <KawaiiHomeIcon size={32} />, ...NAV_ICON_TUNING.home },
-    { id: 'read', label: '성경', icon: <KawaiiBibleIcon size={32} />, ...NAV_ICON_TUNING.read },
-    { id: 'plan', label: '통독', icon: <KawaiiApplicationIcon size={32} />, ...NAV_ICON_TUNING.plan },
-    { id: 'memory', label: '암송', icon: <KawaiiWisdomIcon size={32} />, ...NAV_ICON_TUNING.memory },
-    { id: 'saved', label: '저장', icon: <KawaiiSavedIcon size={32} />, ...NAV_ICON_TUNING.saved },
+    { id: 'home', label: '홈', icon: <KawaiiHomeIcon size={40} />, ...NAV_ICON_TUNING.home },
+    { id: 'read', label: '성경', icon: <KawaiiBibleIcon size={40} />, ...NAV_ICON_TUNING.read },
+    { id: 'plan', label: '통독', icon: <KawaiiApplicationIcon size={40} />, ...NAV_ICON_TUNING.plan },
+    { id: 'memory', label: '암송', icon: <KawaiiWisdomIcon size={40} />, ...NAV_ICON_TUNING.memory },
+    { id: 'saved', label: '저장', icon: <KawaiiSavedIcon size={40} />, ...NAV_ICON_TUNING.saved },
   ] as const;
 
   const pageTitle = { home: '은혜의 말씀', random: '오늘의 말씀', read: activeReadingRange?.label ?? `${selBook.name} ${selChap}장`, plan: '통독', memory: '암송', saved: '저장한 말씀', settings: '설정' }[tab];

@@ -595,12 +595,16 @@ button:not(:disabled) { touch-action: manipulation; }
 
 /* Mobile layout correction: align visual icon bounds instead of image boxes. */
 .app-bottom-nav .app-nav-icon {
-  width: 46px !important;
-  height: 38px !important;
+  width: 56px !important;
+  height: 44px !important;
 }
 .app-bottom-nav .app-nav-icon > div {
-  width: 42px !important;
-  height: 38px !important;
+  width: 52px !important;
+  height: 52px !important;
+}
+.home-dashboard .mood-icon-소망 {
+  transform: translateY(-2px) scale(1.18);
+  transform-origin: center;
 }
 .app-bottom-nav .bottom-nav-item.active {
   background: rgba(111, 143, 114, .10) !important;
@@ -707,4 +711,132 @@ button:not(:disabled) { touch-action: manipulation; }
     min-height: 50px !important;
     padding-inline: 3px !important;
   }
+}
+
+
+/* Home visual refresh v3: stronger reading hierarchy and consistent content icon rhythm. */
+.home-dashboard .mood-chip-grid button {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  min-height: 94px !important;
+  padding: 9px 6px !important;
+}
+.home-dashboard .mood-chip-grid button img {
+  width: 52px !important;
+  height: 52px !important;
+  object-fit: contain !important;
+  flex: 0 0 auto;
+}
+.home-dashboard .mood-chip-grid button .mood-icon-소망 {
+  width: 61px !important;
+  height: 61px !important;
+  margin: -4px 0 -5px !important;
+}
+.home-dashboard .home-verse-panel {
+  position: relative;
+  overflow: hidden;
+  padding: 18px !important;
+  border: 1px solid rgba(229, 215, 193, .82) !important;
+  background: linear-gradient(145deg, rgba(255, 254, 249, .98), rgba(249, 243, 231, .96)) !important;
+}
+.home-dashboard .home-verse-panel::after {
+  content: '';
+  position: absolute;
+  right: -42px;
+  top: -58px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(181, 210, 184, .25), transparent 68%);
+  pointer-events: none;
+}
+.home-dashboard .home-verse-panel > * { position: relative; z-index: 1; }
+.home-dashboard .home-verse-card {
+  min-height: 238px !important;
+  padding: 28px 24px 20px !important;
+  border: 1px solid rgba(230, 215, 192, .72) !important;
+  background: linear-gradient(135deg, rgba(255, 252, 243, .98), rgba(251, 247, 237, .95)) !important;
+}
+.home-dashboard .home-verse-card .serif-verse {
+  max-width: 42em;
+  font-size: clamp(1.05rem, 2.3vw, 1.24rem) !important;
+  line-height: 2.02 !important;
+  letter-spacing: -.025em;
+}
+.home-dashboard .home-verse-actions button {
+  min-height: 54px !important;
+  font-size: 12px !important;
+}
+.home-dashboard .home-side-column .surface-card {
+  min-height: 118px;
+}
+.saved-screen .saved-content-tabs button,
+.saved-screen .saved-group-tabs button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+}
+.saved-screen .saved-content-tabs img,
+body.sion-saved-screen .sion-saved-content-icon {
+  width: 26px !important;
+  height: 26px !important;
+  object-fit: contain !important;
+  flex: 0 0 auto !important;
+}
+.detail-sheet img {
+  object-fit: contain;
+}
+.detail-sheet .serif-verse {
+  font-size: clamp(.98rem, 2.4vw, 1.08rem) !important;
+}
+@media (max-width: 680px) {
+  .home-dashboard .home-verse-panel { padding: 14px !important; }
+  .home-dashboard .home-verse-card { min-height: 224px !important; padding: 24px 18px 18px !important; }
+  .home-dashboard .home-verse-actions { gap: 7px !important; }
+  .home-dashboard .home-verse-actions button { min-height: 56px !important; }
+  .home-dashboard .home-side-column .surface-card { min-height: 104px; }
+}
+
+
+/* Detail sheet content system: one visual rhythm for explanation, meditation, prayer and application. */
+.detail-sheet .devotion-intro-card,
+.detail-sheet .devotion-section-card {
+  border-color: rgba(229, 215, 193, .84) !important;
+  box-shadow: 0 8px 22px rgba(91, 72, 51, .06) !important;
+}
+.detail-sheet .devotion-intro-card {
+  margin-bottom: 10px;
+  padding: 18px !important;
+  background: linear-gradient(145deg, rgba(255, 253, 247, .98), rgba(251, 245, 235, .92)) !important;
+}
+.detail-sheet .devotion-section-card {
+  padding: 16px !important;
+  background: rgba(255, 255, 255, .78) !important;
+}
+.detail-sheet .devotion-section-card[data-tone="prayer"] {
+  background: linear-gradient(145deg, rgba(255, 248, 241, .96), rgba(255, 252, 247, .92)) !important;
+}
+.detail-sheet .devotion-section-card > div:first-child {
+  align-items: center;
+  margin-bottom: 10px !important;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(234, 216, 196, .66);
+}
+.detail-sheet .devotion-section-card p,
+.detail-sheet .devotion-section-card .serif-verse {
+  line-height: 1.86 !important;
+}
+.detail-sheet .devotion-section-card button {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 12px !important;
+}
+@media (max-width: 680px) {
+  .detail-sheet .devotion-intro-card { padding: 16px !important; }
+  .detail-sheet .devotion-section-card { padding: 14px !important; }
+  .detail-sheet .devotion-section-card > div:first-child { margin-bottom: 8px !important; }
 }
