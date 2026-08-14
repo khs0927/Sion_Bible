@@ -108,7 +108,7 @@ function SectionCard({
       : 'bg-white/70';
 
   return (
-    <article className={`${compact ? 'rounded-[18px] p-4' : 'rounded-[22px] p-5'} shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500 ${delay} ${toneClass}`}>
+      <article className={`devotion-section-card ${compact ? 'rounded-[18px] p-4' : 'rounded-[22px] p-5'} shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500 ${delay} ${toneClass}`} data-tone={tone}>
       <div className="mb-3 flex items-center justify-between gap-3">
         <p
           className={`font-bold text-[#A17C5B] serif-verse ${title.includes('불러오고') ? 'animate-pulse' : ''} ${titleSize === 'body' ? '' : 'text-[11px]'}`}
@@ -226,7 +226,7 @@ export function VerseDevotionPanel({
       {devotion && (
         <>
           {showAll && (
-            <article className="rounded-[24px] bg-white/75 p-5 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <article className="devotion-intro-card rounded-[24px] bg-white/75 p-5 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500">
               <div className="flex items-center gap-1 mb-2 text-[#A17C5B]">
                 <KawaiiVerseIcon size={22} />
                 <p className={`text-xs font-bold ${loading && devotion.fallback ? 'animate-pulse' : ''}`}>
