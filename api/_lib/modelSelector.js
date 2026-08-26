@@ -127,7 +127,7 @@ export function getConfiguredModels() {
 }
 
 function chooseFirst(available, candidates, fallback) {
-  return candidates.find((model) => model && available.includes(model)) || fallback;
+  return candidates.find((model) => model && available.includes(model)) || available[0] || fallback;
 }
 
 function modelsFromBenchmark(cache) {
@@ -213,8 +213,8 @@ export async function getRecommendedNvidiaModels({ forceRefresh = false } = {}) 
     }
   }
 
-  // If discovery itself is temporarily unavailable, keep verified configuration as
-  // a resilience fallback instead of disabling AI entirely.
+  // If discovery itself is temporarily unavailable, keep configured models as a
+  // resilience fallback instead of disabling AI entirely.
   if (hasConfiguredModels) {
     return withCache(normalizeRecommendation(configured, 'env-unverified'));
   }
