@@ -119,12 +119,12 @@ export default async function handler(req, res) {
   if (process.env.GEMINI_API_KEY) {
     try {
       const result = await hedgedGeminiRace({
-        models: ['gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-3.6-flash'],
-        delaysMs: [0, 1700, 4200],
+        models: ['gemini-3.5-flash', 'gemini-3.6-flash'],
+        delaysMs: [0, 900],
         messages,
         temperature: 0.3,
         maxTokens: 1700,
-        timeoutMs: 10_000,
+        timeoutMs: 9000,
         validate: (response) => {
           const parsed = response ? parseJsonLoose(response.content) : null;
           return validateAnswer(parsed, input.question);
