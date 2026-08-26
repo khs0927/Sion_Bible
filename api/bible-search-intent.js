@@ -1,4 +1,4 @@
-import { callGeminiChat } from './_lib/gemini.js';
+import { hedgedGeminiRace } from './_lib/gemini.js';
 import { hedgedNvidiaRace } from './_lib/hedgedAiRace.js';
 import { guardAiRequest } from './_lib/httpGuard.js';
 import { getRecommendedNvidiaModels } from './_lib/modelSelector.js';
@@ -133,6 +133,34 @@ export default async function handler(req, res) {
   const failures = [];
   const apiKey = getNvidiaApiKey();
 
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      const result = await hedgedGeminiRace({
+        models: ['gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-3.6-flash'],
+        delaysMs: [0, 1400, 3600],
+        messages,
+        temperature: 0.15,
+        maxTokens: 1100,
+        timeoutMs: 8000,
+        validate: (response) => {
+          const parsed = response ? parseJsonLoose(response.content) : null;
+          return validateIntent(parsed, query);
+        },
+      });
+
+      return sendJson(res, 200, {
+        ok: true,
+        ...result.result,
+        provider: 'gemini',
+        model: result.model,
+        fallback: false,
+        ...debugPayload({ latencyMs: result.latencyMs, attempts: result.attempts }),
+      });
+    } catch (error) {
+      failures.push({ provider: 'gemini', message: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
   if (apiKey) {
     try {
       const config = await getRecommendedNvidiaModels();
@@ -155,30 +183,10 @@ export default async function handler(req, res) {
         provider: 'nvidia',
         model: result.model,
         fallback: false,
-        ...debugPayload({ latencyMs: result.latencyMs, modelSource: config.source, attempts: result.attempts }),
+        ...debugPayload({ latencyMs: result.latencyMs, modelSource: config.source, attempts: result.attempts, failures }),
       });
     } catch (error) {
       failures.push({ provider: 'nvidia', message: error instanceof Error ? error.message : String(error) });
-    }
-  }
-
-  if (process.env.GEMINI_API_KEY) {
-    try {
-      const response = await callGeminiChat({ messages, temperature: 0.15, maxTokens: 900 });
-      const parsed = response ? parseJsonLoose(response.content) : null;
-      const result = validateIntent(parsed, query);
-      if (!result) throw new Error('Gemini returned an invalid intent payload');
-
-      return sendJson(res, 200, {
-        ok: true,
-        ...result,
-        provider: 'gemini',
-        model: response.model,
-        fallback: false,
-        ...debugPayload({ failures }),
-      });
-    } catch (error) {
-      failures.push({ provider: 'gemini', message: error instanceof Error ? error.message : String(error) });
     }
   }
 
