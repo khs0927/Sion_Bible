@@ -23,7 +23,7 @@ function sanitizeAnswer(value) {
 function validateAnswer(parsed, originalQuestion) {
   if (!parsed || typeof parsed !== 'object') return null;
   const answer = sanitizeAnswer(parsed.answer);
-  if (answer.length < 30 || answer.length > 1400 || !/[가-힣]/.test(answer)) return null;
+  if (answer.length < 80 || answer.length > 1700 || !/[가-힣]/.test(answer)) return null;
 
   const question = sanitizeAnswer(parsed.question) || originalQuestion;
   const followUpQuestion = sanitizeAnswer(parsed.followUpQuestion || parsed.reflectionQuestion).slice(0, 240);
@@ -35,10 +35,17 @@ function buildMessages({ ref, verseText, meditation, prayer, question }) {
     {
       role: 'system',
       content: [
-        '너는 한국어 성경 묵상을 돕는 신중한 성경 도우미다.',
-        '제공된 본문을 가장 우선하며 본문에 없는 역사적 배경이나 하나님의 뜻을 단정하지 않는다.',
-        '하나님의 성품, 예수 그리스도의 복음, 성령의 도우심, 회개와 믿음과 순종을 문맥에 맞게 균형 있게 설명한다.',
-        '사용자의 질문에 직접 답하고 실제 묵상과 기도로 이어질 수 있게 한다.',
+        '너는 시온성경의 한국어 성경 해설 도우미다.',
+        '빠르게 답하되 성급하게 단정하지 말고, 내부적으로 먼저 질문의 의도와 본문 근거를 검토한 뒤 최종 답만 출력한다.',
+        '우선순위는 1) 제공된 성경 본문, 2) 본문에서 직접 추론 가능한 의미, 3) 복음 전체의 균형이다.',
+        '본문에 없는 역사적 배경, 인물의 동기, 하나님의 숨은 의도를 사실처럼 만들지 않는다.',
+        '질문의 전제를 그대로 받아들이기 전에 본문과 맞는지 확인하고, 틀린 전제는 부드럽게 바로잡는다.',
+        '하나님의 성품, 예수 그리스도의 복음, 성령의 도우심, 회개·믿음·순종을 본문과 관련 있을 때만 연결한다.',
+        '해석과 적용을 구분한다. 먼저 본문이 무엇을 말하는지 설명하고, 그 다음 오늘의 적용을 제안한다.',
+        '여러 해석 가능성이 있으면 가장 자연스러운 해석을 중심으로 말하되 다른 가능성이 있음을 짧게 밝힌다.',
+        '사용자가 정서적 위로나 확신을 요청해도 본문이 보장하지 않는 결과를 약속하지 않는다.',
+        '답변 전 내부 점검: 질문에 직접 답했는가, 본문 근거가 있는가, 과장이 없는가, 그리스도 중심 연결이 억지스럽지 않은가, 실제 적용이 가능한가.',
+        '내부 추론 과정이나 점검 목록은 사용자에게 공개하지 않는다.',
         '반드시 JSON 객체만 반환한다.',
       ].join(' '),
     },
@@ -51,11 +58,12 @@ function buildMessages({ ref, verseText, meditation, prayer, question }) {
         prayer ? `기존 기도문 참고: ${prayer}` : '',
         `사용자 질문: ${question}`,
         '',
-        '답변 규칙:',
-        '- 질문에 바로 답한다.',
-        '- 본문 근거와 앞뒤 흐름을 구분해 설명한다.',
-        '- 확실하지 않은 내용은 단정하지 않는다.',
-        '- 700자 안팎의 자연스러운 한국어로 쓴다.',
+        '답변 구성 지침:',
+        '- 첫 1~2문장에서 질문에 바로 답한다.',
+        '- 이어서 본문에 근거한 이유를 설명한다.',
+        '- 필요하면 문맥상 주의점이나 오해하기 쉬운 지점을 짧게 짚는다.',
+        '- 마지막에는 오늘 실천할 수 있는 믿음·순종의 방향을 한 가지 제안한다.',
+        '- 550~900자 정도의 자연스러운 한국어를 목표로 한다.',
         '- 마지막에 이어서 묵상할 질문 한 가지를 제안한다.',
         '- JSON 형식: {"question":"질문","answer":"답변","followUpQuestion":"후속 질문"}',
       ].filter(Boolean).join('\n'),
@@ -120,11 +128,15 @@ export default async function handler(req, res) {
     try {
       const result = await hedgedGeminiRace({
         models: ['gemini-3.5-flash', 'gemini-3.6-flash'],
-        delaysMs: [0, 900],
+        delaysMs: [0, 1300],
         messages,
-        temperature: 0.3,
-        maxTokens: 1700,
-        timeoutMs: 9000,
+        temperature: 0.22,
+        maxTokens: 2200,
+        timeoutMs: 10_000,
+        thinkingLevelByModel: {
+          'gemini-3.5-flash': 'medium',
+          'gemini-3.6-flash': 'low',
+        },
         validate: (response) => {
           const parsed = response ? parseJsonLoose(response.content) : null;
           return validateAnswer(parsed, input.question);
@@ -137,7 +149,7 @@ export default async function handler(req, res) {
         provider: 'gemini',
         model: result.model,
         fallback: false,
-        ...debugPayload({ latencyMs: result.latencyMs, attempts: result.attempts }),
+        ...debugPayload({ latencyMs: result.latencyMs, attempts: result.attempts, reasoningProfile: 'quality-balanced' }),
       });
     } catch (error) {
       failures.push({ provider: 'gemini', message: error instanceof Error ? error.message : String(error) });
@@ -155,7 +167,7 @@ export default async function handler(req, res) {
         messages,
         timeoutMs: 16_000,
         temperature: 0.3,
-        maxTokens: 1200,
+        maxTokens: 1400,
         responseFormat: { type: 'json_object' },
         validate: (parsed) => validateAnswer(parsed, input.question),
       });
