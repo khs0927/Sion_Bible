@@ -1,6 +1,6 @@
-const DEFAULT_GEMINI_MODEL = 'gemini-3.7-flash';
+const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash';
 const DEFAULT_TIMEOUT_MS = 12_000;
-const DEFAULT_GEMINI_FLASH_MODELS = ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash'];
+const DEFAULT_GEMINI_FLASH_MODELS = ['gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-3.7-flash'];
 
 function positiveNumber(value, fallback) {
   const parsed = Number(value);
@@ -104,6 +104,8 @@ export async function hedgedGeminiRace({
   maxTokens = 1200,
   timeoutMs = 10_000,
   responseMimeType = 'application/json',
+  thinkingLevel,
+  thinkingLevelByModel,
   validate,
 }) {
   if (!apiKey) throw new Error('GEMINI_API_KEY is not configured');
@@ -132,6 +134,7 @@ export async function hedgedGeminiRace({
 
         const startedAt = Date.now();
         try {
+          const modelThinkingLevel = thinkingLevelByModel?.[model] ?? thinkingLevel ?? defaultThinkingLevel(model);
           const response = await callGeminiChat({
             apiKey,
             model,
@@ -140,10 +143,11 @@ export async function hedgedGeminiRace({
             maxTokens,
             timeoutMs,
             responseMimeType,
+            thinkingLevel: modelThinkingLevel,
           });
           const latencyMs = Date.now() - startedAt;
           const validated = validate ? await validate(response) : response;
-          attempts.push({ model, ok: Boolean(validated), latencyMs });
+          attempts.push({ model, ok: Boolean(validated), latencyMs, thinkingLevel: modelThinkingLevel });
           if (!validated) return failIfDone();
           if (settled) return failIfDone();
           settled = true;
