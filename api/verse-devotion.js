@@ -117,7 +117,7 @@ async function callNvidiaVerseDevotion({ apiKey, messages, ref, verseText, mode 
     messages,
     timeoutMs: mode === 'deep' ? numberEnv('NVIDIA_DEEP_TOTAL_TIMEOUT_MS', 26_000) : numberEnv('NVIDIA_TOTAL_TIMEOUT_MS', 15_000),
     temperature: mode === 'deep' ? 0.25 : 0.22,
-    maxTokens: mode === 'deep' ? 2800 : 2300,
+    maxTokens: mode === 'deep' ? 2800 : 1900,
     responseFormat: { type: 'json_object' },
     validate: (parsed) => validateVerseDevotion(parsed, { ref, verseText }),
   });
@@ -134,10 +134,10 @@ async function callGeminiVerseDevotion({ messages, ref, verseText, mode }) {
   const response = await callGeminiChat({
     model: mode === 'fast' ? GEMINI_FAST_MODEL : undefined,
     messages,
-    temperature: mode === 'deep' ? 0.25 : 0.2,
-    maxTokens: mode === 'deep' ? 2800 : 2300,
-    timeoutMs: mode === 'deep' ? 20_000 : numberEnv('GEMINI_FAST_DEVOTION_TIMEOUT_MS', 8500),
-    thinkingLevel: mode === 'deep' ? 'high' : 'medium',
+    temperature: mode === 'deep' ? 0.25 : 0.18,
+    maxTokens: mode === 'deep' ? 2800 : 1800,
+    timeoutMs: mode === 'deep' ? 20_000 : numberEnv('GEMINI_FAST_DEVOTION_TIMEOUT_MS', 7000),
+    thinkingLevel: mode === 'deep' ? 'high' : 'low',
   });
   if (!response) throw new Error('GEMINI_API_KEY is not configured');
   const parsed = parseJsonLoose(response.content);
@@ -215,7 +215,6 @@ export default async function handler(req, res) {
     const failures = [];
     const apiKey = getNvidiaApiKey();
 
-    // Latency-sensitive default path: Gemini 3.5 Flash first.
     if (requestMode === 'fast' && process.env.GEMINI_API_KEY) {
       try {
         return await respondWithGemini({ res, messages, ref, verseText, mode: requestMode, failures });
@@ -224,7 +223,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // Deep mode remains NVIDIA-first for maximum answer quality and resilience.
     if (apiKey) {
       try {
         return await respondWithNvidia({ res, apiKey, messages, ref, verseText, mode: requestMode, failures });
@@ -235,7 +233,6 @@ export default async function handler(req, res) {
       failures.push({ provider: 'nvidia', message: 'NVIDIA_API_KEY is not configured' });
     }
 
-    // Fast mode reaches here only when Gemini failed. Deep mode uses Gemini as fallback.
     if (process.env.GEMINI_API_KEY) {
       try {
         return await respondWithGemini({ res, messages, ref, verseText, mode: requestMode, failures });
