@@ -6,11 +6,8 @@ export default async function handler(req, res) {
     return sendJson(res, 405, { ok: false, error: 'Method not allowed' });
   }
 
-  const host = process.env.VERCEL_URL;
-  if (!host) return sendJson(res, 500, { ok: false, error: 'VERCEL_URL missing' });
-
   const startedAt = Date.now();
-  const response = await fetch(`https://${host}/api/verse-devotion`, {
+  const response = await fetch('https://sion-bible.vercel.app/api/verse-devotion', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
