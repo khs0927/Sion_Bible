@@ -32,7 +32,7 @@ export default async function handler(req, res) {
   for (const model of MODELS) {
     const startedAt = Date.now();
     try {
-      const response = await callGeminiChat({ model, messages, temperature: 0.1, maxTokens: 300, timeoutMs: 9000 });
+      const response = await callGeminiChat({ model, messages, temperature: 0.1, maxTokens: 900, timeoutMs: 9000 });
       const parsed = response ? parseJsonLoose(response.content) : null;
       const validated = validate(parsed);
       results.push({
