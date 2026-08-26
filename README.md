@@ -134,6 +134,9 @@ Vercel 프로젝트 설정:
 - Output Directory: `dist`
 - Node.js: 22 권장
 - Production 환경변수: `.env.example`의 서버 측 변수 중 실제 사용하는 값
+- 현재 앱 저장소는 브라우저 Local Storage 기반이므로 **Supabase Marketplace 리소스는 배포에 필요하지 않습니다.** 사용하지 않는 Supabase 리소스를 Vercel 프로젝트에 연결하면 해당 리소스가 일시 중지되었을 때 `Provisioning integrations failed`가 빌드 시작 전에 발생할 수 있습니다.
+
+`Provisioning integrations failed`가 표시되면 코드 빌드 로그보다 먼저 Vercel의 연결된 Marketplace 리소스 상태를 확인합니다. 사용하지 않는 Supabase 리소스는 프로젝트에서 연결 해제하고, 계속 사용할 리소스라면 Supabase에서 `ACTIVE_HEALTHY` 상태인지 확인한 뒤 재배포합니다.
 
 Git 연동 프로젝트는 `main` 브랜치에 push되면 Production 배포가 생성됩니다.
 
