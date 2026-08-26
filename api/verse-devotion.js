@@ -134,10 +134,10 @@ async function callGeminiVerseDevotion({ messages, ref, verseText, mode }) {
   const response = await callGeminiChat({
     model: mode === 'fast' ? GEMINI_FAST_MODEL : undefined,
     messages,
-    temperature: mode === 'deep' ? 0.25 : 0.18,
-    maxTokens: mode === 'deep' ? 2800 : 1800,
+    temperature: mode === 'deep' ? 0.25 : 0.15,
+    maxTokens: mode === 'deep' ? 2800 : 1300,
     timeoutMs: mode === 'deep' ? 20_000 : numberEnv('GEMINI_FAST_DEVOTION_TIMEOUT_MS', 7000),
-    thinkingLevel: mode === 'deep' ? 'high' : 'low',
+    thinkingLevel: mode === 'deep' ? 'high' : 'minimal',
   });
   if (!response) throw new Error('GEMINI_API_KEY is not configured');
   const parsed = parseJsonLoose(response.content);
