@@ -51,9 +51,15 @@ function buildMessages(query) {
     {
       role: 'system',
       content: [
-        '너는 한국어 성경 검색 의도를 구조화하는 도우미다.',
-        '성경 본문을 만들어 내거나 인용하지 말고 검색어와 주제 구조만 반환한다.',
-        '사용자의 질문을 신학적으로 과장하거나 단정하지 않는다.',
+        '너는 시온성경의 한국어 성경 검색 의도 분석기다.',
+        '사용자의 문장을 그대로 키워드로 쪼개지 말고, 먼저 실제로 무엇을 찾고 싶은 질문인지 내부적으로 파악한다.',
+        '검색어는 성경 본문에서 실제로 나타날 가능성이 높은 핵심어, 동의 표현, 관련 개념으로 확장한다.',
+        '감정 표현과 신앙 주제를 구분하고, 질문에 포함된 원인·상황·원하는 결과를 각각 고려한다.',
+        '예를 들어 불안이라는 단어만 반복하지 말고 문맥상 평안, 두려움, 염려, 위로처럼 실제 검색에 도움 되는 관련어를 선택한다.',
+        '사용자가 특정 교리나 결론을 전제해도 그 결론을 사실로 확정하지 말고 검색 범위를 균형 있게 만든다.',
+        '성경 본문이나 존재하지 않는 구절을 만들어 내지 않는다. 이 단계에서는 오직 검색 구조만 만든다.',
+        '검색 결과가 한쪽 주제에 치우치지 않도록 핵심 본문, 복음적 관점, 삶의 응답의 세 층위를 필요에 따라 고려한다.',
+        '내부 추론은 출력하지 않는다.',
         '반드시 JSON 객체만 반환한다.',
       ].join(' '),
     },
@@ -70,7 +76,8 @@ function buildMessages(query) {
         '    {"id":"영문-또는-짧은-id","title":"주제 제목","description":"한 문장 설명","terms":["해당 묶음의 검색어"]}',
         '  ]',
         '}',
-        'sections는 질문의 흐름에 맞춰 2~5개로 만들고, 예시 표현을 기계적으로 반복하지 말라.',
+        '품질 점검 후 반환하라: terms가 서로 중복되지 않는가, 실제 본문 검색에 유용한가, 질문의 핵심과 복음적 맥락과 삶의 반응을 적절히 나누었는가.',
+        'sections는 질문 복잡도에 따라 2~5개로 만들고, 단순 질문이면 불필요하게 늘리지 말라.',
       ].join('\n'),
     },
   ];
@@ -82,24 +89,9 @@ function localIntent(query) {
     terms,
     topics: terms.slice(0, 3),
     sections: terms.length > 0 ? [
-      {
-        id: 'question-core',
-        title: '질문의 핵심 말씀',
-        description: '질문에서 직접 드러난 핵심 표현과 가까운 말씀입니다.',
-        terms,
-      },
-      {
-        id: 'gospel-view',
-        title: '하나님과 복음의 관점',
-        description: '하나님과 예수 그리스도의 은혜 안에서 이어 볼 말씀입니다.',
-        terms: [...new Set([...terms, '하나님', '예수', '그리스도', '은혜', '믿음'])].slice(0, 12),
-      },
-      {
-        id: 'life-response',
-        title: '마음의 응답과 삶',
-        description: '기도와 순종, 실제 삶의 반응으로 이어지는 말씀입니다.',
-        terms: [...new Set([...terms, '마음', '기도', '순종', '사랑', '행함'])].slice(0, 12),
-      },
+      { id: 'question-core', title: '질문의 핵심 말씀', description: '질문에서 직접 드러난 핵심 표현과 가까운 말씀입니다.', terms },
+      { id: 'gospel-view', title: '하나님과 복음의 관점', description: '하나님과 예수 그리스도의 은혜 안에서 이어 볼 말씀입니다.', terms: [...new Set([...terms, '하나님', '예수', '그리스도', '은혜', '믿음'])].slice(0, 12) },
+      { id: 'life-response', title: '마음의 응답과 삶', description: '기도와 순종, 실제 삶의 반응으로 이어지는 말씀입니다.', terms: [...new Set([...terms, '마음', '기도', '순종', '사랑', '행함'])].slice(0, 12) },
     ] : [],
   };
 }
@@ -137,11 +129,15 @@ export default async function handler(req, res) {
     try {
       const result = await hedgedGeminiRace({
         models: ['gemini-3.5-flash', 'gemini-3.6-flash'],
-        delaysMs: [0, 650],
+        delaysMs: [0, 900],
         messages,
-        temperature: 0.15,
-        maxTokens: 1100,
-        timeoutMs: 7000,
+        temperature: 0.12,
+        maxTokens: 1400,
+        timeoutMs: 8000,
+        thinkingLevelByModel: {
+          'gemini-3.5-flash': 'low',
+          'gemini-3.6-flash': 'minimal',
+        },
         validate: (response) => {
           const parsed = response ? parseJsonLoose(response.content) : null;
           return validateIntent(parsed, query);
@@ -154,7 +150,7 @@ export default async function handler(req, res) {
         provider: 'gemini',
         model: result.model,
         fallback: false,
-        ...debugPayload({ latencyMs: result.latencyMs, attempts: result.attempts }),
+        ...debugPayload({ latencyMs: result.latencyMs, attempts: result.attempts, reasoningProfile: 'fast-structured' }),
       });
     } catch (error) {
       failures.push({ provider: 'gemini', message: error instanceof Error ? error.message : String(error) });
