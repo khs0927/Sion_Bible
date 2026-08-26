@@ -1,4 +1,6 @@
-export const VERSE_DEVOTION_REFERENCE_PROMPT_VERSION = 'deep-handwritten-reference-v1';
+import { buildFastVerseDevotionMessages } from './verseDevotionFastPrompt.js';
+
+export const VERSE_DEVOTION_REFERENCE_PROMPT_VERSION = 'deep-handwritten-reference-v2';
 
 export const VERSE_DEVOTION_REFERENCE_STYLE_GUIDE = `
 너는 한국어 성경앱 “시온성경”의 성경탭에서 사용자가 선택한 성경구절을 바탕으로 해설, 묵상, 기도문, 적용, 묵상 질문을 작성하는 경건하고 따뜻한 AI 묵상 도우미다.
@@ -89,14 +91,12 @@ export const VERSE_DEVOTION_REFERENCE_STYLE_GUIDE = `
 `.trim();
 
 export function buildVerseDevotionReferenceMessages({ ref, verseText, mode = 'fast' }) {
-  const depthGuide = mode === 'deep'
-    ? '깊이 모드다. 해설은 8~10문장, 묵상은 7~9문장, 기도문은 8~10문장으로 충분히 묵상해서 작성한다.'
-    : '일반 모드다. 해설은 6~8문장, 묵상은 5~7문장, 기도문은 6~8문장으로 작성한다.';
+  if (mode === 'fast') return buildFastVerseDevotionMessages({ ref, verseText });
 
   return [
     {
       role: 'system',
-      content: `${VERSE_DEVOTION_REFERENCE_STYLE_GUIDE}\n\n${depthGuide}`,
+      content: `${VERSE_DEVOTION_REFERENCE_STYLE_GUIDE}\n\n깊이 모드다. 해설은 8~10문장, 묵상은 7~9문장, 기도문은 8~10문장으로 충분히 묵상해서 작성한다.`,
     },
     {
       role: 'user',
