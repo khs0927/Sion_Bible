@@ -2,17 +2,13 @@ import { callGeminiChat } from './_lib/gemini.js';
 import { hedgedNvidiaRace } from './_lib/hedgedAiRace.js';
 import { guardAiRequest } from './_lib/httpGuard.js';
 import { resolveNvidiaModelsForVerseDevotion } from './_lib/modelSelector.js';
-import {
-  getNvidiaApiKey,
-  parseJsonLoose,
-  sendJson,
-  validateVerseDevotion,
-} from './_lib/nvidia.js';
+import { getNvidiaApiKey, parseJsonLoose, sendJson, validateVerseDevotion } from './_lib/nvidia.js';
 import { buildVerseDevotionReferenceMessages } from './_lib/verseDevotionReferencePrompt.js';
 
 const GPT_OSS_120B_MODEL = 'openai/gpt-oss-120b';
 const GPT_OSS_20B_MODEL = 'openai/gpt-oss-20b';
 const LLAMA_3_1_8B_MODEL = 'meta/llama-3.1-8b-instruct';
+const GEMINI_FAST_MODEL = 'gemini-3.5-flash';
 const PRAYER_ENDING = '아버지, 감사합니다. 예수 그리스도의 이름으로 기도드립니다. 아멘.';
 
 function text(value, maxLength) {
@@ -52,10 +48,7 @@ function stripPrayerEndings(value) {
 
 function withPreferredPrayerEnding(devotion) {
   const body = stripPrayerEndings(devotion?.prayer || '');
-  return {
-    ...devotion,
-    prayer: body ? `${body}. ${PRAYER_ENDING}` : PRAYER_ENDING,
-  };
+  return { ...devotion, prayer: body ? `${body}. ${PRAYER_ENDING}` : PRAYER_ENDING };
 }
 
 function buildFallbackDevotion(ref, errorCode) {
@@ -68,8 +61,8 @@ function buildFallbackDevotion(ref, errorCode) {
     coreMessage: '하나님은 말씀 안에서 오늘 붙들 은혜와 순종의 길을 조용히 보여주십니다.',
     keyWords: ['말씀', '은혜', '기도'],
     keyPhrase: '말씀 붙들기',
-    explanation: '이 말씀을 잠시 멈추어 다시 읽어보세요. 본문 안에서 마음에 남는 단어와 표현이 무엇인지 천천히 살펴보면 좋겠습니다. 하나님은 짧은 말씀 속에서도 우리의 마음을 비추시고, 예수 그리스도의 은혜 안에서 오늘 걸어갈 방향을 보여주십니다. 본문을 내 소원대로만 적용하기보다, 하나님이 오늘 내게 보여주시는 뜻을 겸손히 묵상하는 것이 중요합니다.',
-    meditation: '말씀 앞에 조용히 머물며 지금 내 마음을 아버지께 올려드립니다. 답을 급히 찾기보다, 하나님이 이 말씀을 통해 내게 보여주시는 작은 빛을 기다립니다. 오늘은 큰 결심보다 마음에 남은 한 문장을 붙들고 주님과 동행합니다.',
+    explanation: '이 말씀을 잠시 멈추어 다시 읽어보세요. 본문 안에서 마음에 남는 단어와 표현이 무엇인지 천천히 살펴보면 좋겠습니다. 하나님은 짧은 말씀 속에서도 우리의 마음을 비추시고, 예수 그리스도의 은혜 안에서 오늘 걸어갈 방향을 보여주십니다.',
+    meditation: '말씀 앞에 조용히 머물며 지금 내 마음을 아버지께 올려드립니다. 답을 급히 찾기보다 하나님이 이 말씀을 통해 보여주시는 작은 빛을 기다립니다.',
     prayer: PRAYER_ENDING,
     application: [
       '본문을 한 번 더 천천히 읽고 마음에 남는 표현 하나 적기',
@@ -117,21 +110,17 @@ async function callNvidiaVerseDevotion({ apiKey, messages, ref, verseText, mode 
   const delaysMs = mode === 'deep'
     ? [0, numberEnv('NVIDIA_DEEP_HEDGE_DELAY_MS', 1100), numberEnv('NVIDIA_FAST_BACKUP_DELAY_MS', 2400)]
     : [0, numberEnv('NVIDIA_HEDGE_DELAY_MS', 700), numberEnv('NVIDIA_QUALITY_DELAY_MS', 1800)];
-
   const raceResult = await hedgedNvidiaRace({
     apiKey,
     models,
     delaysMs,
     messages,
-    timeoutMs: mode === 'deep'
-      ? numberEnv('NVIDIA_DEEP_TOTAL_TIMEOUT_MS', 26_000)
-      : numberEnv('NVIDIA_TOTAL_TIMEOUT_MS', 15_000),
+    timeoutMs: mode === 'deep' ? numberEnv('NVIDIA_DEEP_TOTAL_TIMEOUT_MS', 26_000) : numberEnv('NVIDIA_TOTAL_TIMEOUT_MS', 15_000),
     temperature: mode === 'deep' ? 0.25 : 0.22,
     maxTokens: mode === 'deep' ? 2800 : 2300,
     responseFormat: { type: 'json_object' },
     validate: (parsed) => validateVerseDevotion(parsed, { ref, verseText }),
   });
-
   return {
     ...raceResult,
     result: withPreferredPrayerEnding(raceResult.result),
@@ -141,17 +130,24 @@ async function callNvidiaVerseDevotion({ apiKey, messages, ref, verseText, mode 
 }
 
 async function callGeminiVerseDevotion({ messages, ref, verseText, mode }) {
+  const startedAt = Date.now();
   const response = await callGeminiChat({
+    model: mode === 'fast' ? GEMINI_FAST_MODEL : undefined,
     messages,
-    temperature: mode === 'deep' ? 0.25 : 0.22,
+    temperature: mode === 'deep' ? 0.25 : 0.2,
     maxTokens: mode === 'deep' ? 2800 : 2300,
-    timeoutMs: mode === 'deep' ? 20_000 : 13_000,
+    timeoutMs: mode === 'deep' ? 20_000 : numberEnv('GEMINI_FAST_DEVOTION_TIMEOUT_MS', 8500),
+    thinkingLevel: mode === 'deep' ? 'high' : 'medium',
   });
   if (!response) throw new Error('GEMINI_API_KEY is not configured');
   const parsed = parseJsonLoose(response.content);
   const validated = validateVerseDevotion(parsed, { ref, verseText });
   if (!validated) throw new Error('Gemini returned an invalid devotion payload');
-  return { result: withPreferredPrayerEnding(validated), model: response.model };
+  return {
+    result: withPreferredPrayerEnding(validated),
+    model: response.model,
+    latencyMs: Date.now() - startedAt,
+  };
 }
 
 function debugPayload(value) {
@@ -163,15 +159,45 @@ function rejectGuard(res, guard) {
   return sendJson(res, guard.status, guard.body);
 }
 
+async function respondWithGemini({ res, messages, ref, verseText, mode, failures }) {
+  const geminiResult = await callGeminiVerseDevotion({ messages, ref, verseText, mode });
+  return sendJson(res, 200, {
+    ok: true,
+    ...geminiResult.result,
+    fallback: false,
+    provider: 'gemini',
+    model: geminiResult.model,
+    ...debugPayload({ provider: 'gemini', latencyMs: geminiResult.latencyMs, failures, mode }),
+  });
+}
+
+async function respondWithNvidia({ res, apiKey, messages, ref, verseText, mode, failures }) {
+  const raceResult = await callNvidiaVerseDevotion({ apiKey, messages, ref, verseText, mode });
+  return sendJson(res, 200, {
+    ok: true,
+    ...raceResult.result,
+    fallback: false,
+    provider: 'nvidia',
+    model: raceResult.model,
+    ...debugPayload({
+      provider: 'nvidia',
+      prompt: 'verseDevotionReferencePrompt',
+      selectedModels: raceResult.modelConfig?.modelsForRace || [],
+      winningModel: raceResult.model,
+      latencyMs: raceResult.latencyMs,
+      attempts: raceResult.attempts,
+      modelSource: raceResult.modelConfig?.source,
+      failures,
+      mode,
+    }),
+  });
+}
+
 export default async function handler(req, res) {
   try {
     if (req.method !== 'POST') {
       res.setHeader('Allow', 'POST');
-      return sendJson(res, 405, {
-        ok: false,
-        error: 'Method not allowed',
-        errorCode: 'INVALID_METHOD',
-      });
+      return sendJson(res, 405, { ok: false, error: 'Method not allowed', errorCode: 'INVALID_METHOD' });
     }
 
     const guard = guardAiRequest(req, { limit: 14, maxBodyBytes: 14_000 });
@@ -181,11 +207,7 @@ export default async function handler(req, res) {
     const verseText = text(req.body?.verseText, 5000);
     const requestMode = req.body?.mode === 'deep' ? 'deep' : 'fast';
     if (!ref || !verseText) {
-      return sendJson(res, 400, {
-        ok: false,
-        error: 'ref and verseText are required',
-        errorCode: 'INVALID_REQUEST',
-      });
+      return sendJson(res, 400, { ok: false, error: 'ref and verseText are required', errorCode: 'INVALID_REQUEST' });
     }
 
     res.setHeader('Cache-Control', 'no-store, max-age=0');
@@ -193,26 +215,19 @@ export default async function handler(req, res) {
     const failures = [];
     const apiKey = getNvidiaApiKey();
 
+    // Latency-sensitive default path: Gemini 3.5 Flash first.
+    if (requestMode === 'fast' && process.env.GEMINI_API_KEY) {
+      try {
+        return await respondWithGemini({ res, messages, ref, verseText, mode: requestMode, failures });
+      } catch (error) {
+        failures.push({ provider: 'gemini', message: error instanceof Error ? error.message : String(error) });
+      }
+    }
+
+    // Deep mode remains NVIDIA-first for maximum answer quality and resilience.
     if (apiKey) {
       try {
-        const raceResult = await callNvidiaVerseDevotion({ apiKey, messages, ref, verseText, mode: requestMode });
-        return sendJson(res, 200, {
-          ok: true,
-          ...raceResult.result,
-          fallback: false,
-          provider: 'nvidia',
-          model: raceResult.model,
-          ...debugPayload({
-            provider: 'nvidia',
-            prompt: 'verseDevotionReferencePrompt',
-            selectedModels: raceResult.modelConfig?.modelsForRace || [],
-            winningModel: raceResult.model,
-            latencyMs: raceResult.latencyMs,
-            attempts: raceResult.attempts,
-            modelSource: raceResult.modelConfig?.source,
-            mode: requestMode,
-          }),
-        });
+        return await respondWithNvidia({ res, apiKey, messages, ref, verseText, mode: requestMode, failures });
       } catch (error) {
         failures.push({ provider: 'nvidia', message: error instanceof Error ? error.message : String(error) });
       }
@@ -220,17 +235,10 @@ export default async function handler(req, res) {
       failures.push({ provider: 'nvidia', message: 'NVIDIA_API_KEY is not configured' });
     }
 
+    // Fast mode reaches here only when Gemini failed. Deep mode uses Gemini as fallback.
     if (process.env.GEMINI_API_KEY) {
       try {
-        const geminiResult = await callGeminiVerseDevotion({ messages, ref, verseText, mode: requestMode });
-        return sendJson(res, 200, {
-          ok: true,
-          ...geminiResult.result,
-          fallback: false,
-          provider: 'gemini',
-          model: geminiResult.model,
-          ...debugPayload({ failures, mode: requestMode }),
-        });
+        return await respondWithGemini({ res, messages, ref, verseText, mode: requestMode, failures });
       } catch (error) {
         failures.push({ provider: 'gemini', message: error instanceof Error ? error.message : String(error) });
       }
