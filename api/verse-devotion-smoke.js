@@ -17,10 +17,10 @@ export default async function handler(req, res) {
     const response = await callGeminiChat({
       model: 'gemini-3.5-flash',
       messages,
-      temperature: 0.18,
-      maxTokens: 1800,
+      temperature: 0.15,
+      maxTokens: 1300,
       timeoutMs: 7000,
-      thinkingLevel: 'low',
+      thinkingLevel: 'minimal',
     });
     const content = response?.content || '';
     let parsed = null;
