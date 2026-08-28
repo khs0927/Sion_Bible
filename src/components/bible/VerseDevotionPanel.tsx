@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { cleanDevotionText, createContextualFallback, getOrGenerateVerseDevotion, getVerseDevotionCacheKey, readCachedVerseDevotion, type VerseDevotionResult } from '../../services/verseDevotionApi';
+import { reviewVerseDevotion } from '../../services/verseDevotionReviewApi';
 import { VerseQuestionPanel } from './VerseQuestionPanel';
 import { Bookmark, Check } from 'lucide-react';
 import { KawaiiVerseIcon } from '../icons';
@@ -249,6 +250,16 @@ export function VerseDevotionPanel({
           if (response?.result) {
             setDevotion(response.result);
             if (generationMode === 'deep' && !response.result.fallback) localStorage.setItem(deepMarkerKey, '1');
+
+            if (generationMode === 'fast' && !response.result.fallback) {
+              void reviewVerseDevotion({
+                ref: selectedVerse.ref,
+                verseText: selectedVerse.text,
+                candidate: response.result,
+              }).then((reviewed) => {
+                if (reviewed && isCurrentRequest()) setDevotion(reviewed);
+              });
+            }
           }
           setErrorMessage('');
           setLoading(false);
