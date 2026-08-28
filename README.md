@@ -7,7 +7,7 @@
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS
 - **Hosting/API**: Vercel Static Hosting + Serverless Functions
 - **Bible data**: 사용자 제공 한국어 성경 색인을 정적 파일로 제공
-- **AI providers**: NVIDIA API 우선, Gemini 서버 측 fallback, 로컬 안전 fallback
+- **AI providers**: 빠른 해설은 Gemini 3.5 Flash 우선, 깊은 해설은 NVIDIA 고품질 모델 우선, 공급자 실패 시 상호 fallback + 로컬 안전 fallback
 - **Storage**: 브라우저 Local Storage 기반 저장 말씀·통독 진행·암송·묵상 기록
 - **PWA**: 홈 화면 설치 및 기본 오프라인 셸 지원
 
@@ -44,15 +44,16 @@
 
 ### `/api/verse-devotion`
 1. 브라우저 캐시 확인
-2. NVIDIA 추천 모델을 지연 경합 방식으로 호출
+2. 기본 `fast` 모드는 Gemini 3.5 Flash를 압축된 본문 중심 지침과 `minimal` thinking으로 우선 호출
 3. 응답 JSON과 본문 연관성 검증
-4. 실패 시 Gemini 호출 및 동일 검증
-5. 모두 실패하면 본문을 벗어나지 않는 로컬 묵상 안내 반환
+4. Gemini가 실패하거나 제한 시간을 넘으면 NVIDIA fast/quality 모델 경합으로 fallback
+5. `deep` 모드는 NVIDIA 고품질/심층 모델을 우선 호출하고 Gemini를 fallback으로 사용
+6. 모든 공급자가 실패하면 본문을 벗어나지 않는 로컬 묵상 안내 반환
 
 ### `/api/verse-question`
 - 질문·본문 길이 제한
-- NVIDIA 동적 모델 선택과 경합
-- Gemini fallback
+- Gemini 3.5 Flash를 빠른 질문 응답에 우선 활용
+- 필요 시 Gemini 보조 모델과 NVIDIA 품질 모델로 fallback
 - 결과 한국어·길이·JSON 구조 검증
 - 정상 답변은 브라우저에 30일 캐시
 
@@ -87,11 +88,11 @@ Vite 단독 서버에서는 `/api/*` 서버리스 함수가 실행되지 않으�
 NVIDIA_API_KEY=
 ```
 
-Gemini fallback을 함께 사용하려면 다음을 추가합니다.
+Gemini를 함께 사용하려면 다음을 추가합니다.
 
 ```env
 GEMINI_API_KEY=
-GEMINI_MODEL=gemini-3.1-flash-lite
+GEMINI_MODEL=gemini-3.5-flash
 ```
 
 모델을 직접 고정하지 않으면 NVIDIA 모델 목록을 확인한 뒤 추천 모델을 일정 시간 메모리에 캐시합니다.
