@@ -31,10 +31,10 @@ export default async function handler(req, res) {
     let provider;
     if (kind === 'oss20') {
       provider = 'nvidia';
-      response = await callNvidiaChat({ model: 'openai/gpt-oss-20b', messages: MESSAGES, temperature: 0.1, maxTokens: 520, timeoutMs: 12000, responseFormat: { type: 'json_object' } });
+      response = await callNvidiaChat({ model: 'openai/gpt-oss-20b', messages: MESSAGES, temperature: 0.1, maxTokens: 1800, timeoutMs: 16000, retryWithoutResponseFormat: false, extraBody: { reasoning_effort: 'low' } });
     } else if (kind === 'oss120') {
       provider = 'nvidia';
-      response = await callNvidiaChat({ model: 'openai/gpt-oss-120b', messages: MESSAGES, temperature: 0.1, maxTokens: 520, timeoutMs: 14000, responseFormat: { type: 'json_object' } });
+      response = await callNvidiaChat({ model: 'openai/gpt-oss-120b', messages: MESSAGES, temperature: 0.1, maxTokens: 2400, timeoutMs: 20000, retryWithoutResponseFormat: false, extraBody: { reasoning_effort: 'low' } });
     } else {
       provider = 'gemini';
       response = await callGeminiChat({ model: 'gemini-3.5-flash', messages: MESSAGES, temperature: 0.1, maxTokens: 520, timeoutMs: 7000, thinkingLevel: 'minimal' });
@@ -42,6 +42,6 @@ export default async function handler(req, res) {
     const check = valid(response?.content || '');
     return res.status(200).json({ provider, model: response?.model || null, elapsedMs: Date.now() - startedAt, ...check });
   } catch (error) {
-    return res.status(200).json({ ok: false, model: kind, elapsedMs: Date.now() - startedAt, error: error instanceof Error ? error.message : String(error) });
+    return res.status(200).json({ ok: false, model: kind, elapsedMs: Date.now() - startedAt, error: error instanceof Error ? error.message : String(error), detail: error?.detail || null });
   }
 }
