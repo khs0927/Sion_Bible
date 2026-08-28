@@ -26,13 +26,13 @@ function fallback(ref, verseText, errorCode) {
 
 function normalizeQuick(parsed, ref) {
   if (!parsed || typeof parsed !== 'object') return null;
-  const title = text(parsed.title, 70);
-  const coreMessage = text(parsed.coreMessage, 220);
-  const explanation = text(parsed.explanation, 650);
+  const title = text(parsed.title, 64);
+  const coreMessage = text(parsed.coreMessage, 180);
+  const explanation = text(parsed.explanation, 460);
   const keyWords = Array.isArray(parsed.keyWords)
     ? parsed.keyWords.map((item) => text(item, 24)).filter(Boolean).slice(0, 3)
     : [];
-  if (!title || coreMessage.length < 35 || explanation.length < 80) return null;
+  if (!title || coreMessage.length < 30 || explanation.length < 70) return null;
   if (!/[가-힣]/.test(`${title} ${coreMessage} ${explanation}`)) return null;
   return { reference: ref, title, coreMessage, explanation, keyWords };
 }
@@ -61,18 +61,17 @@ export default async function handler(req, res) {
     {
       role: 'system',
       content: [
-        '너는 시온성경의 빠른 1차 해설자다.',
+        '너는 시온성경의 즉시 해설자다.',
         '성경 본문을 최우선 근거로 삼고 본문에 없는 사실을 만들지 않는다.',
-        '사용자가 기다리지 않도록 핵심만 짧고 정확하게 쓴다.',
-        '내부적으로 본문의 주체, 행동, 문맥상 의미를 먼저 확인한 뒤 답한다.',
+        '첫 화면에 바로 읽을 수 있도록 짧고 분명하게 쓴다.',
         '과도한 단정, 억지 복음 연결, 출처 없는 역사 배경은 쓰지 않는다.',
         '반드시 JSON 객체만 반환한다.',
-        '형식: {"title":"15~32자","coreMessage":"한두 문장 55~120자","explanation":"2~4문장 120~260자","keyWords":["단어1","단어2","단어3"]}',
+        '형식: {"title":"12~28자","coreMessage":"한 문장 45~90자","explanation":"2~3문장 90~190자","keyWords":["단어1","단어2","단어3"]}',
       ].join('\n'),
     },
     {
       role: 'user',
-      content: `구절: ${ref}\n본문: ${verseText}\n\n이 구절의 핵심을 한국어로 먼저 설명해줘.`,
+      content: `구절: ${ref}\n본문: ${verseText}\n\n이 구절의 핵심 해설만 바로 작성해줘.`,
     },
   ];
 
@@ -80,9 +79,9 @@ export default async function handler(req, res) {
     const response = await callGeminiChat({
       model: MODEL,
       messages,
-      temperature: 0.1,
-      maxTokens: 520,
-      timeoutMs: 4500,
+      temperature: 0.08,
+      maxTokens: 360,
+      timeoutMs: 3200,
       thinkingLevel: 'minimal',
     });
     if (!response) return sendJson(res, 200, fallback(ref, verseText, 'GEMINI_NOT_CONFIGURED'));

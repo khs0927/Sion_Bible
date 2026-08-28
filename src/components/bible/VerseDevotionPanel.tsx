@@ -57,6 +57,12 @@ async function fetchQuickDevotion(ref: string, verseText: string): Promise<Quick
   }
 }
 
+function yieldToPaint() {
+  return new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => window.setTimeout(resolve, 80));
+  });
+}
+
 function stripMarkdown(text: string) {
   return cleanDevotionText(String(text || '').replace(/\*\*/g, ''));
 }
@@ -220,12 +226,6 @@ export function VerseDevotionPanel({
         return;
       }
 
-      const fullPromise = getOrGenerateVerseDevotion({
-        ref: selectedVerse.ref,
-        verseText: selectedVerse.text,
-        mode: generationMode,
-      });
-
       if (generationMode === 'fast') {
         const quick = await fetchQuickDevotion(selectedVerse.ref, selectedVerse.text);
         if (quick && isCurrentRequest()) {
@@ -241,8 +241,19 @@ export function VerseDevotionPanel({
             errorCode: undefined,
           } : current);
           setLoadingStage('full');
+          await yieldToPaint();
+        } else if (isCurrentRequest()) {
+          setLoadingStage('full');
         }
       }
+
+      if (!isCurrentRequest()) return;
+
+      const fullPromise = getOrGenerateVerseDevotion({
+        ref: selectedVerse.ref,
+        verseText: selectedVerse.text,
+        mode: generationMode,
+      });
 
       try {
         const response = await fullPromise;
@@ -296,7 +307,7 @@ export function VerseDevotionPanel({
               <div className="flex items-center gap-1 mb-2 text-[#A17C5B]">
                 <KawaiiVerseIcon size={22} />
                 <p className={`text-xs font-bold ${loadingStage === 'quick' ? 'animate-pulse' : ''}`}>
-                  {loadingStage === 'quick' ? '핵심 해설을 먼저 준비하고 있습니다.' : '말씀 해설'}
+                  {loadingStage === 'quick' ? '해설을 먼저 불러오고 있습니다.' : '말씀 해설'}
                 </p>
               </div>
               <h3 className="text-lg font-black text-[#3D3129] mb-3 leading-tight title-font">{devotion.title}</h3>
@@ -310,17 +321,17 @@ export function VerseDevotionPanel({
           )}
 
           {showExplanation && devotion.explanation && (
-            <SectionCard title={loadingStage === 'quick' ? '핵심 해설을 준비하고 있습니다.' : '해설'} delay="delay-75" titleSize="body" titleFontSize={fontSize} compact={compact} onBookmark={!loading ? () => onSaveDevotionSection?.('explanation', devotion) : undefined}>
+            <SectionCard title={loadingStage === 'quick' ? '해설을 먼저 준비하고 있습니다.' : '해설'} delay="delay-75" titleSize="body" titleFontSize={fontSize} compact={compact} onBookmark={!loading ? () => onSaveDevotionSection?.('explanation', devotion) : undefined}>
               <DevotionParagraph fontSize={fontSize}>{devotion.explanation}</DevotionParagraph>
             </SectionCard>
           )}
 
           {progressiveLoading && (
-            <SectionCard title={loadingStage === 'full' ? '묵상·기도를 이어서 준비하고 있습니다.' : '먼저 핵심을 확인하고 있습니다.'} delay="delay-100" titleSize="body" titleFontSize={fontSize} compact={compact}>
+            <SectionCard title={loadingStage === 'full' ? '읽는 동안 묵상·기도를 준비하고 있습니다.' : '해설을 먼저 불러오고 있습니다.'} delay="delay-100" titleSize="body" titleFontSize={fontSize} compact={compact}>
               <p className="text-[#7B6A5D] leading-relaxed serif-verse" style={{ fontSize: `calc(${fontSize} * 0.9)` }}>
                 {loadingStage === 'full'
-                  ? '핵심 해설을 먼저 보여드렸습니다. 전체 문맥을 확인한 묵상과 기도, 적용을 이어서 채웁니다.'
-                  : '짧고 정확한 핵심 해설을 먼저 만든 뒤 전체 묵상으로 이어집니다.'}
+                  ? '해설을 먼저 보여드렸습니다. 지금 읽으시는 동안 묵상과 기도, 적용을 뒤에서 이어서 준비합니다.'
+                  : '먼저 짧고 정확한 해설만 불러옵니다. 해설이 보인 뒤 나머지 내용을 준비합니다.'}
               </p>
             </SectionCard>
           )}
@@ -376,8 +387,8 @@ function DevotionLoadingMessage() {
       <div className="mx-auto mb-4 h-10 w-10 animate-pulse rounded-full bg-[#F5C292] flex items-center justify-center">
         <div className="h-5 w-5 rounded-full bg-white opacity-40 animate-ping" />
       </div>
-      <p className="text-lg font-black text-[#3D3129] mb-2">말씀을 깊이 살펴보고 있습니다.</p>
-      <p className="text-xs leading-5 text-[#7B6A5D] font-medium serif-verse">핵심 해설을 먼저 보여드리고 묵상과 기도를 이어서 준비합니다.</p>
+      <p className="text-lg font-black text-[#3D3129] mb-2">해설을 먼저 준비하고 있습니다.</p>
+      <p className="text-xs leading-5 text-[#7B6A5D] font-medium serif-verse">해설이 보이면 바로 읽으실 수 있고, 묵상과 기도는 뒤에서 이어서 준비합니다.</p>
     </div>
   );
 }
