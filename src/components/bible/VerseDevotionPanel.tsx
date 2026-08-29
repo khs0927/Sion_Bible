@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { cleanDevotionText, createContextualFallback, getOrGenerateVerseDevotion, getVerseDevotionCacheKey, readCachedVerseDevotion, type VerseDevotionResult } from '../../services/verseDevotionApi';
+import { buildLocalDevotionFromVerse, cleanDevotionText, createContextualFallback, fetchVerseDevotionPart, getOrGenerateVerseDevotion, getVerseDevotionCacheKey, readCachedVerseDevotion, saveCachedVerseDevotion, type VerseDevotionPart, type VerseDevotionResult } from '../../services/verseDevotionApi';
 import { reviewVerseDevotion } from '../../services/verseDevotionReviewApi';
 import { VerseQuestionPanel } from './VerseQuestionPanel';
 import { Bookmark, Check } from 'lucide-react';
@@ -30,37 +30,7 @@ interface VerseDevotionPanelProps {
   generationMode?: GenerationMode;
 }
 
-interface QuickDevotionPayload {
-  ok?: boolean;
-  title?: string;
-  coreMessage?: string;
-  explanation?: string;
-  keyWords?: string[];
-  provider?: string;
-  model?: string;
-  fallback?: boolean;
-}
-
-async function fetchQuickDevotion(ref: string, verseText: string): Promise<QuickDevotionPayload | null> {
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 2600);
-  try {
-    const response = await fetch('/api/verse-devotion-quick', {
-      method: 'POST',
-      signal: controller.signal,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ref, verseText }),
-    });
-    if (!response.ok) return null;
-    const payload = await response.json() as QuickDevotionPayload;
-    if (!payload?.ok || payload.fallback || !payload.title || !payload.coreMessage || !payload.explanation) return null;
-    return payload;
-  } catch {
-    return null;
-  } finally {
-    window.clearTimeout(timeout);
-  }
-}
+const FAST_PARTS: VerseDevotionPart[] = ['explanation', 'context', 'meditation', 'prayer'];
 
 function stripMarkdown(text: string) {
   return cleanDevotionText(String(text || '').replace(/\*\*/g, ''));
@@ -178,11 +148,13 @@ export function VerseDevotionPanel({
   const [loading, setLoading] = useState(false);
   const [loadingStage, setLoadingStage] = useState<LoadingStage>('idle');
   const [devotion, setDevotion] = useState<VerseDevotionResult | null>(null);
+  const [resolvedParts, setResolvedParts] = useState<VerseDevotionPart[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     if (!selectedVerse) {
       setDevotion(null);
+      setResolvedParts([]);
       setErrorMessage('');
       setLoading(false);
       setLoadingStage('idle');
@@ -197,6 +169,7 @@ export function VerseDevotionPanel({
 
       if (initialDevotion) {
         setDevotion(initialDevotion);
+        setResolvedParts(generationMode === 'fast' ? FAST_PARTS : []);
         setErrorMessage('');
         setLoading(false);
         setLoadingStage('idle');
@@ -204,6 +177,7 @@ export function VerseDevotionPanel({
       }
 
       setDevotion(createContextualFallback(selectedVerse.ref, selectedVerse.text, 'LOCAL_INITIAL'));
+      setResolvedParts([]);
       setErrorMessage('');
       setLoading(true);
       setLoadingStage(generationMode === 'fast' ? 'quick' : 'full');
@@ -218,6 +192,7 @@ export function VerseDevotionPanel({
       if (cached) {
         if (isCurrentRequest()) {
           setDevotion(cached);
+          setResolvedParts(generationMode === 'fast' ? FAST_PARTS : []);
           setErrorMessage('');
           setLoading(false);
           setLoadingStage('idle');
@@ -225,62 +200,71 @@ export function VerseDevotionPanel({
         return;
       }
 
-      let fullSettled = false;
-      const quickPromise = generationMode === 'fast'
-        ? fetchQuickDevotion(selectedVerse.ref, selectedVerse.text)
-        : null;
-      const fullPromise = getOrGenerateVerseDevotion({
-        ref: selectedVerse.ref,
-        verseText: selectedVerse.text,
-        mode: generationMode,
-      });
+      if (generationMode === 'fast') {
+        const partial: Partial<VerseDevotionResult> = {
+          reference: selectedVerse.ref,
+          provider: 'gemini-parts',
+          fallback: false,
+        };
+        const completed = new Set<VerseDevotionPart>();
 
-      if (quickPromise) {
-        void quickPromise
-          .then((quick) => {
-            if (!quick || !isCurrentRequest() || fullSettled) return;
-            setDevotion((current) => current ? {
-              ...current,
-              title: quick.title || current.title,
-              coreMessage: quick.coreMessage || current.coreMessage,
-              explanation: quick.explanation || current.explanation,
-              keyWords: quick.keyWords?.length ? quick.keyWords : current.keyWords,
-              provider: quick.provider,
-              model: quick.model,
-              fallback: false,
-              errorCode: undefined,
-            } : current);
-            setLoadingStage('full');
-          })
-          .finally(() => {
-            if (isCurrentRequest() && !fullSettled) setLoadingStage('full');
+        const partPromises = FAST_PARTS.map(async (part) => {
+          const payload = await fetchVerseDevotionPart({
+            ref: selectedVerse.ref,
+            verseText: selectedVerse.text,
+            part,
           });
+          if (!payload || !isCurrentRequest()) return null;
+
+          const { part: _part, latencyMs: _latencyMs, ...values } = payload;
+          Object.assign(partial, values, { fallback: false, provider: 'gemini-parts' });
+          completed.add(part);
+          setResolvedParts(Array.from(completed));
+          setDevotion(buildLocalDevotionFromVerse(selectedVerse.ref, selectedVerse.text, partial));
+          setLoadingStage('full');
+          return payload;
+        });
+
+        await Promise.allSettled(partPromises);
+        if (!isCurrentRequest()) return;
+
+        const finalResult = buildLocalDevotionFromVerse(selectedVerse.ref, selectedVerse.text, partial);
+        if (completed.size > 0) setDevotion(finalResult);
+
+        const hasCriticalParts = completed.has('explanation') && completed.has('meditation') && completed.has('prayer');
+        if (hasCriticalParts) {
+          saveCachedVerseDevotion(selectedVerse.ref, selectedVerse.text, finalResult);
+          void reviewVerseDevotion({
+            ref: selectedVerse.ref,
+            verseText: selectedVerse.text,
+            candidate: finalResult,
+          }).then((reviewed) => {
+            if (reviewed && isCurrentRequest()) setDevotion(reviewed);
+          });
+        }
+
+        setErrorMessage('');
+        setLoading(false);
+        setLoadingStage('idle');
+        return;
       }
 
       try {
-        const response = await fullPromise;
-        fullSettled = true;
+        const response = await getOrGenerateVerseDevotion({
+          ref: selectedVerse.ref,
+          verseText: selectedVerse.text,
+          mode: generationMode,
+        });
         if (isCurrentRequest()) {
           if (response?.result) {
             setDevotion(response.result);
-            if (generationMode === 'deep' && !response.result.fallback) localStorage.setItem(deepMarkerKey, '1');
-
-            if (generationMode === 'fast' && !response.result.fallback) {
-              void reviewVerseDevotion({
-                ref: selectedVerse.ref,
-                verseText: selectedVerse.text,
-                candidate: response.result,
-              }).then((reviewed) => {
-                if (reviewed && isCurrentRequest()) setDevotion(reviewed);
-              });
-            }
+            if (!response.result.fallback) localStorage.setItem(deepMarkerKey, '1');
           }
           setErrorMessage('');
           setLoading(false);
           setLoadingStage('idle');
         }
       } catch {
-        fullSettled = true;
         if (isCurrentRequest()) {
           setErrorMessage('');
           setLoading(false);
@@ -301,13 +285,17 @@ export function VerseDevotionPanel({
   const showPrayer = showAll || visibleSection === 'prayer';
   const showQuestion = showAll || visibleSection === 'question';
   const progressiveLoading = generationMode === 'fast' && loading;
-  const hasGeneratedPreview = Boolean(devotion && !devotion.fallback);
+  const explanationReady = resolvedParts.includes('explanation');
+  const contextReady = resolvedParts.includes('context');
+  const meditationReady = resolvedParts.includes('meditation');
+  const prayerReady = resolvedParts.includes('prayer');
+  const hasGeneratedPreview = resolvedParts.length > 0 || Boolean(devotion && !devotion.fallback && !loading);
 
   return (
     <div className={`${compact ? 'mt-0' : 'mt-2'} space-y-3`}>
       {devotion && (
         <>
-          {showAll && (!loading || hasGeneratedPreview) && (
+          {showAll && (!loading || explanationReady) && (
             <article className="rounded-[24px] bg-white/75 p-5 shadow-sm border border-white/80 animate-in fade-in slide-in-from-bottom-2 duration-500">
               <div className="flex items-center gap-1 mb-2 text-[#A17C5B]">
                 <KawaiiVerseIcon size={22} />
@@ -325,36 +313,32 @@ export function VerseDevotionPanel({
             </article>
           )}
 
-          {showExplanation && devotion.explanation && (!loading || hasGeneratedPreview) && (
-            <SectionCard title={loadingStage === 'quick' ? '해설을 빠르게 준비하고 있습니다.' : '해설'} delay="delay-75" titleSize="body" titleFontSize={fontSize} compact={compact} onBookmark={!loading ? () => onSaveDevotionSection?.('explanation', devotion) : undefined}>
+          {showExplanation && devotion.explanation && (!loading || explanationReady) && (
+            <SectionCard title="해설" delay="delay-75" titleSize="body" titleFontSize={fontSize} compact={compact} onBookmark={!loading || explanationReady ? () => onSaveDevotionSection?.('explanation', devotion) : undefined}>
               <DevotionParagraph fontSize={fontSize}>{devotion.explanation}</DevotionParagraph>
             </SectionCard>
           )}
 
-          {progressiveLoading && (
-            <SectionCard title={loadingStage === 'full' ? '묵상·기도를 동시에 준비하고 있습니다.' : '해설과 묵상을 동시에 불러오고 있습니다.'} delay="delay-100" titleSize="body" titleFontSize={fontSize} compact={compact}>
-              <p className="text-[#7B6A5D] leading-relaxed serif-verse" style={{ fontSize: `calc(${fontSize} * 0.9)` }}>
-                {loadingStage === 'full'
-                  ? '해설은 먼저 보여드리고, 묵상과 기도·적용은 같은 요청 흐름에서 뒤이어 준비합니다.'
-                  : '짧은 해설과 전체 묵상을 동시에 요청하고 있습니다. 먼저 도착하는 내용을 바로 보여드립니다.'}
-              </p>
+          {showAll && devotion.context && (!loading || contextReady) && (
+            <SectionCard title="앞뒤 문맥" delay="delay-75" titleSize="body" titleFontSize={fontSize} compact={compact}>
+              <DevotionParagraph fontSize={fontSize}>{devotion.context}</DevotionParagraph>
             </SectionCard>
           )}
 
-          {!progressiveLoading && showMeditation && (
-            <SectionCard title={loading ? '묵상문을 불러오고 있습니다.' : '묵상'} delay="delay-100" titleSize="body" titleFontSize={fontSize} compact={compact} onBookmark={() => onSaveDevotionSection?.('meditation', devotion)}>
+          {showMeditation && devotion.meditation && (!loading || meditationReady) && (
+            <SectionCard title="묵상" delay="delay-100" titleSize="body" titleFontSize={fontSize} compact={compact} onBookmark={!loading || meditationReady ? () => onSaveDevotionSection?.('meditation', devotion) : undefined}>
               <DevotionParagraph fontSize={fontSize}>{devotion.meditation}</DevotionParagraph>
             </SectionCard>
           )}
 
-          {!progressiveLoading && showPrayer && (
-            <SectionCard title={loading ? '기도문을 불러오고 있습니다.' : '기도문'} delay="delay-150" tone="prayer" titleSize="body" titleFontSize={fontSize} compact={compact} onBookmark={() => onSaveDevotionSection?.('prayer', devotion)}>
+          {showPrayer && devotion.prayer && (!loading || prayerReady) && (
+            <SectionCard title="기도문" delay="delay-150" tone="prayer" titleSize="body" titleFontSize={fontSize} compact={compact} onBookmark={!loading || prayerReady ? () => onSaveDevotionSection?.('prayer', devotion) : undefined}>
               <DevotionParagraph fontSize={fontSize}>{ensureAmen(stripMarkdown(devotion.prayer))}</DevotionParagraph>
             </SectionCard>
           )}
 
-          {!progressiveLoading && showAll && asApplicationList(devotion.application).length > 0 && (
-            <SectionCard title="오늘의 적용" delay="delay-200" titleSize="body" titleFontSize={fontSize} onBookmark={() => onSaveDevotionSection?.('application', devotion)}>
+          {showAll && asApplicationList(devotion.application).length > 0 && (!loading || meditationReady) && (
+            <SectionCard title="오늘의 적용" delay="delay-200" titleSize="body" titleFontSize={fontSize} onBookmark={!loading || meditationReady ? () => onSaveDevotionSection?.('application', devotion) : undefined}>
               <div className="space-y-2">
                 {asApplicationList(devotion.application).map((item, index) => (
                   <div key={`${item}-${index}`} className="flex gap-2 rounded-[16px] border border-[#F5E6D3] bg-white/65 px-3 py-2">
@@ -368,13 +352,21 @@ export function VerseDevotionPanel({
             </SectionCard>
           )}
 
-          {!progressiveLoading && showAll && devotionQuestion(devotion) && (
+          {showAll && devotionQuestion(devotion) && (!loading || meditationReady) && (
             <SectionCard title="오늘 붙들 질문" delay="delay-250" tone="question" titleSize="body" titleFontSize={fontSize}>
               <DevotionParagraph fontSize={fontSize} strong>{devotionQuestion(devotion)}</DevotionParagraph>
             </SectionCard>
           )}
 
-          {!progressiveLoading && showQuestion && <VerseQuestionPanel verse={selectedVerse} devotion={devotion} />}
+          {progressiveLoading && resolvedParts.length < FAST_PARTS.length && (
+            <SectionCard title="나머지 내용을 동시에 준비하고 있습니다." delay="delay-100" titleSize="body" titleFontSize={fontSize} compact={compact}>
+              <p className="text-[#7B6A5D] leading-relaxed serif-verse" style={{ fontSize: `calc(${fontSize} * 0.9)` }}>
+                해설·앞뒤 문맥·묵상·기도를 각각 따로 생성해 완성되는 순서대로 바로 보여드립니다. 현재 {resolvedParts.length}/4 항목이 준비되었습니다.
+              </p>
+            </SectionCard>
+          )}
+
+          {!loading && showQuestion && <VerseQuestionPanel verse={selectedVerse} devotion={devotion} />}
         </>
       )}
 
@@ -392,8 +384,8 @@ function DevotionLoadingMessage() {
       <div className="mx-auto mb-4 h-10 w-10 animate-pulse rounded-full bg-[#F5C292] flex items-center justify-center">
         <div className="h-5 w-5 rounded-full bg-white opacity-40 animate-ping" />
       </div>
-      <p className="text-lg font-black text-[#3D3129] mb-2">해설을 빠르게 준비하고 있습니다.</p>
-      <p className="text-xs leading-5 text-[#7B6A5D] font-medium serif-verse">짧은 해설과 전체 묵상을 동시에 불러와 먼저 도착하는 내용을 바로 보여드립니다.</p>
+      <p className="text-lg font-black text-[#3D3129] mb-2">말씀 해설을 준비하고 있습니다.</p>
+      <p className="text-xs leading-5 text-[#7B6A5D] font-medium serif-verse">해설·문맥·묵상·기도를 동시에 생성하고, 먼저 끝나는 내용부터 바로 보여드립니다.</p>
     </div>
   );
 }
