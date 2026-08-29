@@ -59,12 +59,18 @@ export function highlightKeyword(text: string, keyword: string): string {
 }
 
 function resolveBook(input: string) {
-  const normalized = input.trim().toLowerCase();
-  return BIBLE_BOOKS.find((book) =>
-    book.name === input.trim()
-    || book.abbr === input.trim()
-    || book.id.toLowerCase() === normalized,
-  );
+  const trimmed = input.trim();
+  // 공백을 제거한 형태로 비교해 "마가 복음", "마가복음", "마가  복음" 등
+  // 띄어쓰기 차이에도 책 이름을 정확히 인식합니다.
+  const compact = trimmed.replace(/\s+/g, '').toLowerCase();
+  return BIBLE_BOOKS.find((book) => {
+    const nameCompact = book.name.replace(/\s+/g, '');
+    return book.name === trimmed
+      || book.abbr === trimmed
+      || book.id.toLowerCase() === compact
+      || nameCompact === compact
+      || book.abbr.replace(/\s+/g, '').toLowerCase() === compact;
+  });
 }
 
 function uniqueVerses(verses: BibleVerseRecord[]) {
@@ -152,6 +158,21 @@ export function parseMultiReferenceQuery(query: string) {
         chapter: lastChapter,
         startVerse: Math.min(first, second),
         endVerse: Math.max(first, second),
+      });
+      continue;
+    }
+
+    // 장(章)만 지정한 참조: "창세기 1장" 또는 "창세기 1" → 해당 장 전체 절
+    const chapterOnlyPattern = /^([가-힣a-zA-Z\s]+?)\s*(\d+)\s*(?:장)?\s*$/;
+    const chapterOnlyMatch = part.replace(/\s+/g, ' ').match(chapterOnlyPattern);
+    if (chapterOnlyMatch) {
+      lastBook = chapterOnlyMatch[1].trim();
+      lastChapter = Number.parseInt(chapterOnlyMatch[2], 10);
+      results.push({
+        bookName: lastBook,
+        chapter: lastChapter,
+        startVerse: 1,
+        endVerse: Number.MAX_SAFE_INTEGER,
       });
       continue;
     }

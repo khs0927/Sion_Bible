@@ -103,7 +103,7 @@ export function MemoryPracticePage({
                     color: autoNotificationEnabled ? 'white' : T.sub 
                   }}
                 >
-                  <Bell size={16} className={autoNotificationEnabled ? 'animate-wiggle' : ''} />
+                  <Bell size={16} />
                 </button>
                 <button 
                   onClick={handleFinish}
@@ -225,14 +225,7 @@ export function MemoryPracticePage({
           from { width: 100%; }
           to { width: 0%; }
         }
-        .animate-wiggle {
-          animation: wiggle 1s ease-in-out infinite;
-        }
-        @keyframes wiggle {
-          0%, 100% { transform: rotate(0deg); }
-          25% { transform: rotate(-10deg); }
-          75% { transform: rotate(10deg); }
-        }
+        
       `}</style>
     </div>
   );
