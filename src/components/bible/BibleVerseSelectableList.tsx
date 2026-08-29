@@ -187,7 +187,7 @@ export function BibleVerseSelectableList({
 
   return (
     <>
-      <div className="divide-y divide-[#EFE5DA] overflow-hidden rounded-[22px] border border-[#E8D8C8] bg-white shadow-sm">
+      <div className="divide-y divide-[#EFE5DA] overflow-hidden rounded-2xl border border-[#EFE0CF] bg-white">
         {verses.map((verse) => {
           const selected = selectedVerses.includes(verse.verse);
           const showCheckbox = mode === 'select' || selectionMode;
@@ -326,9 +326,11 @@ export function BibleVerseSelectableList({
                     aria-label={`${color} 형광펜`}
                     aria-pressed={activeAnnotation.color === color}
                     onClick={() => updateAnnotation({ color })}
-                    className="h-9 w-9 shrink-0 rounded-full border-[3px] shadow-sm transition active:scale-95"
-                    style={{ backgroundColor: HIGHLIGHT_COLORS[color], borderColor: activeAnnotation.color === color ? '#6F4D27' : '#FFFFFF', outline: activeAnnotation.color === color ? '2px solid #D0A13D' : 'none' }}
-                  />
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all active:scale-90 ${activeAnnotation.color === color ? 'ring-2 ring-[#6F4D27] ring-offset-2 ring-offset-[#FFF9EF]' : 'hover:scale-105'}`}
+                    style={{ backgroundColor: HIGHLIGHT_COLORS[color] }}
+                  >
+                    {activeAnnotation.color === color && <Check size={15} strokeWidth={3.5} className="text-[#5B4326]" />}
+                  </button>
                 ))}
               </div>
               <button
@@ -347,10 +349,10 @@ export function BibleVerseSelectableList({
           </div>
 
           <div className="grid shrink-0 grid-cols-4 gap-2 border-b border-[#E8DCCF] bg-white px-3 py-3">
-            <button type="button" onClick={() => setDetailTab('explanation')} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl border text-[11px] font-black transition ${detailTab === 'explanation' ? 'border-[#C88D32] bg-[#FFF0CD] text-[#66461E] shadow-sm' : 'border-[#E4D8CA] bg-[#FFFDF9] text-[#6C5A4C]'}`}><KawaiiVerseIcon size={24} /><span>해설</span></button>
-            <button type="button" onClick={() => setDetailTab('meditation')} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl border text-[11px] font-black transition ${detailTab === 'meditation' ? 'border-[#7E9A63] bg-[#EDF4E5] text-[#40552F] shadow-sm' : 'border-[#E4D8CA] bg-[#FFFDF9] text-[#6C5A4C]'}`}><KawaiiMeditationIcon size={24} /><span>묵상</span></button>
-            <button type="button" onClick={() => setDetailTab('prayer')} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl border text-[11px] font-black transition ${detailTab === 'prayer' ? 'border-[#D7A56F] bg-[#FFF0E3] text-[#6C4B31] shadow-sm' : 'border-[#E4D8CA] bg-[#FFFDF9] text-[#6C5A4C]'}`}><KawaiiPrayerIcon size={24} /><span>기도</span></button>
-            <button type="button" onClick={() => setDetailTab('question')} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl border text-[11px] font-black transition ${detailTab === 'question' ? 'border-[#9A8BC2] bg-[#F1ECFA] text-[#51446F] shadow-sm' : 'border-[#E4D8CA] bg-[#FFFDF9] text-[#6C5A4C]'}`}><KawaiiWisdomIcon size={24} /><span>질문</span></button>
+            <button type="button" onClick={() => setDetailTab('explanation')} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl border text-[11px] font-black transition ${detailTab === 'explanation' ? 'border-[#C88D32] bg-[#FFF0CD] text-[#66461E]' : 'border-[#E4D8CA] bg-[#FFFDF9] text-[#6C5A4C]'}`}><KawaiiVerseIcon size={24} /><span>해설</span></button>
+            <button type="button" onClick={() => setDetailTab('meditation')} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl border text-[11px] font-black transition ${detailTab === 'meditation' ? 'border-[#7E9A63] bg-[#EDF4E5] text-[#40552F]' : 'border-[#E4D8CA] bg-[#FFFDF9] text-[#6C5A4C]'}`}><KawaiiMeditationIcon size={24} /><span>묵상</span></button>
+            <button type="button" onClick={() => setDetailTab('prayer')} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl border text-[11px] font-black transition ${detailTab === 'prayer' ? 'border-[#D7A56F] bg-[#FFF0E3] text-[#6C4B31]' : 'border-[#E4D8CA] bg-[#FFFDF9] text-[#6C5A4C]'}`}><KawaiiPrayerIcon size={24} /><span>기도</span></button>
+            <button type="button" onClick={() => setDetailTab('question')} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl border text-[11px] font-black transition ${detailTab === 'question' ? 'border-[#9A8BC2] bg-[#F1ECFA] text-[#51446F]' : 'border-[#E4D8CA] bg-[#FFFDF9] text-[#6C5A4C]'}`}><KawaiiWisdomIcon size={24} /><span>질문</span></button>
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-[calc(16px+env(safe-area-inset-bottom))] pt-3">

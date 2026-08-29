@@ -902,7 +902,7 @@ export default function App() {
         <div style={{ minWidth: 0, flex: 1 }}>
           {tab !== 'read' && <div className="title-font" style={{ fontSize: 11, color: th.sub, fontWeight: 800 }}>시온성경</div>}
           {tab === 'read' ? (
-            <div style={{ display: 'inline-grid', gridTemplateColumns: activeReadingRange ? '1fr' : '30px minmax(0, auto) 30px', alignItems: 'center', gap: 3, maxWidth: '100%' }}>
+            <div style={{ display: 'inline-grid', gridTemplateColumns: activeReadingRange ? '1fr' : '30px minmax(0, auto) 30px', alignItems: 'center', gap: 6, maxWidth: '100%' }}>
               {!activeReadingRange && (
                 <button
                   aria-label="이전 장"

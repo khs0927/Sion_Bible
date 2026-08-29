@@ -91,7 +91,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
     const timer = window.setTimeout(() => {
       if (trimmed.length >= 2) void searchNow(true);
       else resetResults();
-    }, 380);
+    }, 90);
     return () => window.clearTimeout(timer);
   }, [query, questionMode]);
 
@@ -211,7 +211,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
         overscrollBehavior: 'contain',
       }}
     >
-      <header className={`flex-shrink-0 overflow-hidden bg-[#FDF6F0] px-6 transition-all duration-300 ${verseOnly ? 'max-h-0 pb-0 pt-0 opacity-0 pointer-events-none' : 'max-h-28 pb-4 pt-5 opacity-100'}`}>
+      <header className={`flex-shrink-0 overflow-hidden bg-[#FDF6F0] px-6 transition-all duration-150 ${verseOnly ? 'max-h-0 pb-0 pt-0 opacity-0 pointer-events-none' : 'max-h-28 pb-4 pt-5 opacity-100'}`}>
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <div className="rounded-2xl border bg-white p-2 shadow-sm" style={{ borderColor: T.line }}>
@@ -230,7 +230,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
         </div>
       </header>
 
-      <section className={`flex-shrink-0 overflow-hidden bg-[#FDF6F0] px-6 transition-all duration-300 ${verseOnly ? 'max-h-0 pb-0 opacity-0 pointer-events-none' : 'max-h-[610px] pb-5 opacity-100'}`}>
+      <section className={`flex-shrink-0 overflow-hidden bg-[#FDF6F0] px-6 transition-all duration-150 ${verseOnly ? 'max-h-0 pb-0 opacity-0 pointer-events-none' : 'max-h-[610px] pb-5 opacity-100'}`}>
         <div className="mb-3 grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -315,7 +315,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
         onScroll={handleScroll}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className={`flex-1 overflow-y-auto pb-10 transition-all duration-300 ${verseOnly ? 'px-4 pt-3' : 'px-6'}`}
+        className={`flex-1 overflow-y-auto pb-10 transition-all duration-150 ${verseOnly ? 'px-4 pt-3' : 'px-6'}`}
         style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
       >
         {verseOnly && totalCount > 0 && (
@@ -342,7 +342,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
               const showSection = questionMode && section && section.id !== previousSection?.id;
 
               return (
-                <div key={verse.id} className="space-y-3">
+                <div key={verse.id} className="animate-fade-up space-y-3">
                   {showSection && (
                     <div className="pt-2 pb-1">
                       <div className="rounded-2xl border bg-white/80 px-4 py-3 shadow-sm" style={{ borderColor: T.line }}>
