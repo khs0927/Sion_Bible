@@ -7,6 +7,7 @@ export interface VerseDevotionResult {
   keyWords?: string[];
   keyPhrase?: string;
   explanation?: string;
+  context?: string;
   meditation: string;
   prayer: string;
   application: string | string[];
@@ -19,9 +20,19 @@ export interface VerseDevotionResult {
   savedAt?: number;
 }
 
-const CACHE_PREFIX = 'sion_verse_devotion_v14_';
+export type VerseDevotionPart = 'explanation' | 'context' | 'meditation' | 'prayer';
+
+export interface VerseDevotionPartPayload extends Partial<VerseDevotionResult> {
+  part: VerseDevotionPart;
+  provider?: string;
+  model?: string;
+  latencyMs?: number;
+}
+
+const CACHE_PREFIX = 'sion_verse_devotion_v15_';
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const REQUIRED_PRAYER_ENDING = '아버지, 감사합니다. 예수 그리스도의 이름으로 기도드립니다. 아멘.';
+const partInflight = new Map<string, Promise<VerseDevotionPartPayload | null>>();
 
 function normalizeRef(ref: string) {
   return String(ref || '').replace(/\s+(?=\d)/g, '').replace(/\s/g, '');
@@ -103,6 +114,7 @@ export function createContextualFallback(ref: string, _verseText: string, errorC
       keyWords: ['정죄', '하나님의 일', '은혜의 시선'],
       keyPhrase: '정죄가 아니라 은혜의 시선',
       explanation: '요한복음 9장은 예수님께서 날 때부터 앞을 보지 못한 사람을 만나시는 장면입니다. 제자들은 그 사람의 고난을 보며 누구의 죄 때문인지 묻지만, 예수님은 그 사람이나 부모의 죄 때문이라고 단정하지 않으셨습니다. 당시에는 질병이나 장애를 개인의 죄와 직접 연결해 생각하는 시선이 있었지만, 예수님은 그 정죄의 틀을 깨뜨리셨습니다. 예수님은 아픔을 가진 사람을 설명해야 할 문제로만 보지 않으시고, 하나님의 일이 나타날 사람으로 바라보셨습니다. 이 말씀은 고난의 이유를 함부로 판단하지 말라는 조심스러운 초대입니다. 동시에 하나님께서 절망처럼 보이는 자리에서도 은혜와 회복과 영광을 드러내실 수 있음을 보여줍니다. 예수 그리스도의 복음은 사람을 죄책감 속에 가두기보다, 하나님의 긍휼 안에서 새롭게 바라보게 합니다.',
+      context: '',
       meditation: '우리는 때때로 나의 연약함이나 다른 사람의 아픔을 보며 너무 빨리 원인을 찾으려 합니다. 그러나 예수님은 고난받는 사람을 정죄의 시선으로 보지 않으셨습니다. 주님은 그 사람 안에서 하나님이 하실 일을 바라보셨습니다. 오늘 나의 설명되지 않는 아픔도 단순히 부끄러움이나 실패의 증거로만 남아 있지 않을 수 있습니다. 하나님은 내가 감추고 싶은 자리에서도 은혜의 빛을 비추실 수 있습니다. 오늘은 원인을 단정하기보다, 그 자리에서 예수님께서 어떻게 일하시는지 믿음으로 바라볼 수 있습니다.',
       prayer: '주님, 제 삶의 아픔과 연약함을 죄책감과 두려움으로만 바라보지 않습니다. 사람을 쉽게 판단하고 정죄했던 마음을 주님 앞에 내려놓습니다. 예수님께서 날 때부터 앞을 보지 못한 사람을 하나님의 일이 나타날 사람으로 바라보신 것처럼, 저도 나 자신과 이웃을 은혜의 시선으로 바라봅니다. 설명되지 않는 고난 속에서도 하나님이 일하심을 신뢰합니다. 절망처럼 보이는 자리에도 주님의 빛이 임할 수 있음을 믿습니다. 아버지, 감사합니다. 예수 그리스도의 이름으로 기도드립니다. 아멘.',
       application: [
@@ -130,6 +142,7 @@ export function createContextualFallback(ref: string, _verseText: string, errorC
     keyWords: ['말씀', '은혜', '기도'],
     keyPhrase: '말씀 앞에 머무르기',
     explanation: '이 말씀을 잠시 멈추어 다시 읽어보세요. 본문 안에서 마음에 남는 단어와 표현이 무엇인지 천천히 살펴보면 좋겠습니다. 하나님은 짧은 말씀 속에서도 우리의 마음을 비추시고, 예수 그리스도의 은혜 안에서 오늘 걸어갈 방향을 보여주십니다.',
+    context: '',
     meditation: curated?.meditation || '말씀 앞에 조용히 머물며 지금 내 마음을 주님께 올려드릴 수 있습니다. 답을 급히 찾기보다, 하나님이 이 말씀을 통해 내게 보여주시는 작은 빛을 기다려보세요. 오늘은 큰 결심보다 마음에 남은 한 문장을 붙들고 주님과 동행해볼 수 있습니다.',
     prayer: ensurePrayerEnding(curated?.prayer || '하나님, 이 말씀 앞에 제 마음을 조용히 내려놓습니다. 제 생각과 감정보다 주님의 뜻을 먼저 듣습니다. 예수 그리스도의 은혜 안에서 오늘 작은 순종을 걷습니다. 성령님께서 제 마음을 비추시고 주님을 신뢰할 힘을 주심을 믿습니다.'),
     application: fallbackApplication,
@@ -154,6 +167,7 @@ export function buildLocalDevotionFromVerse(ref: string, verseText: string, part
     keyWords: Array.isArray(partial?.keyWords) && partial.keyWords.length > 0 ? partial.keyWords.slice(0, 3) : fallback.keyWords,
     keyPhrase: sanitizeKoreanDevotionText(String(partial?.keyPhrase || fallback.keyPhrase || '')),
     explanation: sanitizeKoreanDevotionText(String(partial?.explanation || fallback.explanation || '')),
+    context: sanitizeKoreanDevotionText(String(partial?.context || '')),
     meditation: sanitizeKoreanDevotionText(String(partial?.meditation || fallback.meditation)),
     prayer: ensurePrayerEnding(String(partial?.prayer || fallback.prayer)),
     application: applicationArray(partial?.application, fallback.application as string[]),
@@ -196,6 +210,95 @@ export function saveCachedVerseDevotion(ref: string, verseText: string, result: 
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';
+}
+
+function normalizePartPayload(part: VerseDevotionPart, data: unknown): VerseDevotionPartPayload | null {
+  if (!isObject(data) || data.ok !== true || data.fallback === true) return null;
+  const provider = typeof data.provider === 'string' ? data.provider : undefined;
+  const model = typeof data.model === 'string' ? data.model : undefined;
+  const latencyMs = typeof data.latencyMs === 'number' ? data.latencyMs : undefined;
+
+  if (part === 'explanation') {
+    const title = String(data.title || '').trim();
+    const coreMessage = String(data.coreMessage || '').trim();
+    const explanation = String(data.explanation || '').trim();
+    if (!title || !coreMessage || !explanation) return null;
+    return {
+      part,
+      title,
+      coreMessage,
+      explanation,
+      keyWords: Array.isArray(data.keyWords) ? data.keyWords.map(String).filter(Boolean).slice(0, 3) : undefined,
+      keyPhrase: typeof data.keyPhrase === 'string' ? data.keyPhrase : undefined,
+      provider,
+      model,
+      latencyMs,
+    };
+  }
+
+  if (part === 'context') {
+    const context = String(data.context || '').trim();
+    return context ? { part, context, provider, model, latencyMs } : null;
+  }
+
+  if (part === 'meditation') {
+    const meditation = String(data.meditation || '').trim();
+    const question = String(data.question || data.reflectionQuestion || '').trim();
+    const application = Array.isArray(data.application) ? data.application.map(String).filter(Boolean).slice(0, 3) : [];
+    if (!meditation || !question || application.length < 3) return null;
+    return { part, meditation, application, question, reflectionQuestion: question, provider, model, latencyMs };
+  }
+
+  const prayer = String(data.prayer || '').trim();
+  return prayer ? { part, prayer, provider, model, latencyMs } : null;
+}
+
+export async function fetchVerseDevotionPart({
+  ref,
+  verseText,
+  part,
+}: {
+  ref: string;
+  verseText: string;
+  part: VerseDevotionPart;
+}): Promise<VerseDevotionPartPayload | null> {
+  const normalizedRef = ref.trim();
+  const normalizedText = verseText.trim();
+  if (!normalizedRef || !normalizedText) return null;
+
+  const key = `${getVerseDevotionCacheKey(normalizedRef, normalizedText)}:${part}`;
+  const existing = partInflight.get(key);
+  if (existing) return existing;
+
+  const promise = (async () => {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 4200);
+    try {
+      const response = await fetch('/api/verse-devotion-part', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ref: normalizedRef,
+          verseText: normalizedText,
+          contextText: getNearbyVerseContext(normalizedRef),
+          part,
+        }),
+      });
+      if (!response.ok) return null;
+      const data: unknown = await response.json();
+      return normalizePartPayload(part, data);
+    } catch {
+      return null;
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  })().finally(() => {
+    partInflight.delete(key);
+  });
+
+  partInflight.set(key, promise);
+  return promise;
 }
 
 export async function getOrGenerateVerseDevotion({
