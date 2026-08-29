@@ -19,7 +19,7 @@ export interface VerseDevotionResult {
   savedAt?: number;
 }
 
-const CACHE_PREFIX = 'sion_verse_devotion_v13_';
+const CACHE_PREFIX = 'sion_verse_devotion_v14_';
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const REQUIRED_PRAYER_ENDING = '아버지, 감사합니다. 예수 그리스도의 이름으로 기도드립니다. 아멘.';
 
@@ -30,6 +30,17 @@ function normalizeRef(ref: string) {
 function findCuratedVerse(ref: string) {
   const key = normalizeRef(ref);
   return BIBLE_VERSES.find((verse) => normalizeRef(`${verse.book} ${verse.chapter}:${verse.verse}`) === key);
+}
+
+function getNearbyVerseContext(ref: string) {
+  const center = findCuratedVerse(ref);
+  if (!center) return '';
+  const centerVerse = Number(center.verse);
+  return BIBLE_VERSES
+    .filter((verse) => verse.book === center.book && verse.chapter === center.chapter && Math.abs(Number(verse.verse) - centerVerse) <= 2)
+    .sort((a, b) => Number(a.verse) - Number(b.verse))
+    .map((verse) => `${verse.book} ${verse.chapter}:${verse.verse} ${verse.content}`)
+    .join('\n');
 }
 
 function applicationArray(value: VerseDevotionResult['application'] | unknown, fallback: string[]) {
@@ -204,7 +215,7 @@ export async function getOrGenerateVerseDevotion({
   if (cached) return { result: cached, fromCache: true };
 
   const controller = new AbortController();
-  const timeoutMs = mode === 'deep' ? 34_000 : 22_000;
+  const timeoutMs = mode === 'deep' ? 34_000 : 12_000;
   const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
 
   try {
@@ -212,7 +223,12 @@ export async function getOrGenerateVerseDevotion({
       method: 'POST',
       signal: controller.signal,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ref: normalizedRef, verseText: normalizedText, mode }),
+      body: JSON.stringify({
+        ref: normalizedRef,
+        verseText: normalizedText,
+        contextText: getNearbyVerseContext(normalizedRef),
+        mode,
+      }),
     });
 
     const raw = await response.text();
