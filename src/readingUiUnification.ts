@@ -33,9 +33,37 @@ const savedContentIcons: Record<string, string> = {
   '적용': designDecorations.pottedSprout,
 };
 
+function isSavedContentMenuButton(button: HTMLButtonElement) {
+  if (!Object.prototype.hasOwnProperty.call(savedContentIcons, text(button))) return false;
+  const parent = button.parentElement;
+  if (!parent) return false;
+
+  const matchingSiblingCount = [...parent.children]
+    .filter((child): child is HTMLButtonElement => child instanceof HTMLButtonElement)
+    .map((child) => text(child))
+    .filter((label) => Object.prototype.hasOwnProperty.call(savedContentIcons, label))
+    .length;
+
+  // The saved-content selector is a grouped menu (말씀/해설/묵상/기도문/적용).
+  // Requiring at least three matching siblings prevents the same labels in the
+  // verse action sheet from receiving a second decorative icon.
+  return matchingSiblingCount >= 3;
+}
+
+function cleanupMisplacedSavedContentIcons() {
+  const decoratedButtons = [...document.querySelectorAll<HTMLButtonElement>('main button[data-sion-saved-icon]')];
+  for (const button of decoratedButtons) {
+    if (isSavedContentMenuButton(button)) continue;
+    button.querySelectorAll('.sion-saved-content-icon').forEach((icon) => icon.remove());
+    delete button.dataset.sionSavedIcon;
+  }
+}
+
 function decorateSavedContentButtons() {
+  cleanupMisplacedSavedContentIcons();
+
   const buttons = [...document.querySelectorAll<HTMLButtonElement>('main button')]
-    .filter((button) => Object.prototype.hasOwnProperty.call(savedContentIcons, text(button)));
+    .filter(isSavedContentMenuButton);
 
   for (const button of buttons) {
     const label = text(button);
