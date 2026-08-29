@@ -137,11 +137,11 @@ async function callGeminiVerseDevotion({ messages, ref, verseText, mode }) {
     : GEMINI_FAST_MODELS;
   const raceResult = await hedgedGeminiRace({
     models,
-    delaysMs: mode === 'deep' ? [0, 1200] : [0, 850],
+    delaysMs: mode === 'deep' ? [0, 1200] : [0, 900],
     messages,
-    temperature: mode === 'deep' ? 0.22 : 0.12,
-    maxTokens: mode === 'deep' ? 2200 : 1250,
-    timeoutMs: mode === 'deep' ? numberEnv('GEMINI_DEEP_DEVOTION_TIMEOUT_MS', 9_000) : numberEnv('GEMINI_FAST_DEVOTION_TIMEOUT_MS', 5_200),
+    temperature: mode === 'deep' ? 0.22 : 0.1,
+    maxTokens: mode === 'deep' ? 2200 : 900,
+    timeoutMs: mode === 'deep' ? numberEnv('GEMINI_DEEP_DEVOTION_TIMEOUT_MS', 9_000) : numberEnv('GEMINI_FAST_DEVOTION_TIMEOUT_MS', 3_600),
     thinkingLevel: 'minimal',
     validate: (response) => {
       const parsed = response ? parseJsonLoose(response.content) : null;
@@ -167,6 +167,8 @@ function rejectGuard(res, guard) {
 
 async function respondWithGemini({ res, messages, ref, verseText, mode, failures }) {
   const geminiResult = await callGeminiVerseDevotion({ messages, ref, verseText, mode });
+  res.setHeader('Server-Timing', `gemini;dur=${geminiResult.latencyMs}`);
+  console.info('[ai-perf] verse-devotion', JSON.stringify({ provider: 'gemini', model: geminiResult.model, mode, latencyMs: geminiResult.latencyMs }));
   return sendJson(res, 200, {
     ok: true,
     ...geminiResult.result,
@@ -221,16 +223,26 @@ export default async function handler(req, res) {
     const failures = [];
     const apiKey = getNvidiaApiKey();
 
-    // User-facing devotion requests now prefer Gemini 3.5 Flash Lite for first-response speed.
-    // A second Gemini Flash attempt starts shortly after only if Lite is slow, then NVIDIA remains a bounded fallback.
     if (process.env.GEMINI_API_KEY) {
+      const geminiStartedAt = Date.now();
       try {
         return await respondWithGemini({ res, messages, ref, verseText, mode: requestMode, failures });
       } catch (error) {
-        failures.push({ provider: 'gemini', message: error instanceof Error ? error.message : String(error) });
+        const latencyMs = Date.now() - geminiStartedAt;
+        failures.push({ provider: 'gemini', latencyMs, message: error instanceof Error ? error.message : String(error) });
+        console.warn('[ai-perf] verse-devotion gemini failed', JSON.stringify({ mode: requestMode, latencyMs, error: error instanceof Error ? error.message : String(error) }));
       }
     } else {
       failures.push({ provider: 'gemini', message: 'GEMINI_API_KEY is not configured' });
+    }
+
+    // Fast mode is intentionally bounded: if both Gemini Lite/Flash attempts fail,
+    // return the safe local fallback immediately instead of adding another long provider wait.
+    if (requestMode === 'fast' && process.env.GEMINI_API_KEY) {
+      return sendJson(res, 200, {
+        ...buildFallbackDevotion(ref, 'FAST_GEMINI_FAILED'),
+        ...debugPayload({ failures, mode: requestMode }),
+      });
     }
 
     if (apiKey) {
