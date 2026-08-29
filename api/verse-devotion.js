@@ -1,4 +1,4 @@
-import { callGeminiChat } from './_lib/gemini.js';
+import { hedgedGeminiRace } from './_lib/gemini.js';
 import { hedgedNvidiaRace } from './_lib/hedgedAiRace.js';
 import { guardAiRequest } from './_lib/httpGuard.js';
 import { resolveNvidiaModelsForVerseDevotion } from './_lib/modelSelector.js';
@@ -8,7 +8,7 @@ import { buildVerseDevotionReferenceMessages } from './_lib/verseDevotionReferen
 const GPT_OSS_120B_MODEL = 'openai/gpt-oss-120b';
 const GPT_OSS_20B_MODEL = 'openai/gpt-oss-20b';
 const LLAMA_3_1_8B_MODEL = 'meta/llama-3.1-8b-instruct';
-const GEMINI_FAST_MODEL = 'gemini-3.5-flash';
+const GEMINI_FAST_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.5-flash'];
 const PRAYER_ENDING = '아버지, 감사합니다. 예수 그리스도의 이름으로 기도드립니다. 아멘.';
 
 function text(value, maxLength) {
@@ -109,16 +109,16 @@ async function callNvidiaVerseDevotion({ apiKey, messages, ref, verseText, mode 
   const modelConfig = await resolveNvidiaModelsForVerseDevotion();
   const models = mode === 'deep' ? buildDeepModels(modelConfig) : buildFastModels(modelConfig);
   const delaysMs = mode === 'deep'
-    ? [0, numberEnv('NVIDIA_DEEP_HEDGE_DELAY_MS', 1100), numberEnv('NVIDIA_FAST_BACKUP_DELAY_MS', 2400)]
-    : [0, numberEnv('NVIDIA_HEDGE_DELAY_MS', 1100), numberEnv('NVIDIA_QUALITY_DELAY_MS', 2200)];
+    ? [0, numberEnv('NVIDIA_DEEP_HEDGE_DELAY_MS', 900), numberEnv('NVIDIA_FAST_BACKUP_DELAY_MS', 1800)]
+    : [0, numberEnv('NVIDIA_HEDGE_DELAY_MS', 650), numberEnv('NVIDIA_QUALITY_DELAY_MS', 1350)];
   const raceResult = await hedgedNvidiaRace({
     apiKey,
     models,
     delaysMs,
     messages,
-    timeoutMs: mode === 'deep' ? numberEnv('NVIDIA_DEEP_TOTAL_TIMEOUT_MS', 26_000) : numberEnv('NVIDIA_TOTAL_TIMEOUT_MS', 15_000),
+    timeoutMs: mode === 'deep' ? numberEnv('NVIDIA_DEEP_TOTAL_TIMEOUT_MS', 12_000) : numberEnv('NVIDIA_TOTAL_TIMEOUT_MS', 7_500),
     temperature: mode === 'deep' ? 0.25 : 0.22,
-    maxTokens: mode === 'deep' ? 2800 : 1900,
+    maxTokens: mode === 'deep' ? 2400 : 1500,
     responseFormat: { type: 'json_object' },
     validate: (parsed) => validateVerseDevotion(parsed, { ref, verseText }),
   });
@@ -132,22 +132,27 @@ async function callNvidiaVerseDevotion({ apiKey, messages, ref, verseText, mode 
 
 async function callGeminiVerseDevotion({ messages, ref, verseText, mode }) {
   const startedAt = Date.now();
-  const response = await callGeminiChat({
-    model: mode === 'fast' ? GEMINI_FAST_MODEL : undefined,
+  const models = mode === 'deep'
+    ? ['gemini-3.5-flash-lite', 'gemini-3.5-flash']
+    : GEMINI_FAST_MODELS;
+  const raceResult = await hedgedGeminiRace({
+    models,
+    delaysMs: mode === 'deep' ? [0, 1200] : [0, 850],
     messages,
-    temperature: mode === 'deep' ? 0.25 : 0.15,
-    maxTokens: mode === 'deep' ? 2800 : 1300,
-    timeoutMs: mode === 'deep' ? 20_000 : numberEnv('GEMINI_FAST_DEVOTION_TIMEOUT_MS', 7000),
-    thinkingLevel: mode === 'deep' ? 'high' : 'minimal',
+    temperature: mode === 'deep' ? 0.22 : 0.12,
+    maxTokens: mode === 'deep' ? 2200 : 1250,
+    timeoutMs: mode === 'deep' ? numberEnv('GEMINI_DEEP_DEVOTION_TIMEOUT_MS', 9_000) : numberEnv('GEMINI_FAST_DEVOTION_TIMEOUT_MS', 5_200),
+    thinkingLevel: 'minimal',
+    validate: (response) => {
+      const parsed = response ? parseJsonLoose(response.content) : null;
+      return validateVerseDevotion(parsed, { ref, verseText });
+    },
   });
-  if (!response) throw new Error('GEMINI_API_KEY is not configured');
-  const parsed = parseJsonLoose(response.content);
-  const validated = validateVerseDevotion(parsed, { ref, verseText });
-  if (!validated) throw new Error('Gemini returned an invalid devotion payload');
   return {
-    result: withPreferredPrayerEnding(validated),
-    model: response.model,
+    result: withPreferredPrayerEnding(raceResult.result),
+    model: raceResult.model,
     latencyMs: Date.now() - startedAt,
+    attempts: raceResult.attempts,
   };
 }
 
@@ -168,7 +173,7 @@ async function respondWithGemini({ res, messages, ref, verseText, mode, failures
     fallback: false,
     provider: 'gemini',
     model: geminiResult.model,
-    ...debugPayload({ provider: 'gemini', latencyMs: geminiResult.latencyMs, failures, mode }),
+    ...debugPayload({ provider: 'gemini', latencyMs: geminiResult.latencyMs, attempts: geminiResult.attempts, failures, mode }),
   });
 }
 
@@ -216,9 +221,18 @@ export default async function handler(req, res) {
     const failures = [];
     const apiKey = getNvidiaApiKey();
 
-    // The UI already uses Gemini for the small explanation-first request.
-    // Keep the heavier meditation/prayer generation on NVIDIA so Gemini quota
-    // remains available for the user's first visible response.
+    // User-facing devotion requests now prefer Gemini 3.5 Flash Lite for first-response speed.
+    // A second Gemini Flash attempt starts shortly after only if Lite is slow, then NVIDIA remains a bounded fallback.
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        return await respondWithGemini({ res, messages, ref, verseText, mode: requestMode, failures });
+      } catch (error) {
+        failures.push({ provider: 'gemini', message: error instanceof Error ? error.message : String(error) });
+      }
+    } else {
+      failures.push({ provider: 'gemini', message: 'GEMINI_API_KEY is not configured' });
+    }
+
     if (apiKey) {
       try {
         return await respondWithNvidia({ res, apiKey, messages, ref, verseText, mode: requestMode, failures });
@@ -227,14 +241,6 @@ export default async function handler(req, res) {
       }
     } else {
       failures.push({ provider: 'nvidia', message: 'NVIDIA_API_KEY is not configured' });
-    }
-
-    if (process.env.GEMINI_API_KEY) {
-      try {
-        return await respondWithGemini({ res, messages, ref, verseText, mode: requestMode, failures });
-      } catch (error) {
-        failures.push({ provider: 'gemini', message: error instanceof Error ? error.message : String(error) });
-      }
     }
 
     return sendJson(res, 200, {

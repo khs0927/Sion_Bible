@@ -1,6 +1,6 @@
-const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash';
-const DEFAULT_TIMEOUT_MS = 12_000;
-const DEFAULT_GEMINI_FLASH_MODELS = ['gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-3.7-flash'];
+const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash-lite';
+const DEFAULT_TIMEOUT_MS = 6_500;
+const DEFAULT_GEMINI_FLASH_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.6-flash'];
 
 function positiveNumber(value, fallback) {
   const parsed = Number(value);
@@ -30,7 +30,7 @@ function toGeminiRequest(messages) {
 
 function defaultThinkingLevel(model) {
   if (model === 'gemini-3.7-flash') return 'low';
-  if (model === 'gemini-3.6-flash' || model === 'gemini-3.5-flash') return 'minimal';
+  if (model === 'gemini-3.6-flash' || model === 'gemini-3.5-flash' || model === 'gemini-3.5-flash-lite') return 'minimal';
   return null;
 }
 
@@ -98,11 +98,11 @@ export async function callGeminiChat({
 export async function hedgedGeminiRace({
   apiKey = process.env.GEMINI_API_KEY,
   models = DEFAULT_GEMINI_FLASH_MODELS,
-  delaysMs = [0, 1800, 3200],
+  delaysMs = [0, 1100, 2600],
   messages,
   temperature = 0.2,
   maxTokens = 1200,
-  timeoutMs = 10_000,
+  timeoutMs = 6_500,
   responseMimeType = 'application/json',
   thinkingLevel,
   thinkingLevelByModel,
