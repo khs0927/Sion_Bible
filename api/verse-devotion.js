@@ -78,26 +78,27 @@ function buildFallbackDevotion(ref, errorCode) {
 
 function buildFastModels(modelConfig) {
   return uniqueModels([
+    GPT_OSS_120B_MODEL,
+    process.env.NVIDIA_QUALITY_MODEL,
+    modelConfig?.qualityModel,
+    GPT_OSS_20B_MODEL,
     process.env.NVIDIA_PRIMARY_MODEL,
     process.env.NVIDIA_FAST_MODEL_1,
     modelConfig?.primaryFastModel,
-    GPT_OSS_20B_MODEL,
     LLAMA_3_1_8B_MODEL,
     process.env.NVIDIA_SECONDARY_MODEL,
     process.env.NVIDIA_FAST_MODEL_2,
     modelConfig?.secondaryFastModel,
-    process.env.NVIDIA_QUALITY_MODEL,
-    modelConfig?.qualityModel,
   ]);
 }
 
 function buildDeepModels(modelConfig) {
   return uniqueModels([
+    GPT_OSS_120B_MODEL,
     process.env.NVIDIA_DEEP_MODEL,
     process.env.NVIDIA_QUALITY_MODEL,
     modelConfig?.deepModel,
     modelConfig?.qualityModel,
-    GPT_OSS_120B_MODEL,
     process.env.NVIDIA_PRIMARY_MODEL,
     modelConfig?.primaryFastModel,
     LLAMA_3_1_8B_MODEL,
@@ -109,7 +110,7 @@ async function callNvidiaVerseDevotion({ apiKey, messages, ref, verseText, mode 
   const models = mode === 'deep' ? buildDeepModels(modelConfig) : buildFastModels(modelConfig);
   const delaysMs = mode === 'deep'
     ? [0, numberEnv('NVIDIA_DEEP_HEDGE_DELAY_MS', 1100), numberEnv('NVIDIA_FAST_BACKUP_DELAY_MS', 2400)]
-    : [0, numberEnv('NVIDIA_HEDGE_DELAY_MS', 700), numberEnv('NVIDIA_QUALITY_DELAY_MS', 1800)];
+    : [0, numberEnv('NVIDIA_HEDGE_DELAY_MS', 1100), numberEnv('NVIDIA_QUALITY_DELAY_MS', 2200)];
   const raceResult = await hedgedNvidiaRace({
     apiKey,
     models,
@@ -215,14 +216,9 @@ export default async function handler(req, res) {
     const failures = [];
     const apiKey = getNvidiaApiKey();
 
-    if (requestMode === 'fast' && process.env.GEMINI_API_KEY) {
-      try {
-        return await respondWithGemini({ res, messages, ref, verseText, mode: requestMode, failures });
-      } catch (error) {
-        failures.push({ provider: 'gemini', message: error instanceof Error ? error.message : String(error) });
-      }
-    }
-
+    // The UI already uses Gemini for the small explanation-first request.
+    // Keep the heavier meditation/prayer generation on NVIDIA so Gemini quota
+    // remains available for the user's first visible response.
     if (apiKey) {
       try {
         return await respondWithNvidia({ res, apiKey, messages, ref, verseText, mode: requestMode, failures });
