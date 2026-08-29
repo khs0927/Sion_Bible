@@ -104,7 +104,7 @@ export function MemoryHome({ T, savedVerses }: { T: ThemeTokens; savedVerses: Sa
       {dueAutoReminders.length > 0 && (
         <section className="rounded-[22px] border border-[#F0D6B6] bg-[#FFF5DF] p-4 shadow-sm">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-[#E58E28]"><BellRing className="h-5 w-5 animate-bounce" /></span><div><h3 className="text-[13px] font-black">복습 알림이 도착했어요</h3><p className="mt-1 text-[10px] font-semibold text-[#7D7163]">{dueAutoReminders.length}개의 말씀을 다시 떠올려보세요.</p></div></div>
+            <div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-[#E58E28]"><BellRing className="h-5 w-5" /></span><div><h3 className="text-[13px] font-black">복습 알림이 도착했어요</h3><p className="mt-1 text-[10px] font-semibold text-[#7D7163]">{dueAutoReminders.length}개의 말씀을 다시 떠올려보세요.</p></div></div>
             <button type="button" onClick={() => { markAutoReminderCompleted(dueAutoReminders[0].id); refresh(); }} className="rounded-full bg-[#E99B31] px-4 py-2 text-[11px] font-black text-white">확인</button>
           </div>
         </section>
