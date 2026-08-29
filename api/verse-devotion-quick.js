@@ -1,8 +1,8 @@
-import { callGeminiChat } from './_lib/gemini.js';
+import { hedgedGeminiRace } from './_lib/gemini.js';
 import { guardAiRequest } from './_lib/httpGuard.js';
 import { parseJsonLoose, sendJson } from './_lib/nvidia.js';
 
-const MODEL = 'gemini-3.5-flash';
+const MODELS = ['gemini-3.5-flash-lite', 'gemini-3.5-flash'];
 
 function text(value, maxLength) {
   return String(value || '').replace(/\u0000/g, '').trim().slice(0, maxLength);
@@ -76,23 +76,25 @@ export default async function handler(req, res) {
   ];
 
   try {
-    const response = await callGeminiChat({
-      model: MODEL,
+    const result = await hedgedGeminiRace({
+      models: MODELS,
+      delaysMs: [0, 750],
       messages,
       temperature: 0.08,
       maxTokens: 360,
       timeoutMs: 3200,
       thinkingLevel: 'minimal',
+      validate: (response) => {
+        const parsed = response ? parseJsonLoose(response.content) : null;
+        return normalizeQuick(parsed, ref);
+      },
     });
-    if (!response) return sendJson(res, 200, fallback(ref, verseText, 'GEMINI_NOT_CONFIGURED'));
-    const parsed = parseJsonLoose(response.content);
-    const quick = normalizeQuick(parsed, ref);
-    if (!quick) return sendJson(res, 200, fallback(ref, verseText, 'INVALID_QUICK_PAYLOAD'));
+
     return sendJson(res, 200, {
       ok: true,
-      ...quick,
+      ...result.result,
       provider: 'gemini',
-      model: response.model,
+      model: result.model,
       fallback: false,
       latencyMs: Date.now() - startedAt,
     });
