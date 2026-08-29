@@ -28,12 +28,12 @@ function fallback(ref, verseText, errorCode) {
 function normalizeQuick(parsed, ref) {
   if (!parsed || typeof parsed !== 'object') return null;
   const title = text(parsed.title, 56);
-  const coreMessage = text(parsed.coreMessage, 150);
-  const explanation = text(parsed.explanation, 360);
+  const coreMessage = text(parsed.coreMessage, 170);
+  const explanation = text(parsed.explanation, 460);
   const keyWords = Array.isArray(parsed.keyWords)
     ? parsed.keyWords.map((item) => text(item, 24)).filter(Boolean).slice(0, 3)
     : [];
-  if (!title || coreMessage.length < 24 || explanation.length < 60) return null;
+  if (!title || coreMessage.length < 28 || explanation.length < 80) return null;
   if (!/[가-힣]/.test(`${title} ${coreMessage} ${explanation}`)) return null;
   return { reference: ref, title, coreMessage, explanation, keyWords };
 }
@@ -62,16 +62,19 @@ export default async function handler(req, res) {
     {
       role: 'system',
       content: [
-        '너는 시온성경의 즉시 해설자다.',
-        '제공된 성경 본문만을 최우선 근거로 삼고 본문에 없는 사실을 만들지 않는다.',
-        '첫 화면에서 바로 읽을 수 있도록 짧고 분명하게 쓴다.',
+        '너는 시온성경의 즉시 구절 해설자다.',
+        '제공된 성경의 정확한 장절과 선택 절 본문 자체가 중심이다.',
+        '선택 절에 실제로 등장하는 핵심 단어나 표현을 짚어서 무엇을 말하는지 설명한다.',
+        '일반적인 위로나 어느 구절에도 붙일 수 있는 문장을 피한다.',
+        '본문에 없는 역사적 사실이나 하나님의 의도를 추측해서 만들지 않는다.',
+        '첫 화면에서 바로 읽을 수 있도록 짧지만 구체적으로 쓴다.',
         '반드시 JSON 객체만 반환한다.',
-        '형식: {"title":"12~24자","coreMessage":"한 문장 35~75자","explanation":"2문장 70~150자","keyWords":["단어1","단어2","단어3"]}',
+        '형식: {"title":"12~24자","coreMessage":"한 문장 40~80자","explanation":"선택 절의 실제 표현을 짚은 3문장 90~180자","keyWords":["본문 핵심어1","본문 핵심어2","본문 핵심어3"]}',
       ].join('\n'),
     },
     {
       role: 'user',
-      content: `구절: ${ref}\n본문: ${verseText}\n\n핵심 해설만 즉시 작성해줘.`,
+      content: `선택 구절: ${ref}\n선택 절 본문: ${verseText}\n\n이 절에 실제로 있는 표현을 짚어 이 절 자체의 의미를 먼저 해설해줘.`,
     },
   ];
 
@@ -80,7 +83,7 @@ export default async function handler(req, res) {
       model: MODEL,
       messages,
       temperature: 0.05,
-      maxTokens: 260,
+      maxTokens: 320,
       timeoutMs: QUICK_TIMEOUT_MS,
       thinkingLevel: 'minimal',
     });
