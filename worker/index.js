@@ -4,6 +4,9 @@ import health from '../api/health.js';
 import insight from '../api/insight.js';
 import readingMeditation from '../api/reading-meditation.js';
 import verseDevotion from '../api/verse-devotion.js';
+import verseDevotionPart from '../api/verse-devotion-part.js';
+import verseDevotionQuick from '../api/verse-devotion-quick.js';
+import verseDevotionReview from '../api/verse-devotion-review.js';
 import verseQuestion from '../api/verse-question.js';
 
 const API_ROUTES = new Map([
@@ -13,6 +16,9 @@ const API_ROUTES = new Map([
   ['/api/insight', insight],
   ['/api/reading-meditation', readingMeditation],
   ['/api/verse-devotion', verseDevotion],
+  ['/api/verse-devotion-part', verseDevotionPart],
+  ['/api/verse-devotion-quick', verseDevotionQuick],
+  ['/api/verse-devotion-review', verseDevotionReview],
   ['/api/verse-question', verseQuestion],
 ]);
 
