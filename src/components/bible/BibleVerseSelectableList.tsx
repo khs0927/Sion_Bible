@@ -204,7 +204,7 @@ export function BibleVerseSelectableList({
                 selected && showCheckbox
                   ? 'bg-[#EAF2E6] ring-2 ring-inset ring-[#6F8F72]/70'
                   : isActive
-                    ? 'bg-[#FDF4E4] shadow-[inset_3px_0_0_#D0A13D]'
+                    ? 'bg-[#FFF6DD] ring-2 ring-inset ring-[#D0A13D]'
                     : 'bg-white hover:bg-[#FFFDF8]',
               ].join(' ')}
             >
@@ -232,8 +232,8 @@ export function BibleVerseSelectableList({
                   ) : (
                     <>
                       <span className={[
-                        'inline-flex h-5 min-w-5 items-center justify-center text-[11px] font-bold leading-none',
-                        isActive ? 'text-[#A17C5B]' : 'text-[#C9B8A7]',
+                        'inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold leading-none',
+                        isActive ? 'bg-[#D0A13D] text-white' : 'text-[#C9B8A7]',
                       ].join(' ')}>{verse.verse}</span>
                       <button
                         type="button"
