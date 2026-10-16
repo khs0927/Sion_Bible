@@ -35,6 +35,9 @@ jobs:
       - name: Audit verse annotation scope
         run: npm run audit:verse-annotations
 
+      - name: Audit reading UI
+        run: npm run audit:reading-ui
+
       - name: Typecheck
         run: npm run typecheck
 
