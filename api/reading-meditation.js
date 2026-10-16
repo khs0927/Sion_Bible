@@ -1,6 +1,6 @@
 import {
-  DEFAULT_FAST_MODEL_1,
-  DEFAULT_FAST_MODEL_2,
+  DEFAULT_PRIMARY_FAST_MODEL,
+  DEFAULT_SECONDARY_FAST_MODEL,
   DEFAULT_QUALITY_MODEL,
   callNvidiaChat,
   getNvidiaApiKey,
@@ -123,7 +123,7 @@ export default async function handler(req, res) {
 
     const apiKey = getNvidiaApiKey();
     if (!apiKey) {
-      return sendJson(res, 500, { error: 'NVIDIA_API_KEY가 설정되지 않았습니다.', detail: 'Vercel 환경 변수를 확인해주세요.' });
+      return sendJson(res, 500, { error: 'NVIDIA_API_KEY가 설정되지 않았습니다.', detail: '서버 환경 변수를 확인해주세요.' });
     }
 
     const { passageTitle, chaptersText } = req.body ?? {};
@@ -132,8 +132,8 @@ export default async function handler(req, res) {
     }
 
     const fastModels = [
-      process.env.NVIDIA_FAST_MODEL_1 || DEFAULT_FAST_MODEL_1,
-      process.env.NVIDIA_FAST_MODEL_2 || DEFAULT_FAST_MODEL_2,
+      process.env.NVIDIA_PRIMARY_MODEL || process.env.NVIDIA_FAST_MODEL_1 || DEFAULT_PRIMARY_FAST_MODEL,
+      process.env.NVIDIA_SECONDARY_MODEL || process.env.NVIDIA_FAST_MODEL_2 || DEFAULT_SECONDARY_FAST_MODEL,
     ];
     const qualityModel = process.env.NVIDIA_QUALITY_MODEL || DEFAULT_QUALITY_MODEL;
     const chapters = splitChapters(chaptersText);
@@ -147,7 +147,7 @@ export default async function handler(req, res) {
             messages: chapterMessages(passageTitle, chapter),
             validate: validateChapter,
             maxTokens: 800,
-            timeoutMs: 9000, // Stay within Vercel limits
+            timeoutMs: 9000, // Stay within serverless limits
           });
           return race.result;
         }),
@@ -182,7 +182,7 @@ export default async function handler(req, res) {
       }
 
       const overview = chapterResults.map((chapter) => `${chapter.chapterTitle || ''}: ${chapter.summary}`).join(' ');
-      
+
       return sendJson(res, 200, {
         title: `${passageTitle} 통독 묵상`,
         overview,
