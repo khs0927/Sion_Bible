@@ -1,10 +1,20 @@
 {
   "version": "user-provided-korean-bible",
-  "verseCount": 31039,
+  "verseCount": 31101,
   "createdAt": "2026-05-28T17:20:19.141Z",
   "source": "C:/Users/khs09/Downloads/성경(구약+신약).md",
   "encoding": "utf-8",
   "rangeLinesExpanded": 11,
   "headingLinesSkipped": 4,
-  "malformedContinuationLinesAppended": 45
+  "malformedContinuationLinesAppended": 45,
+  "repairSource": {
+    "repository": "neppiness/typer-bible@de7861d47a1b8dd916f0ed94abb726799cf38dc3",
+    "path": "src/main/resources/bible-text",
+    "fetchedAt": "2026-10-21T12:35:35.737Z",
+    "bookCount": 66,
+    "verseCount": 31101,
+    "missingVersesRestored": 62,
+    "correctedVerses": 83
+  },
+  "baseVerseCount": 31039
 }
