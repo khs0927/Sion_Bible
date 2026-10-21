@@ -32,3 +32,10 @@ Thumbs.db
 .idea/
 
 .vercel
+
+# Local scratch work and backups (never commit secrets)
+scratch/
+*.bak
+
+# 공개 성경 원본 캐시
+.cache/
